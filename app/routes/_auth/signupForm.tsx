@@ -1,13 +1,24 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import * as z from 'zod';
 import { Button } from '~/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
+import { useUserContext } from '~/context/AuthContext';
+import {
+  useCreateUserAccountMutation,
+  useSignInAccountMutation,
+} from '~/lib/react-query/queriesAndMutations';
 import { signupValidation } from '~/lib/validation';
 
 export default function SignupForm() {
+  const navigate = useNavigate();
+  const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
+  const { mutateAsync: createAccount, isPending: isCreatingAccount } =
+    useCreateUserAccountMutation();
+  const { mutateAsync: signInAccount, isPending: isSigningIn } = useSignInAccountMutation();
+
   const form = useForm<z.infer<typeof signupValidation>>({
     resolver: zodResolver(signupValidation),
     defaultValues: {
@@ -18,9 +29,30 @@ export default function SignupForm() {
     },
   });
 
-  function onSubmit(data: z.infer<typeof signupValidation>) {
-    // Do something with the form values.
-    console.log(data);
+  async function onSubmit(data: z.infer<typeof signupValidation>) {
+    const newUser = await createAccount(data);
+
+    if (!newUser) {
+      console.error('Sign up failed');
+    }
+
+    const session = await signInAccount({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (!session) {
+      console.error('Sign in failed');
+    }
+
+    const isLoggedIn = await checkAuthUser();
+
+    if (isLoggedIn) {
+      form.reset();
+      navigate('/');
+    } else {
+      console.error('Sign up failed');
+    }
   }
 
   return (
