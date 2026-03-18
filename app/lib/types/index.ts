@@ -13,3 +13,9 @@ export type User = {
   imageUrl: string;
   bio: string;
 };
+
+export type NavBarLink = {
+  imgURL: string;
+  route: string;
+  label: string;
+};
