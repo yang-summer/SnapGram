@@ -7,22 +7,22 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field
 import { Input } from '~/components/ui/input';
 import { useUserContext } from '~/context/AuthContext';
 import { useSignInAccountMutation } from '~/lib/react-query/queriesAndMutations';
-import { signinValidation } from '~/lib/validation';
+import { SigninValidation } from '~/lib/validation';
 
 export default function SigninForm() {
   const navigate = useNavigate();
   const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
   const { mutateAsync: signInAccount, isPending: isSigningIn } = useSignInAccountMutation();
 
-  const form = useForm<z.infer<typeof signinValidation>>({
-    resolver: zodResolver(signinValidation),
+  const form = useForm<z.infer<typeof SigninValidation>>({
+    resolver: zodResolver(SigninValidation),
     defaultValues: {
       email: '',
       password: '',
     },
   });
 
-  async function onSubmit(data: z.infer<typeof signinValidation>) {
+  async function onSubmit(data: z.infer<typeof SigninValidation>) {
     const session = await signInAccount({
       email: data.email,
       password: data.password,

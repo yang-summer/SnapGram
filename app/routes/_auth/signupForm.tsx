@@ -10,7 +10,7 @@ import {
   useCreateUserAccountMutation,
   useSignInAccountMutation,
 } from '~/lib/react-query/queriesAndMutations';
-import { signupValidation } from '~/lib/validation';
+import { SignupValidation } from '~/lib/validation';
 
 export default function SignupForm() {
   const navigate = useNavigate();
@@ -19,8 +19,8 @@ export default function SignupForm() {
     useCreateUserAccountMutation();
   const { mutateAsync: signInAccount, isPending: isSigningIn } = useSignInAccountMutation();
 
-  const form = useForm<z.infer<typeof signupValidation>>({
-    resolver: zodResolver(signupValidation),
+  const form = useForm<z.infer<typeof SignupValidation>>({
+    resolver: zodResolver(SignupValidation),
     defaultValues: {
       name: '',
       username: '',
@@ -29,7 +29,7 @@ export default function SignupForm() {
     },
   });
 
-  async function onSubmit(data: z.infer<typeof signupValidation>) {
+  async function onSubmit(data: z.infer<typeof SignupValidation>) {
     const newUser = await createAccount(data);
 
     if (!newUser) {

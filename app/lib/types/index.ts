@@ -19,3 +19,11 @@ export type NavBarLink = {
   route: string;
   label: string;
 };
+
+export type NewPost = {
+  userId: string;
+  caption: string;
+  file: File[];
+  location?: string;
+  tags?: string;
+};

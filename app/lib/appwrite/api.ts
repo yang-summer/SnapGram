@@ -1,6 +1,6 @@
-import { ID, Query } from 'appwrite';
-import type { NewUser } from '../types';
-import { account, appwriteConfig, avatars, tablesDB } from './config';
+import { ID, ImageGravity, Query } from 'appwrite';
+import type { NewPost, NewUser } from '../types';
+import { account, appwriteConfig, avatars, storage, tablesDB } from './config';
 
 export async function createUserAccount(user: NewUser) {
   try {
@@ -88,6 +88,93 @@ export async function signOutAccount() {
     const session = await account.deleteSession({ sessionId: 'current' });
 
     return session;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function createPost(post: NewPost) {
+  try {
+    // Upload image to storage
+    const uploadedFile = await uploadFile(post.file[0]);
+
+    if (!uploadedFile) throw Error;
+
+    // Get file url
+    const fileUrl = await getFilePreview(uploadedFile.$id);
+
+    if (!fileUrl) {
+      await deleteFile(uploadedFile.$id);
+      throw Error;
+    }
+
+    // Convert tags into array
+    const tags = post.tags?.replace(/ /g, '').split(',') || [];
+
+    // Save post to database
+    const newPost = await tablesDB.createRow(
+      appwriteConfig.databaseId,
+      appwriteConfig.postsTableId,
+      ID.unique(),
+      {
+        creator: post.userId,
+        caption: post.caption,
+        imageUrl: fileUrl,
+        imageId: uploadedFile.$id,
+        location: post.location,
+        tags: tags,
+      },
+    );
+
+    if (!newPost) {
+      await deleteFile(uploadedFile.$id);
+      throw Error;
+    }
+
+    return newPost;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function uploadFile(file: File) {
+  try {
+    const uploadedFile = await storage.createFile({
+      bucketId: appwriteConfig.storageId,
+      fileId: ID.unique(),
+      file: file,
+    });
+
+    return uploadedFile;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getFilePreview(fileId: string) {
+  try {
+    const fileUrl = storage.getFilePreview({
+      bucketId: appwriteConfig.storageId,
+      fileId: fileId,
+      width: 2000,
+      height: 2000,
+      gravity: ImageGravity.Top,
+      quality: 100,
+    });
+    return fileUrl;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function deleteFile(fileId: string) {
+  try {
+    await storage.deleteFile({
+      bucketId: appwriteConfig.storageId,
+      fileId: fileId,
+    });
+
+    return { status: 'ok' };
   } catch (error) {
     console.log(error);
   }
