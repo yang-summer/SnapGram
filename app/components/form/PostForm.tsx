@@ -41,7 +41,7 @@ export default function PostForm({ post }: PostFormProps) {
       console.error('create post failed');
     }
 
-    navigate('/');
+    // navigate('/');
   }
   return (
     <form id="form-createPost" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-5xl">

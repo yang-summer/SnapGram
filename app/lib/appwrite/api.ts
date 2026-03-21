@@ -72,7 +72,7 @@ export async function getCurrentUser() {
     const currentUser = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.usersTableId,
-      queries: [Query.equal('accountId', currentAccount.$id)],
+      queries: [Query.equal('accountId', currentAccount.$id), Query.select(['*', 'save.*'])],
     });
 
     if (!currentUser) throw Error;
@@ -101,7 +101,7 @@ export async function createPost(post: NewPost) {
     if (!uploadedFile) throw Error;
 
     // Get file url
-    const fileUrl = await getFilePreview(uploadedFile.$id);
+    const fileUrl = await getFileView(uploadedFile.$id);
 
     if (!fileUrl) {
       await deleteFile(uploadedFile.$id);
@@ -112,11 +112,11 @@ export async function createPost(post: NewPost) {
     const tags = post.tags?.replace(/ /g, '').split(',') || [];
 
     // Save post to database
-    const newPost = await tablesDB.createRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.postsTableId,
-      ID.unique(),
-      {
+    const newPost = await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      rowId: ID.unique(),
+      data: {
         creator: post.userId,
         caption: post.caption,
         imageUrl: fileUrl,
@@ -124,7 +124,7 @@ export async function createPost(post: NewPost) {
         location: post.location,
         tags: tags,
       },
-    );
+    });
 
     if (!newPost) {
       await deleteFile(uploadedFile.$id);
@@ -151,16 +151,14 @@ export async function uploadFile(file: File) {
   }
 }
 
-export async function getFilePreview(fileId: string) {
+export async function getFileView(fileId: string) {
   try {
-    const fileUrl = storage.getFilePreview({
+    // getFilePreview 支持对图片进行裁剪, 需要收费, 因此使用getFileView
+    const fileUrl = storage.getFileView({
       bucketId: appwriteConfig.storageId,
       fileId: fileId,
-      width: 2000,
-      height: 2000,
-      gravity: ImageGravity.Top,
-      quality: 100,
     });
+    console.log('fileUrl', fileUrl);
     return fileUrl;
   } catch (error) {
     console.log(error);
@@ -173,6 +171,77 @@ export async function deleteFile(fileId: string) {
       bucketId: appwriteConfig.storageId,
       fileId: fileId,
     });
+
+    return { status: 'ok' };
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getRecentPosts() {
+  try {
+    // 需要通过Queries选择加载的字段来加载关系数据, 首先需要加载全部字段, 之后选择关系的字段
+    const posts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      queries: [
+        Query.select(['*', 'creator.*', 'likes.*']),
+        Query.orderDesc('$createdAt'),
+        Query.limit(20),
+      ],
+    });
+
+    if (!posts) throw Error;
+
+    return posts;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function likePost(postId: string, likesArray: string[]) {
+  try {
+    const updatedPost = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      rowId: postId,
+      data: { likes: likesArray },
+    });
+
+    if (!updatedPost) throw Error;
+
+    return updatedPost;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function savePost(postId: string, userId: string) {
+  try {
+    const updatedPost = await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.saveTableId,
+      rowId: ID.unique(),
+      data: { user: userId, post: postId },
+    });
+
+    if (!updatedPost) throw Error;
+
+    return updatedPost;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function deleteSavedPost(savedRecordId: string) {
+  try {
+    const statusCode = await tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.saveTableId,
+      rowId: savedRecordId,
+    });
+
+    if (!statusCode) throw Error;
 
     return { status: 'ok' };
   } catch (error) {
