@@ -27,3 +27,13 @@ export type NewPost = {
   location?: string;
   tags?: string;
 };
+
+export type UpdatePost = {
+  postId: string;
+  caption: string;
+  imageId: string;
+  imageUrl: string;
+  file: File[];
+  location?: string;
+  tags?: string;
+};

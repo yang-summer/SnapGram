@@ -8,18 +8,23 @@ import { PostValidation } from '~/lib/validation';
 import FileUploader from '../shared/FileUploader';
 import { Button } from '../ui/button';
 import type { Models } from 'appwrite';
-import { useCreatePostMutation } from '~/lib/react-query/queriesAndMutations';
+import {
+  useCreatePostMutation,
+  useUpdatePostMutation,
+} from '~/lib/react-query/queriesAndMutations';
 import { useUserContext } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 
 type PostFormProps = {
+  action: 'Create' | 'Update';
   post?: Models.Row;
 };
 
-export default function PostForm({ post }: PostFormProps) {
+export default function PostForm({ action, post }: PostFormProps) {
   const navigate = useNavigate();
   const { user } = useUserContext();
   const { mutateAsync: createPost, isPending: isLoadingCreate } = useCreatePostMutation();
+  const { mutateAsync: updatePost, isPending: isLoadingUpdate } = useUpdatePostMutation();
 
   const form = useForm<z.infer<typeof PostValidation>>({
     resolver: zodResolver(PostValidation),
@@ -32,6 +37,23 @@ export default function PostForm({ post }: PostFormProps) {
   });
 
   async function onSubmit(values: z.infer<typeof PostValidation>) {
+    // ACTION = UPDATE
+    if (post && action === 'Update') {
+      const updatedPost = await updatePost({
+        ...values,
+        postId: post.$id,
+        imageId: post.imageId,
+        imageUrl: post.imageUrl,
+      });
+
+      if (!updatedPost) {
+        console.error('post failed. Please try again.');
+      }
+
+      return navigate(`/posts/${post.$id}`);
+    }
+
+    // ACTION = CREATE
     const newPost = await createPost({
       ...values,
       userId: user.id,
@@ -70,7 +92,7 @@ export default function PostForm({ post }: PostFormProps) {
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="w-full">
               <FieldLabel htmlFor="form-createPost-file">Add Photos</FieldLabel>
-              <FileUploader fieldChange={field.onChange} />
+              <FileUploader fieldChange={field.onChange} mediaUrl={post?.imageUrl} />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -118,7 +140,9 @@ export default function PostForm({ post }: PostFormProps) {
         <Button type="button" variant="outline">
           Cancel
         </Button>
-        <Button type="submit">Submit</Button>
+        <Button type="submit" disabled={isLoadingCreate || isLoadingUpdate}>
+          {isLoadingCreate || (isLoadingUpdate && 'Loading...')} {action} Post
+        </Button>
       </div>
     </form>
   );

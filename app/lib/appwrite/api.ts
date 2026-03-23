@@ -1,5 +1,5 @@
 import { ID, ImageGravity, Query } from 'appwrite';
-import type { NewPost, NewUser } from '../types';
+import type { NewPost, NewUser, UpdatePost } from '../types';
 import { account, appwriteConfig, avatars, storage, tablesDB } from './config';
 
 export async function createUserAccount(user: NewUser) {
@@ -244,6 +244,101 @@ export async function deleteSavedPost(savedRecordId: string) {
     if (!statusCode) throw Error;
 
     return { status: 'ok' };
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getPostById(postId: string) {
+  if (!postId) throw Error;
+
+  try {
+    const post = await tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      rowId: postId,
+    });
+
+    if (!post) throw Error;
+
+    return post;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function updatePost(post: UpdatePost) {
+  const hasFileToUpdate = post.file.length > 0;
+
+  try {
+    let image = {
+      imageUrl: post.imageUrl,
+      imageId: post.imageId,
+    };
+
+    if (hasFileToUpdate) {
+      // Upload new file to storage
+      const uploadedFile = await uploadFile(post.file[0]);
+      if (!uploadedFile) throw Error;
+
+      // Get new file url
+      const fileUrl = await getFileView(uploadedFile.$id);
+
+      if (!fileUrl) {
+        await deleteFile(uploadedFile.$id);
+        throw Error;
+      }
+
+      image = { ...image, imageUrl: fileUrl, imageId: uploadedFile.$id };
+    }
+
+    // Convert tags into array
+    const tags = post.tags?.replace(/ /g, '').split(',') || [];
+
+    // Update post
+    const updatedPost = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      rowId: post.postId,
+      data: {
+        caption: post.caption,
+        imageUrl: image.imageUrl,
+        imageId: image.imageId,
+        location: post.location,
+        tags: tags,
+      },
+    });
+
+    if (!updatedPost) {
+      // Delete new file that has been recently uploaded
+      if (hasFileToUpdate) {
+        await deleteFile(image.imageId);
+      }
+      // If no new file uploaded, just throw error
+      throw Error;
+    }
+
+    return updatedPost;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function deletePost(postId?: string, imageId?: string) {
+  if (!postId || !imageId) return;
+
+  try {
+    const statusCode = await tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      rowId: postId,
+    });
+
+    if (!statusCode) throw Error;
+
+    await deleteFile(imageId);
+
+    return { status: 'OK' };
   } catch (error) {
     console.log(error);
   }
