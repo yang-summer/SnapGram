@@ -192,7 +192,7 @@ export async function getRecentPosts() {
     });
 
     if (!posts) throw Error;
-
+    console.log('posts: ', posts);
     return posts;
   } catch (error) {
     console.log(error);
