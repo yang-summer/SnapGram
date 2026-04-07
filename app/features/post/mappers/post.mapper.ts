@@ -1,5 +1,5 @@
 import type { Models } from 'appwrite';
-import type { PostCardViewModel, RawPostRow } from '../types/post.type';
+import type { PostCardViewModel, PostDetailViewModel, RawPostRow } from '../types/post.type';
 
 export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | null {
   // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
@@ -19,7 +19,7 @@ export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | 
       name: row.creator.name ?? 'Unknown user',
       imageUrl: row.creator.imageUrl ?? null,
     },
-    likes: row.likes ?? [],
+    likes: (row.likes ?? []).map((like) => like.$id),
   };
 }
 
@@ -40,4 +40,27 @@ export function mapPostRowsToCardViewModels(data: Models.RowList<RawPostRow>): P
   }
 
   return result;
+}
+
+export function mapPostRowToDetailViewModel(row: RawPostRow): PostDetailViewModel | null {
+  // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
+  if (!row || !row.creator) {
+    return null;
+  }
+
+  return {
+    id: row.$id,
+    createdAt: row.$createdAt,
+    caption: row.caption ?? '',
+    imageId: row.imageId,
+    imageUrl: row.imageUrl,
+    location: row.location ?? null,
+    tags: row.tags ?? [],
+    creator: {
+      id: row.creator.$id,
+      name: row.creator.name ?? 'Unknown user',
+      imageUrl: row.creator.imageUrl ?? null,
+    },
+    likes: (row.likes ?? []).map((like) => like.$id),
+  };
 }

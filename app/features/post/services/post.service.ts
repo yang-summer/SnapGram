@@ -1,6 +1,6 @@
-import { getRecentPosts } from '../api/post.api';
-import { mapPostRowsToCardViewModels } from '../mappers/post.mapper';
-import type { PostCardViewModel } from '../types/post.type';
+import { deletePost, getPostById, getRecentPosts } from '../api/post.api';
+import { mapPostRowsToCardViewModels, mapPostRowToDetailViewModel } from '../mappers/post.mapper';
+import type { DeletePostResult, PostCardViewModel, PostDetailViewModel } from '../types/post.type';
 
 export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
   try {
@@ -21,6 +21,37 @@ export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
     // 记录 Service 层错误日志
     console.error(`[PostService.getRecentPostCards] Error:`, error);
 
+    throw error;
+  }
+}
+
+export async function getPostDetail(postId: string): Promise<PostDetailViewModel | null> {
+  try {
+    // 1. 调用 API 获取原始数据
+    const response = await getPostById(postId);
+
+    // 2. 业务规则：防御性编程，处理空结果或无效响应
+    if (!response) {
+      return null;
+    }
+
+    // 3. 将 raw row 交给 mapper 进行转换
+    const viewModel = mapPostRowToDetailViewModel(response);
+
+    return viewModel;
+  } catch (error) {
+    // 记录 Service 层错误日志
+    console.error(`[PostService.getPostDetail] Error:`, error);
+
+    throw error;
+  }
+}
+
+export async function deletePostById(postId: string): Promise<DeletePostResult> {
+  try {
+    return await deletePost(postId);
+  } catch (error) {
+    console.error(`[PostService.deletePostById] Error:`, error);
     throw error;
   }
 }

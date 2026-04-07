@@ -11,9 +11,7 @@ export type RawPostRow = Models.Row & {
     name?: string | null;
     imageUrl?: string | null;
   };
-  likes?: Array<{
-    $id: string;
-  }> | null;
+  likes?: Array<Models.Row> | null;
 };
 
 export type PostCardViewModel = {
@@ -28,7 +26,30 @@ export type PostCardViewModel = {
     name: string;
     imageUrl: string | null;
   };
-  likes: Array<{
-    $id: string;
-  }>;
+  likes: string[];
+};
+
+export type PostDetailViewModel = {
+  id: string;
+  createdAt: string;
+  caption: string;
+  imageId: string;
+  imageUrl: string;
+  location: string | null;
+  tags: string[];
+  creator: {
+    id: string;
+    name: string;
+    imageUrl: string | null;
+  };
+  likes: string[];
+};
+
+export type PostDeleteSnapshot = Models.Row & {
+  imageId?: string | null;
+};
+
+export type DeletePostResult = {
+  postId: string;
+  imageCleanupFailed: boolean;
 };

@@ -1,4 +1,4 @@
-import { useGetRecentPostsQuery } from '../features/post/queries/useRecentPostsQuery';
+import { useGetRecentPostsQuery } from '../features/post/queries/post.queries';
 import type { Route } from './+types/home';
 import PostCard from '../features/post/components/PostCard';
 

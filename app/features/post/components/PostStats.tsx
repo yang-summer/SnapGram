@@ -22,9 +22,7 @@ type PostStatsProps = {
 };
 
 export default function PostStats({ post, userId }: PostStatsProps) {
-  const likesList = post.likes ? post.likes.map((value) => value.$id) : [];
-
-  const [likes, setLikes] = useState<string[]>(likesList);
+  const [likes, setLikes] = useState<string[]>(post.likes);
   const [isSaved, setIsSaved] = useState(false);
 
   const { data: currentUser } = useGetCurrentUserQuery();
@@ -69,7 +67,7 @@ export default function PostStats({ post, userId }: PostStatsProps) {
   };
 
   const checkIsLiked = (userId: string) => {
-    return likesList.includes(userId);
+    return post.likes.includes(userId);
   };
 
   return (
