@@ -10,16 +10,16 @@ export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | 
   return {
     id: row.$id,
     createdAt: row.$createdAt,
-    caption: row.caption,
+    caption: row.caption ?? '',
     imageUrl: row.imageUrl,
     location: row.location ?? null,
     tags: row.tags ?? [],
     creator: {
       id: row.creator.$id,
-      name: row.creator.name,
-      imageUrl: row.creator.imageUrl,
+      name: row.creator.name ?? 'Unknown user',
+      imageUrl: row.creator.imageUrl ?? null,
     },
-    likes: row.likes,
+    likes: row.likes ?? [],
   };
 }
 

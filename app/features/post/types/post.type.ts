@@ -1,17 +1,17 @@
 import type { Models } from 'appwrite';
 
 export type RawPostRow = Models.Row & {
-  caption: string;
+  caption?: string | null;
   imageUrl: string;
   imageId: string;
   location?: string | null;
-  tags?: string[];
-  creator: {
+  tags?: string[] | null;
+  creator?: {
     $id: string;
-    name: string;
-    imageUrl: string | null;
+    name?: string | null;
+    imageUrl?: string | null;
   };
-  likes: Array<{
+  likes?: Array<{
     $id: string;
   }> | null;
 };
@@ -21,8 +21,8 @@ export type PostCardViewModel = {
   createdAt: string;
   caption: string;
   imageUrl: string;
-  location?: string | null;
-  tags?: string[];
+  location: string | null;
+  tags: string[];
   creator: {
     id: string;
     name: string;
@@ -30,5 +30,5 @@ export type PostCardViewModel = {
   };
   likes: Array<{
     $id: string;
-  }> | null;
+  }>;
 };
