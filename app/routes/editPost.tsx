@@ -1,10 +1,11 @@
 import { useParams } from 'react-router';
-import PostForm from '~/components/form/PostForm';
-import { useGetPostByIdQuery } from '~/lib/react-query/queriesAndMutations';
+import PostForm from '~/features/post/components/PostForm';
+import { useGetPostEditorQuery } from '~/features/post/queries/post.queries';
 
 export default function EditPost() {
   const { id } = useParams();
-  const { data: post, isPending } = useGetPostByIdQuery(id || '');
+  const postId = id ?? '';
+  const { data: post, isPending } = useGetPostEditorQuery(postId);
 
   if (isPending) return <div>Loading...</div>;
 
@@ -17,7 +18,7 @@ export default function EditPost() {
             Edit Post
           </h2>
         </div>
-        <PostForm action="Update" post={post} />
+        <PostForm action="Update" post={post ?? undefined} />
       </div>
     </div>
   );

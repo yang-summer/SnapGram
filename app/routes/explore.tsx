@@ -1,30 +1,41 @@
 import { useEffect, useState } from 'react';
-import GridPostList from '~/components/shared/GridPostList';
+import GridPostList from '~/features/post/components/GridPostList';
+import SearchResults from '~/features/post/components/SearchResults';
+import {
+  useExplorePostsInfiniteQuery,
+  useSearchPostsQuery,
+} from '~/features/post/queries/post.queries';
 import { Input } from '~/components/ui/input';
-import { useGetPostsQuery, useSearchPostsQuery } from '~/lib/react-query/queriesAndMutations';
 import { useDebounce } from 'ahooks';
 import { useInView } from 'react-intersection-observer';
-import SearchResults from '~/components/shared/SearchResults';
 
 export default function Explore() {
   const { ref, inView } = useInView();
   const [searchValue, setSearchValue] = useState('');
   const debouncedSearchValue = useDebounce(searchValue, { wait: 500 });
+  const shouldShowSearchResults = debouncedSearchValue.trim().length >= 3;
 
-  const { data: posts, hasNextPage, fetchNextPage } = useGetPostsQuery();
+  const {
+    data: posts,
+    isPending: isPostsPending,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useExplorePostsInfiniteQuery();
 
   const { data: searchedPosts, isFetching: isSearchFetching } =
     useSearchPostsQuery(debouncedSearchValue);
 
   useEffect(() => {
-    if (inView && !searchValue) fetchNextPage();
-  }, [inView, searchValue]);
+    if (inView && !shouldShowSearchResults && hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, inView, isFetchingNextPage, shouldShowSearchResults]);
 
-  if (!posts) return <div className="flex-center w-full h-full">Loading...</div>;
+  if (isPostsPending && !posts) return <div className="flex-center w-full h-full">Loading...</div>;
 
-  const shouldShowSearchResults = searchValue !== '';
   const shouldShowPosts =
-    !shouldShowSearchResults && posts.pages.every((item) => item?.rows.length === 0);
+    !shouldShowSearchResults && !!posts && posts.pages.every((page) => page.items.length === 0);
 
   return (
     <div className="flex flex-col items-center overflow-scroll py-10 px-5 md:p-14">
@@ -58,15 +69,15 @@ export default function Explore() {
         ) : shouldShowPosts ? (
           <p className="mt-10 text-center w-full">End of posts</p>
         ) : (
-          posts.pages.map((item, index) => (
-            <GridPostList key={`page-${index}`} posts={item?.rows} />
+          posts?.pages.map((page, index) => (
+            <GridPostList key={`page-${index}`} posts={page.items} />
           ))
         )}
       </div>
 
-      {hasNextPage && !searchValue && (
+      {hasNextPage && !shouldShowSearchResults && (
         <div ref={ref} className="mt-10">
-          Loading...
+          {isFetchingNextPage ? 'Loading...' : 'Load more'}
         </div>
       )}
     </div>

@@ -6,7 +6,6 @@ import {
   useLikePostMutation,
   useSavePostMutation,
 } from '~/lib/react-query/queriesAndMutations';
-import type { PostCardViewModel } from '../types/post.type';
 
 type SaveRecord = Models.Row & {
   post?: string | { $id: string } | null;
@@ -17,7 +16,10 @@ type CurrentUserWithSaves = Models.Row & {
 };
 
 type PostStatsProps = {
-  post: PostCardViewModel;
+  post: {
+    id: string;
+    likes: string[];
+  };
   userId: string;
 };
 
