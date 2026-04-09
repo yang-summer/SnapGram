@@ -13,9 +13,7 @@ export function getDefaultUserProfileImageUrl(name: string): string {
   return avatars.getInitials({ name });
 }
 
-export async function createUserProfile(
-  input: CreateUserProfileInput,
-): Promise<UserProfileRecord> {
+export async function createUserProfile(input: CreateUserProfileInput): Promise<UserProfileRecord> {
   try {
     return await tablesDB.createRow<UserProfileRecord>({
       databaseId: appwriteConfig.databaseId,
@@ -85,30 +83,6 @@ export async function getUserProfileByAccountId(
     return result.rows[0] ?? null;
   } catch (error) {
     console.error('[UserApi.getUserProfileByAccountId] Failed to load user profile.', error);
-    throw error;
-  }
-}
-
-export async function listUserSaveRecords(profileId: string): Promise<UserSaveRecord[]> {
-  if (!profileId) {
-    return [];
-  }
-
-  try {
-    const result = await tablesDB.listRows<UserSaveRecord>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.saveTableId,
-      queries: [
-        Query.select(['*', 'post.$id']),
-        Query.equal('user', profileId),
-        Query.limit(100),
-      ],
-      total: false,
-    });
-
-    return result.rows;
-  } catch (error) {
-    console.error('[UserApi.listUserSaveRecords] Failed to load save records.', error);
     throw error;
   }
 }
