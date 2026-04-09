@@ -1,18 +1,13 @@
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { PiSignOut, PiUser } from 'react-icons/pi';
-import { useSignOutAccountMutation } from '~/lib/react-query/queriesAndMutations';
-import { useEffect } from 'react';
-import { useUserContext } from '~/context/AuthContext';
+import { useSignOutMutation } from '~/features/auth/queries/auth.mutations';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 
 export default function Topbar() {
-  const navigate = useNavigate();
-  const { mutate: signOut, isSuccess } = useSignOutAccountMutation();
-  const { user } = useUserContext();
-
-  useEffect(() => {
-    if (isSuccess) navigate('/sign-in');
-  }, [isSuccess]);
+  const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
 
   return (
     <section className="z-50 w-full shrink-0 md:hidden">
@@ -22,12 +17,12 @@ export default function Topbar() {
         </Link>
 
         <div className="flex gap-4 items-center">
-          <Button variant="ghost" onClick={() => signOut()}>
+          <Button variant="ghost" onClick={() => signOut()} disabled={isSigningOut}>
             <PiSignOut />
           </Button>
-          <Link to={`/profile/${user.id}`}>
-            {user.imageUrl ? (
-              <img src={user.imageUrl} alt="profile" className="h-8 w-8 rounded-full" />
+          <Link to={`/profile/${currentUser?.profileId ?? ''}`}>
+            {currentUser?.imageUrl ? (
+              <img src={currentUser.imageUrl} alt="profile" className="h-8 w-8 rounded-full" />
             ) : (
               <PiUser className="h-8 w-8" />
             )}

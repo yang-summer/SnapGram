@@ -10,6 +10,19 @@ export type RawPostLikeRow = Models.Row & {
   $id: string;
 };
 
+export type RawPostLikeMutationRow = Models.Row & {
+  likes?: string[] | RawPostLikeRow[] | null;
+};
+
+export type RawViewerSavePostReference = {
+  $id: string;
+};
+
+export type RawViewerSaveRecord = Models.Row & {
+  post?: string | RawViewerSavePostReference | null;
+  user?: string | null;
+};
+
 export type RawPostRow = Models.Row & {
   caption?: string | null;
   imageUrl: string;
@@ -178,4 +191,45 @@ export type PostMutationResult = {
   id: string;
   imageId: string;
   imageUrl: string;
+};
+
+export type UpdatePostLikesInput = {
+  postId: string;
+  likes: string[];
+};
+
+export type PostLikeMutationResult = {
+  postId: string;
+  likes: string[];
+};
+
+export type CreateViewerPostSaveInput = {
+  postId: string;
+  viewerId: string;
+};
+
+export type DeleteViewerPostSaveInput = {
+  saveRecordId: string;
+  viewerId: string;
+  postId?: string;
+};
+
+export type ViewerSavedPostRecord = {
+  saveRecordId: string;
+  postId: string;
+};
+
+export type ViewerSavedPostsResult = {
+  records: ViewerSavedPostRecord[];
+  postIds: string[];
+};
+
+export type ViewerPostSaveMutationResult = {
+  saveRecordId: string;
+  postId: string;
+  viewerId: string;
+};
+
+export type DeleteViewerPostSaveResult = {
+  saveRecordId: string;
 };

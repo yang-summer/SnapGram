@@ -1,6 +1,6 @@
 import type { Models } from 'appwrite';
 import { Link } from 'react-router';
-import { useUserContext } from '~/context/AuthContext';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import PostStats from './PostStats';
 
 type PostCardProps = {
@@ -8,7 +8,9 @@ type PostCardProps = {
 };
 
 export default function PostCard({ post }: PostCardProps) {
-  const { user } = useUserContext();
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
+  const currentUserProfileId = currentUser?.profileId ?? '';
 
   if (!post.creator) return null;
 
@@ -32,7 +34,7 @@ export default function PostCard({ post }: PostCardProps) {
         </div>
         <Link
           to={`/update-post/${post.$id}`}
-          className={user.id !== post.creator.$id ? 'hidden' : ''}
+          className={currentUserProfileId !== post.creator.$id ? 'hidden' : ''}
         >
           <img src={'/assets/icons/edit.svg'} alt="edit" width={20} height={20} />
         </Link>
@@ -52,7 +54,7 @@ export default function PostCard({ post }: PostCardProps) {
           alt="post image"
         />
       </Link>
-      <PostStats post={post} userId={user.id} />
+      <PostStats post={post} userId={currentUserProfileId} />
     </div>
   );
 }

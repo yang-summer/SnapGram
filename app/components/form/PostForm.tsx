@@ -8,11 +8,11 @@ import { PostValidation } from '~/lib/validation';
 import FileUploader from '../shared/FileUploader';
 import { Button } from '../ui/button';
 import type { Models } from 'appwrite';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import {
   useCreatePostMutation,
   useUpdatePostMutation,
 } from '~/lib/react-query/queriesAndMutations';
-import { useUserContext } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 
 type PostFormProps = {
@@ -22,7 +22,8 @@ type PostFormProps = {
 
 export default function PostForm({ action, post }: PostFormProps) {
   const navigate = useNavigate();
-  const { user } = useUserContext();
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
   const { mutateAsync: createPost, isPending: isLoadingCreate } = useCreatePostMutation();
   const { mutateAsync: updatePost, isPending: isLoadingUpdate } = useUpdatePostMutation();
 
@@ -56,7 +57,7 @@ export default function PostForm({ action, post }: PostFormProps) {
     // ACTION = CREATE
     const newPost = await createPost({
       ...values,
-      userId: user.id,
+      userId: currentUser?.profileId ?? '',
     });
 
     if (!newPost) {

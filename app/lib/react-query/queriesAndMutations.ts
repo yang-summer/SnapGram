@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { userKeys } from '~/features/user/queries/user.keys';
 import {
   createPost,
   createUserAccount,
@@ -92,6 +93,9 @@ export const useSavePostMutation = () => {
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.GET_CURRENT_USER],
       });
+      queryClient.invalidateQueries({
+        queryKey: userKeys.saves(),
+      });
     },
   });
 };
@@ -109,6 +113,9 @@ export const useDeleteSavedPostMutation = () => {
       });
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.GET_CURRENT_USER],
+      });
+      queryClient.invalidateQueries({
+        queryKey: userKeys.saves(),
       });
     },
   });

@@ -1,9 +1,9 @@
 import type { Models } from 'appwrite';
-import { useState } from 'react';
-import { useUserContext } from '~/context/AuthContext';
+import { useEffect, useState } from 'react';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
+import { useUserSaveRecordsQuery } from '~/features/user/queries/user.queries';
 import {
   useDeleteSavedPostMutation,
-  useGetCurrentUserQuery,
   useLikePostMutation,
   useSavePostMutation,
 } from '~/lib/react-query/queriesAndMutations';
@@ -18,13 +18,22 @@ export default function PostStats({ post, userId }: PostStatsProps) {
 
   const [likes, setLikes] = useState<string[]>(likesList);
   const [isSaved, setIsSaved] = useState(false);
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
+  const currentUserProfileId = currentUser?.profileId ?? '';
+  const { data: saveRecords = [] } = useUserSaveRecordsQuery(currentUserProfileId);
 
-  const { data: currentUser } = useGetCurrentUserQuery();
   const { mutateAsync: likePost } = useLikePostMutation();
   const { mutateAsync: savePost } = useSavePostMutation();
   const { mutateAsync: deleteSavePost } = useDeleteSavedPostMutation();
+  const savedPostRecord = saveRecords.find((record) => {
+    const savedPostId = typeof record.post === 'string' ? record.post : record.post?.$id;
+    return savedPostId === post.$id;
+  });
 
-  const savedPostRecord = currentUser?.save.find((record: Models.Row) => record.post === post.$id);
+  useEffect(() => {
+    setIsSaved(!!savedPostRecord);
+  }, [savedPostRecord]);
 
   const handleLikePost = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -48,15 +57,20 @@ export default function PostStats({ post, userId }: PostStatsProps) {
 
     if (savedPostRecord) {
       setIsSaved(false);
-      return deleteSavePost(savedPostRecord.$id);
+      void deleteSavePost(savedPostRecord.$id);
+      return;
     }
 
-    savePost({ userId: userId, postId: post.$id });
+    if (!currentUserProfileId) {
+      return;
+    }
+
+    void savePost({ userId: currentUserProfileId, postId: post.$id });
     setIsSaved(true);
   };
 
   const checkIsLiked = (userId: string) => {
-    return likesList.includes(userId);
+    return likes.includes(userId);
   };
 
   return (

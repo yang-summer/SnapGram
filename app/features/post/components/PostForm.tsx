@@ -7,8 +7,8 @@ import { Textarea } from '~/components/ui/textarea';
 import { PostValidation } from '~/lib/validation';
 import FileUploader from '~/components/shared/FileUploader';
 import { Button } from '~/components/ui/button';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
-import { useUserContext } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 import type { PostEditorInitialData, PostFormValues } from '../types/post.type';
 
@@ -39,7 +39,8 @@ function getErrorMessage(error: unknown): string {
 
 export default function PostForm({ action, post }: PostFormProps) {
   const navigate = useNavigate();
-  const { user } = useUserContext();
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
   const { mutateAsync: createPost, isPending: isLoadingCreate } = useCreatePostMutation();
   const { mutateAsync: updatePost, isPending: isLoadingUpdate } = useUpdatePostMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -87,8 +88,13 @@ export default function PostForm({ action, post }: PostFormProps) {
     }
 
     try {
+      if (!currentUser) {
+        setSubmitError('Unable to resolve the current user.');
+        return;
+      }
+
       const newPost = await createPost({
-        creatorId: user.id,
+        creatorId: currentUser.profileId,
         caption: values.caption,
         file: nextFile,
         location: values.location,

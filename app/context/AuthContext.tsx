@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { getCurrentUser } from '~/lib/appwrite/api';
+import { createContext, useContext } from 'react';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
+import type { CurrentUserResult } from '~/features/auth/types/auth.type';
 import type { User } from '~/lib/types';
 
 type AuthContextType = {
@@ -21,66 +21,52 @@ const INITIAL_USER = {
   bio: '',
 };
 
+const noopSetUser: React.Dispatch<React.SetStateAction<User>> = () => {};
+const noopSetIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>> = () => {};
+
+function mapCurrentUserToLegacyUser(currentUser: CurrentUserResult | undefined): User {
+  if (currentUser?.status !== 'authenticated') {
+    return INITIAL_USER;
+  }
+
+  return {
+    id: currentUser.user.profileId,
+    name: currentUser.user.name,
+    username: currentUser.user.username,
+    email: currentUser.user.email,
+    imageUrl: currentUser.user.imageUrl ?? '',
+    bio: currentUser.user.bio ?? '',
+  };
+}
+
 const INITIAL_STATE = {
   user: INITIAL_USER,
   isLoading: false,
   isAuthenticated: false,
-  setUser: () => {},
-  setIsAuthenticated: () => {},
+  setUser: noopSetUser,
+  setIsAuthenticated: noopSetIsAuthenticated,
   checkAuthUser: async () => false as boolean,
 };
 
 const AuthContext = createContext<AuthContextType>(INITIAL_STATE);
 
 export function AuthContextProvider({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<User>(INITIAL_USER);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { data, isPending, isFetching, refetch } = useCurrentUserQuery();
+  const user = mapCurrentUserToLegacyUser(data);
+  const isAuthenticated = data?.status === 'authenticated';
+  const isLoading = isPending || isFetching;
 
   const checkAuthUser = async () => {
-    setIsLoading(true);
-    try {
-      const currentAccount = await getCurrentUser();
-      console.log(currentAccount);
-      if (currentAccount) {
-        setUser({
-          id: currentAccount.$id,
-          name: currentAccount.name,
-          username: currentAccount.username,
-          email: currentAccount.email,
-          imageUrl: currentAccount.imageUrl,
-          bio: currentAccount.bio,
-        });
-        setIsAuthenticated(true);
-
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error(error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+    const result = await refetch();
+    return result.data?.status === 'authenticated';
   };
-
-  useEffect(() => {
-    const cookieFallback = localStorage.getItem('cookieFallback');
-    if (cookieFallback === '[]' || cookieFallback === null || cookieFallback === undefined) {
-      navigate('/sign-in');
-    }
-
-    checkAuthUser();
-  }, []);
 
   const value = {
     user,
-    setUser,
+    setUser: noopSetUser,
     isLoading,
     isAuthenticated,
-    setIsAuthenticated,
+    setIsAuthenticated: noopSetIsAuthenticated,
     checkAuthUser,
   };
 

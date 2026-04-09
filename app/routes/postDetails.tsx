@@ -1,14 +1,16 @@
 import { Link, useNavigate, useParams } from 'react-router';
 import PostStats from '~/features/post/components/PostStats';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { useDeletePostMutation } from '~/features/post/queries/post.mutation';
 import { useGetPostByIdQuery } from '~/features/post/queries/post.queries';
 import { Button } from '~/components/ui/button';
-import { useUserContext } from '~/context/AuthContext';
 
 export default function PostDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useUserContext();
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
+  const currentUserProfileId = currentUser?.profileId ?? '';
 
   if (!id) {
     throw new Error('PostDetails route requires a post id.');
@@ -76,14 +78,14 @@ export default function PostDetails() {
             <div className="flex justify-center items-center gap-4">
               <Link
                 to={`/update-post/${post.id}`}
-                className={user.id !== post.creator.id ? 'hidden' : ''}
+                className={currentUserProfileId !== post.creator.id ? 'hidden' : ''}
               >
                 <img src={'/assets/icons/edit.svg'} alt="edit" width={24} height={24} />
               </Link>
               <Button
                 onClick={handleDeletePost}
                 variant="ghost"
-                className={user.id !== post.creator.id ? 'hidden' : ''}
+                className={currentUserProfileId !== post.creator.id ? 'hidden' : ''}
               >
                 <img src={'/assets/icons/delete.svg'} alt="delete" width={24} height={24} />
               </Button>
@@ -102,7 +104,7 @@ export default function PostDetails() {
           </div>
 
           <div className="w-full">
-            <PostStats post={post} userId={user.id} />
+            <PostStats post={post} userId={currentUserProfileId} />
           </div>
         </div>
       </div>

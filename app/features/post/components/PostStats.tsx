@@ -1,19 +1,10 @@
-import type { Models } from 'appwrite';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  useDeleteSavedPostMutation,
-  useGetCurrentUserQuery,
-  useLikePostMutation,
-  useSavePostMutation,
-} from '~/lib/react-query/queriesAndMutations';
-
-type SaveRecord = Models.Row & {
-  post?: string | { $id: string } | null;
-};
-
-type CurrentUserWithSaves = Models.Row & {
-  save?: SaveRecord[] | null;
-};
+  useCreateViewerPostSaveMutation,
+  useDeleteViewerPostSaveMutation,
+  useUpdatePostLikesMutation,
+} from '../queries/post.engagement.mutations';
+import { useViewerSavedPostsQuery } from '../queries/post.engagement.queries';
 
 type PostStatsProps = {
   post: {
@@ -26,50 +17,92 @@ type PostStatsProps = {
 export default function PostStats({ post, userId }: PostStatsProps) {
   const [likes, setLikes] = useState<string[]>(post.likes);
   const [isSaved, setIsSaved] = useState(false);
+  const viewerId = userId;
+  const { data: viewerSavedPosts } = useViewerSavedPostsQuery(viewerId);
 
-  const { data: currentUser } = useGetCurrentUserQuery();
-  const { mutateAsync: likePost } = useLikePostMutation();
-  const { mutateAsync: savePost } = useSavePostMutation();
-  const { mutateAsync: deleteSavePost } = useDeleteSavedPostMutation();
+  const { mutateAsync: updatePostLikes } = useUpdatePostLikesMutation();
+  const { mutateAsync: createViewerPostSave } = useCreateViewerPostSaveMutation();
+  const { mutateAsync: deleteViewerPostSave } = useDeleteViewerPostSaveMutation();
 
-  const saveRecords = (currentUser as CurrentUserWithSaves | undefined)?.save ?? [];
+  const savedPostRecord = viewerSavedPosts?.records.find((record) => record.postId === post.id);
 
-  const savedPostRecord = saveRecords.find((record) => {
-    const savedPostId = typeof record.post === 'string' ? record.post : record.post?.$id;
-    return savedPostId === post.id;
-  });
+  useEffect(() => {
+    setLikes(post.likes);
+  }, [post.likes]);
 
-  const handleLikePost = (e: React.MouseEvent) => {
+  useEffect(() => {
+    setIsSaved(viewerSavedPosts?.postIds.includes(post.id) ?? false);
+  }, [post.id, viewerSavedPosts]);
+
+  async function handleLikePost(e: React.MouseEvent) {
     e.stopPropagation();
 
-    let newLikes = [...likes];
+    if (!viewerId) {
+      return;
+    }
 
-    const hasLiked = newLikes.includes(userId);
+    const previousLikes = likes;
+    let nextLikes = [...previousLikes];
+
+    const hasLiked = nextLikes.includes(viewerId);
 
     if (hasLiked) {
-      newLikes = newLikes.filter((id) => id !== userId);
+      nextLikes = nextLikes.filter((id) => id !== viewerId);
     } else {
-      newLikes.push(userId);
+      nextLikes.push(viewerId);
     }
 
-    setLikes(newLikes);
-    likePost({ postId: post.id, likesArray: newLikes });
-  };
+    setLikes(nextLikes);
 
-  const handleSavePost = (e: React.MouseEvent) => {
+    try {
+      await updatePostLikes({
+        postId: post.id,
+        likes: nextLikes,
+      });
+    } catch {
+      setLikes(previousLikes);
+    }
+  }
+
+  async function handleSavePost(e: React.MouseEvent) {
     e.stopPropagation();
 
-    if (savedPostRecord) {
-      setIsSaved(false);
-      return deleteSavePost(savedPostRecord.$id);
+    if (!viewerId) {
+      return;
     }
 
-    savePost({ userId: userId, postId: post.id });
+    if (savedPostRecord) {
+      const previousIsSaved = isSaved;
+      setIsSaved(false);
+
+      try {
+        await deleteViewerPostSave({
+          saveRecordId: savedPostRecord.saveRecordId,
+          viewerId,
+          postId: post.id,
+        });
+      } catch {
+        setIsSaved(previousIsSaved);
+      }
+
+      return;
+    }
+
+    const previousIsSaved = isSaved;
     setIsSaved(true);
-  };
+
+    try {
+      await createViewerPostSave({
+        viewerId,
+        postId: post.id,
+      });
+    } catch {
+      setIsSaved(previousIsSaved);
+    }
+  }
 
   const checkIsLiked = (userId: string) => {
-    return post.likes.includes(userId);
+    return likes.includes(userId);
   };
 
   return (
