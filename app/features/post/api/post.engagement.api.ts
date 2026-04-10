@@ -8,7 +8,7 @@ import type {
   UpdatePostLikesInput,
 } from '../types/post.type';
 
-const VIEWER_SAVE_RECORD_SELECT = ['$id', 'post.$id', 'user'];
+const VIEWER_SAVE_RECORD_SELECT = ['$id', 'post.$id'];
 const VIEWER_SAVE_RECORD_LIMIT = 100;
 
 export async function updatePostLikesRow(
