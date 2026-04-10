@@ -1,9 +1,15 @@
-import { Link, useNavigate, useParams } from 'react-router';
+import PageEmptyState from '~/components/feedback/page-empty-state';
+import PageErrorState from '~/components/feedback/page-error-state';
+import PageLoadingState from '~/components/feedback/page-loading-state';
+import RouteErrorState from '~/components/feedback/route-error-state';
+import { Button } from '~/components/ui/button';
 import PostStats from '~/features/post/components/PostStats';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { useDeletePostMutation } from '~/features/post/queries/post.mutation';
 import { useGetPostByIdQuery } from '~/features/post/queries/post.queries';
-import { Button } from '~/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import type { Route } from './+types/postDetails';
 
 export default function PostDetails() {
   const navigate = useNavigate();
@@ -17,40 +23,53 @@ export default function PostDetails() {
   }
 
   const postId = id;
-  const { data: post, isPending, isError, error, refetch } = useGetPostByIdQuery(postId);
+  const { data: post, isPending, isError, error, refetch, isFetching } = useGetPostByIdQuery(postId);
   const { mutateAsync: deletePost } = useDeletePostMutation();
 
   async function handleDeletePost() {
-    const result = await deletePost(postId);
+    try {
+      const result = await deletePost(postId);
 
-    if (result.imageCleanupFailed) {
-      console.warn('Post row deleted, but image cleanup failed.');
+      if (result.imageCleanupFailed) {
+        console.warn('Post row deleted, but image cleanup failed.');
+        toast.warning('Post deleted, but image cleanup could not be completed.');
+      } else {
+        toast.success('Post deleted successfully.');
+      }
+
+      navigate(-1);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete post. Please try again.');
     }
-
-    navigate(-1);
   }
 
   let content: React.ReactNode;
 
   if (isPending) {
-    content = <div>Loading post...</div>;
+    content = (
+      <PageLoadingState
+        title="Loading post"
+        description="Please wait while we load the post details."
+        className="px-0 py-4"
+      />
+    );
   } else if (isError) {
     content = (
-      <div className="w-full max-w-5xl rounded-[30px] border p-8 text-center">
-        <p>Failed to load post.</p>
-        <p className="mt-2 text-sm opacity-70">
-          {error instanceof Error ? error.message : 'Unknown error'}
-        </p>
-        <Button onClick={() => refetch()} variant="outline" className="mt-4">
-          Retry
-        </Button>
-      </div>
+      <PageErrorState
+        title="Failed to load post"
+        description={error instanceof Error ? error.message : 'Please try again in a moment.'}
+        onRetry={() => void refetch()}
+        isRetrying={isFetching}
+        className="px-0 py-4"
+      />
     );
   } else if (post === null) {
     content = (
-      <div className="w-full max-w-5xl rounded-[30px] border p-8 text-center">
-        <p>Post not found.</p>
-      </div>
+      <PageEmptyState
+        title="Post not found"
+        description="This post may have been removed or is no longer available."
+        className="px-0 py-4"
+      />
     );
   } else {
     content = (
@@ -112,8 +131,16 @@ export default function PostDetails() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 overflow-scroll py-10 px-5 md:p-14 ">
+    <div className="flex flex-col items-center gap-10 overflow-scroll px-5 py-10 md:p-14">
       {content}
+    </div>
+  );
+}
+
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  return (
+    <div className="flex flex-col items-center gap-10 overflow-scroll px-5 py-10 md:p-14">
+      <RouteErrorState error={error} className="px-0 py-4" />
     </div>
   );
 }

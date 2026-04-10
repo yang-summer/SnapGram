@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import * as z from 'zod';
+import InlineErrorAlert from '~/components/feedback/inline-error-alert';
 import { Button } from '~/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
@@ -72,9 +73,11 @@ export default function SignupForm() {
       </div>
       <FieldGroup className="flex flex-col items-center gap-5">
         {submitError ? (
-          <div className="w-full max-w-xs rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            {submitError}
-          </div>
+          <InlineErrorAlert
+            title="Sign up failed"
+            message={submitError}
+            className="w-full max-w-xs"
+          />
         ) : null}
         <Controller
           name="name"

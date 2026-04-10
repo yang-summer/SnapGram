@@ -1,16 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
+import { toast } from 'sonner';
+import InlineErrorAlert from '~/components/feedback/inline-error-alert';
+import FileUploader from '~/components/shared/FileUploader';
+import { Button } from '~/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
-import { PostValidation } from '~/lib/validation';
-import FileUploader from '~/components/shared/FileUploader';
-import { Button } from '~/components/ui/button';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
-import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
-import { useNavigate } from 'react-router';
+import { PostValidation } from '~/lib/validation';
 import type { PostEditorInitialData, PostFormValues } from '../types/post.type';
+import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
 
 type PostFormProps = {
   action: 'Create' | 'Update';
@@ -74,6 +76,7 @@ export default function PostForm({ action, post }: PostFormProps) {
           currentImageUrl: post.imageUrl,
         });
 
+        toast.success('Post updated successfully.');
         navigate(`/posts/${updatedPost.id}`);
         return;
       } catch (error) {
@@ -101,6 +104,7 @@ export default function PostForm({ action, post }: PostFormProps) {
         tags: normalizedTags,
       });
 
+      toast.success('Post published successfully.');
       navigate(`/posts/${newPost.id}`);
     } catch (error) {
       setSubmitError(getErrorMessage(error));
@@ -119,9 +123,10 @@ export default function PostForm({ action, post }: PostFormProps) {
     <form id="form-createPost" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-5xl">
       <FieldGroup className="flex flex-col w-full max-w-5xl gap-9">
         {submitError ? (
-          <div className="w-full rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            {submitError}
-          </div>
+          <InlineErrorAlert
+            title={isEditMode ? 'Unable to update post' : 'Unable to create post'}
+            message={submitError}
+          />
         ) : null}
         <Controller
           name="caption"

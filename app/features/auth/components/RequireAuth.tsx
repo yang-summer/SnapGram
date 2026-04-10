@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { Loader2Icon, ShieldAlertIcon, UserRoundSearchIcon } from 'lucide-react';
 import { Navigate, useLocation } from 'react-router';
+import FullPageState from '~/components/feedback/full-page-state';
+import InlineErrorAlert from '~/components/feedback/inline-error-alert';
 import { Button } from '~/components/ui/button';
 import { useRetryInitializeProfileMutation } from '../queries/auth.mutations';
 import { useCurrentUserQuery } from '../queries/auth.queries';
@@ -9,7 +12,7 @@ type RequireAuthProps = {
 };
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Failed to initialize your profile.';
+  return error instanceof Error ? error.message : 'Failed to verify your sign-in status.';
 }
 
 function ProfileRecoveryPage() {
@@ -31,46 +34,18 @@ function ProfileRecoveryPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-10">
-      <div className="w-full max-w-lg rounded-2xl border p-8 text-center">
-        <h1 className="text-2xl font-semibold">个人资料初始化未完成</h1>
-        <p className="mt-3 text-sm opacity-80">{recoveryMessage}</p>
-        {submitError ? (
-          <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            {submitError}
-          </div>
-        ) : null}
-        <div className="mt-6 flex justify-center">
-          <Button onClick={handleRetry} disabled={isPending}>
-            {isPending ? '正在初始化资料...' : '重试初始化资料'}
-          </Button>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-function AuthErrorFallback({
-  message,
-  onRetry,
-  isRetrying,
-}: {
-  message: string;
-  onRetry: () => void;
-  isRetrying: boolean;
-}) {
-  return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-10">
-      <div className="w-full max-w-lg rounded-2xl border p-8 text-center">
-        <h1 className="text-2xl font-semibold">认证状态加载失败</h1>
-        <p className="mt-3 text-sm opacity-80">{message}</p>
-        <div className="mt-6 flex justify-center">
-          <Button variant="outline" onClick={onRetry} disabled={isRetrying}>
-            {isRetrying ? '正在重试...' : '重试'}
-          </Button>
-        </div>
-      </div>
-    </main>
+    <FullPageState
+      title="个人资料初始化未完成"
+      description={recoveryMessage}
+      icon={<UserRoundSearchIcon className="size-5" />}
+      actions={
+        <Button onClick={handleRetry} disabled={isPending}>
+          {isPending ? '正在初始化资料...' : '重试初始化资料'}
+        </Button>
+      }
+    >
+      {submitError ? <InlineErrorAlert title="初始化失败" message={submitError} /> : null}
+    </FullPageState>
   );
 }
 
@@ -78,15 +53,27 @@ export default function RequireAuth({ children }: RequireAuthProps) {
   const { data, isPending, isError, error, refetch, isFetching } = useCurrentUserQuery();
 
   if (isPending && !data) {
-    return <main className="p-6">正在验证登录状态...</main>;
+    return (
+      <FullPageState
+        title="正在验证登录状态"
+        description="请稍候，我们正在确认你的会话信息。"
+        icon={<Loader2Icon className="size-5 animate-spin" />}
+      />
+    );
   }
 
   if (isError && !data) {
     return (
-      <AuthErrorFallback
-        message={getErrorMessage(error)}
-        onRetry={() => void refetch()}
-        isRetrying={isFetching}
+      <FullPageState
+        title="认证状态加载失败"
+        description={getErrorMessage(error)}
+        icon={<ShieldAlertIcon className="size-5" />}
+        iconWrapperClassName="bg-destructive/10 text-destructive"
+        actions={
+          <Button variant="outline" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? '正在重试...' : '重试'}
+          </Button>
+        }
       />
     );
   }

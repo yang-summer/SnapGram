@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { postKeys } from '~/features/post/queries/post.keys';
 import {
   retryInitializeCurrentUserProfile,
@@ -69,6 +70,11 @@ export function useSignOutMutation() {
           exact: true,
         });
       }
+
+      toast.success('You have been signed out.');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to sign out. Please try again.');
     },
   });
 }
