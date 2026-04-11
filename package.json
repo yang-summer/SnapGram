@@ -5,6 +5,9 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
+    "migrate:schema-v1:dry-run": "node scripts/migrations/backfill-schema-v1.mjs --dry-run",
+    "migrate:schema-v1:run": "node scripts/migrations/backfill-schema-v1.mjs --run",
+    "migrate:schema-v1:verify": "node scripts/migrations/backfill-schema-v1.mjs --verify",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
   },
@@ -45,6 +48,7 @@
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
+    "node-appwrite": "^23.1.0",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",

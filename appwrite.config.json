@@ -60,7 +60,7 @@
                     "type": "varchar",
                     "required": false,
                     "array": true,
-                    "size": 2200,
+                    "size": 512,
                     "default": null,
                     "encrypt": false
                 },
@@ -77,7 +77,7 @@
                     "type": "varchar",
                     "required": true,
                     "array": false,
-                    "size": 2200,
+                    "size": 512,
                     "default": null,
                     "encrypt": false
                 },
@@ -86,7 +86,7 @@
                     "type": "varchar",
                     "required": false,
                     "array": false,
-                    "size": 2200,
+                    "size": 256,
                     "default": null,
                     "encrypt": false
                 },
@@ -101,6 +101,53 @@
                     "twoWayKey": "post",
                     "onDelete": "setNull",
                     "side": "child"
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "published",
+                    "format": "enum",
+                    "elements": [
+                        "published",
+                        "draft"
+                    ]
+                },
+                {
+                    "key": "searchText",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "likeCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "saveCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "commentCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
                 }
             ],
             "indexes": [
@@ -113,6 +160,28 @@
                     ],
                     "orders": [
                         "desc"
+                    ]
+                },
+                {
+                    "key": "posts_status_idx",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "posts_search_text_ft",
+                    "type": "fulltext",
+                    "status": "available",
+                    "columns": [
+                        "searchText"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
@@ -159,7 +228,7 @@
                     "type": "varchar",
                     "required": false,
                     "array": false,
-                    "size": 2200,
+                    "size": 64,
                     "default": null,
                     "encrypt": false
                 },
@@ -168,7 +237,7 @@
                     "type": "varchar",
                     "required": false,
                     "array": false,
-                    "size": 2200,
+                    "size": 64,
                     "default": null,
                     "encrypt": false
                 },
@@ -177,7 +246,7 @@
                     "type": "varchar",
                     "required": false,
                     "array": false,
-                    "size": 2200,
+                    "size": 64,
                     "default": null,
                     "encrypt": false
                 },
@@ -186,7 +255,7 @@
                     "type": "varchar",
                     "required": true,
                     "array": false,
-                    "size": 2200,
+                    "size": 512,
                     "default": null,
                     "encrypt": false
                 },
@@ -195,7 +264,7 @@
                     "type": "varchar",
                     "required": false,
                     "array": false,
-                    "size": 2200,
+                    "size": 512,
                     "default": null,
                     "encrypt": false
                 },
@@ -229,7 +298,30 @@
                     "side": "child"
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "users_username_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "username"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "users_account_id_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "accountId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         },
         {
             "$id": "saves",
@@ -267,9 +359,107 @@
                     "twoWayKey": "save",
                     "onDelete": "setNull",
                     "side": "parent"
+                },
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "postId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "saves_user_idx",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "saves_post_idx",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "postId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "likes",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "69b7a69e000a10b87c40",
+            "name": "Likes",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "postId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "likes_user_idx",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "likes_post_idx",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "postId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         }
     ],
     "buckets": [
