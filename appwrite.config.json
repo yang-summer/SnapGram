@@ -33,18 +33,6 @@
                     "side": "parent"
                 },
                 {
-                    "key": "likes",
-                    "type": "relationship",
-                    "required": false,
-                    "array": false,
-                    "relatedTable": "users",
-                    "relationType": "manyToMany",
-                    "twoWay": true,
-                    "twoWayKey": "liked",
-                    "onDelete": "setNull",
-                    "side": "parent"
-                },
-                {
                     "key": "caption",
                     "type": "varchar",
                     "required": false,
@@ -87,18 +75,6 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
-                },
-                {
-                    "key": "save",
-                    "type": "relationship",
-                    "required": false,
-                    "array": false,
-                    "relatedTable": "saves",
-                    "relationType": "manyToOne",
-                    "twoWay": true,
-                    "twoWayKey": "post",
-                    "onDelete": "setNull",
-                    "side": "child"
                 },
                 {
                     "key": "status",
@@ -208,18 +184,6 @@
                     "side": "child"
                 },
                 {
-                    "key": "liked",
-                    "type": "relationship",
-                    "required": false,
-                    "array": false,
-                    "relatedTable": "posts",
-                    "relationType": "manyToMany",
-                    "twoWay": true,
-                    "twoWayKey": "likes",
-                    "onDelete": "setNull",
-                    "side": "child"
-                },
-                {
                     "key": "name",
                     "type": "varchar",
                     "required": false,
@@ -280,18 +244,6 @@
                     "array": false,
                     "default": null,
                     "format": "url"
-                },
-                {
-                    "key": "save",
-                    "type": "relationship",
-                    "required": false,
-                    "array": false,
-                    "relatedTable": "saves",
-                    "relationType": "manyToOne",
-                    "twoWay": true,
-                    "twoWayKey": "user",
-                    "onDelete": "setNull",
-                    "side": "child"
                 }
             ],
             "indexes": [
@@ -329,30 +281,6 @@
             "enabled": true,
             "rowSecurity": true,
             "columns": [
-                {
-                    "key": "user",
-                    "type": "relationship",
-                    "required": false,
-                    "array": false,
-                    "relatedTable": "users",
-                    "relationType": "manyToOne",
-                    "twoWay": true,
-                    "twoWayKey": "save",
-                    "onDelete": "setNull",
-                    "side": "parent"
-                },
-                {
-                    "key": "post",
-                    "type": "relationship",
-                    "required": false,
-                    "array": false,
-                    "relatedTable": "posts",
-                    "relationType": "manyToOne",
-                    "twoWay": true,
-                    "twoWayKey": "save",
-                    "onDelete": "setNull",
-                    "side": "parent"
-                },
                 {
                     "key": "userId",
                     "type": "varchar",

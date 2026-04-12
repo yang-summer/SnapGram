@@ -6,15 +6,9 @@ export type RawPostCreator = {
   imageUrl?: string | null;
 };
 
-export type RawViewerSavePostReference = {
-  $id: string;
-};
-
 export type RawViewerSaveRecord = Models.Row & {
   postId?: string | null;
   userId?: string | null;
-  post?: string | RawViewerSavePostReference | null;
-  user?: string | null;
 };
 
 export type RawViewerLikeRecord = Models.Row & {

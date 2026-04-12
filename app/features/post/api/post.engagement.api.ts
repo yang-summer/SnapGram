@@ -15,7 +15,7 @@ import type {
 
 const VIEWER_LIKE_RECORD_SELECT = ['$id', 'postId'];
 const VIEWER_LIKE_RECORD_LIMIT = 100;
-const VIEWER_SAVE_RECORD_SELECT = ['$id', 'postId', 'userId', 'post.$id'];
+const VIEWER_SAVE_RECORD_SELECT = ['$id', 'postId', 'userId'];
 const VIEWER_SAVE_RECORD_LIMIT = 100;
 const POST_LIKE_COUNT_COLUMN = 'likeCount';
 const POST_LIKE_COUNT_STEP = 1;
@@ -62,8 +62,6 @@ function createSyntheticViewerSaveRecord(
     $id: saveRecordId,
     postId: input.postId,
     userId: input.viewerProfileId,
-    post: input.postId,
-    user: input.viewerProfileId,
   } as RawViewerSaveRecord;
 }
 
@@ -200,8 +198,6 @@ export async function createViewerSaveRecord(
       tableId: appwriteConfig.saveTableId,
       rowId: saveRecordId,
       data: {
-        user: input.viewerProfileId,
-        post: input.postId,
         userId: input.viewerProfileId,
         postId: input.postId,
       },

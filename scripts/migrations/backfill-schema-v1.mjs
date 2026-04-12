@@ -58,6 +58,7 @@ Environment:
     APPWRITE_LIKES_TABLE_ID   default: likes
 
 Notes:
+  - Pre-migration only: run this before removing legacy relationship columns such as posts.likes, users.liked, saves.user, and saves.post.
   - This script is intended for schema v1 migration before comments and new like writes go live.
   - Verify mode exits with code 1 when mismatches are found.
 `);

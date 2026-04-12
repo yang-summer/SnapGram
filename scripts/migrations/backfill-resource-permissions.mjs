@@ -56,6 +56,7 @@ Environment:
     APPWRITE_LIKES_TABLE_ID   default: likes
 
 Notes:
+  - Pre-migration only: run this before removing legacy relationship columns that historical rows may still depend on during backfill.
   - This script backfills row/file-level permissions for historical data only.
   - It assumes posts.creator, likes.userId, and saves.userId refer to profile row IDs.
   - Verify mode exits with code 1 when permissions are still out of sync or owner mapping is missing.

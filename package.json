@@ -5,15 +5,6 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
-    "migrate:permissions:dry-run": "node scripts/migrations/backfill-resource-permissions.mjs --dry-run",
-    "migrate:permissions:dry-run:skip-files": "node scripts/migrations/backfill-resource-permissions.mjs --dry-run --skip-files",
-    "migrate:permissions:run": "node scripts/migrations/backfill-resource-permissions.mjs --run",
-    "migrate:permissions:run:skip-files": "node scripts/migrations/backfill-resource-permissions.mjs --run --skip-files",
-    "migrate:permissions:verify": "node scripts/migrations/backfill-resource-permissions.mjs --verify",
-    "migrate:permissions:verify:skip-files": "node scripts/migrations/backfill-resource-permissions.mjs --verify --skip-files",
-    "migrate:schema-v1:dry-run": "node scripts/migrations/backfill-schema-v1.mjs --dry-run",
-    "migrate:schema-v1:run": "node scripts/migrations/backfill-schema-v1.mjs --run",
-    "migrate:schema-v1:verify": "node scripts/migrations/backfill-schema-v1.mjs --verify",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
   },

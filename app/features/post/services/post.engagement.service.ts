@@ -66,20 +66,9 @@ function mapViewerLikeRecords(records: RawViewerLikeRecord[]): ViewerLikedPostsR
   };
 }
 
-function resolveSavedPostId(record: RawViewerSaveRecord): string | null {
-  if (typeof record.postId === 'string' && record.postId.trim().length > 0) {
-    return record.postId;
-  }
-
-  if (typeof record.post === 'string') {
-    return record.post;
-  }
-
-  return record.post?.$id ?? null;
-}
-
 function mapViewerSaveRecord(record: RawViewerSaveRecord): ViewerSavedPostRecord | null {
-  const postId = resolveSavedPostId(record);
+  const postId =
+    typeof record.postId === 'string' && record.postId.trim().length > 0 ? record.postId : null;
 
   if (!postId) {
     return null;
@@ -191,7 +180,10 @@ export async function savePostForViewer(
 
     return {
       saveRecordId: createdRecord.$id,
-      postId: resolveSavedPostId(createdRecord) ?? input.postId,
+      postId:
+        typeof createdRecord.postId === 'string' && createdRecord.postId.trim().length > 0
+          ? createdRecord.postId
+          : input.postId,
       viewerProfileId: input.viewerProfileId,
     };
   } catch (error) {
