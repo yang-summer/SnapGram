@@ -7,13 +7,13 @@ export type RawPostCreator = {
 };
 
 export type RawViewerSaveRecord = Models.Row & {
-  postId?: string | null;
-  userId?: string | null;
+  postId: string;
+  userId: string;
 };
 
 export type RawViewerLikeRecord = Models.Row & {
-  postId?: string | null;
-  userId?: string | null;
+  postId: string;
+  userId: string;
 };
 
 export type RawPostRow = Models.Row & {
@@ -203,7 +203,6 @@ export type CreateViewerPostLikeInput = {
 };
 
 export type DeleteViewerPostLikeInput = {
-  likeRecordId: string;
   viewerProfileId: string;
   postId: string;
 };
@@ -213,10 +212,15 @@ export type ViewerLikedPostRecord = {
   postId: string;
 };
 
+export type ViewerLikedPostResult = ViewerLikedPostRecord | null;
+
 export type ViewerLikedPostsResult = {
   records: ViewerLikedPostRecord[];
   postIds: string[];
+  recordByPostId: Record<string, ViewerLikedPostRecord>;
 };
+
+export type ViewerLikedPostsByPostIdsResult = ViewerLikedPostsResult;
 
 export type ViewerPostLikeMutationResult = {
   likeRecordId: string;
@@ -225,7 +229,8 @@ export type ViewerPostLikeMutationResult = {
 };
 
 export type DeleteViewerPostLikeResult = {
-  likeRecordId: string;
+  likeRecordId: string | null;
+  deleted: boolean;
 };
 
 export type CreateViewerPostSaveInput = {
@@ -235,9 +240,8 @@ export type CreateViewerPostSaveInput = {
 };
 
 export type DeleteViewerPostSaveInput = {
-  saveRecordIds: string[];
   viewerProfileId: string;
-  postId?: string;
+  postId: string;
 };
 
 export type ViewerSavedPostRecord = {
@@ -245,11 +249,16 @@ export type ViewerSavedPostRecord = {
   postId: string;
 };
 
+export type ViewerSavedPostResult = ViewerSavedPostRecord | null;
+
 export type ViewerSavedPostsResult = {
   records: ViewerSavedPostRecord[];
   postIds: string[];
+  recordByPostId: Record<string, ViewerSavedPostRecord>;
   recordIdsByPostId: Record<string, string[]>;
 };
+
+export type ViewerSavedPostsByPostIdsResult = ViewerSavedPostsResult;
 
 export type ViewerPostSaveMutationResult = {
   saveRecordId: string;
@@ -258,5 +267,6 @@ export type ViewerPostSaveMutationResult = {
 };
 
 export type DeleteViewerPostSaveResult = {
-  saveRecordIds: string[];
+  saveRecordId: string | null;
+  deleted: boolean;
 };

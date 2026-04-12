@@ -3,8 +3,12 @@ import {
   createViewerSaveRecord,
   deleteViewerLikeRecord,
   deleteViewerSaveRecord,
-  listViewerLikeRecords,
-  listViewerSaveRecords,
+  findViewerLikeRecord,
+  findViewerSaveRecord,
+  listAllViewerLikeRecords,
+  listAllViewerSaveRecords,
+  listViewerLikeRecordsByPostIds,
+  listViewerSaveRecordsByPostIds,
 } from '../api/post.engagement.api';
 import type {
   CreateViewerPostLikeInput,
@@ -15,19 +19,19 @@ import type {
   DeleteViewerPostSaveResult,
   RawViewerLikeRecord,
   RawViewerSaveRecord,
+  ViewerLikedPostResult,
+  ViewerLikedPostsByPostIdsResult,
   ViewerLikedPostRecord,
   ViewerLikedPostsResult,
   ViewerPostLikeMutationResult,
   ViewerPostSaveMutationResult,
+  ViewerSavedPostResult,
+  ViewerSavedPostsByPostIdsResult,
   ViewerSavedPostRecord,
   ViewerSavedPostsResult,
 } from '../types/post.type';
 
-function mapViewerLikeRecord(record: RawViewerLikeRecord): ViewerLikedPostRecord | null {
-  if (!record.postId) {
-    return null;
-  }
-
+function mapViewerLikeRecord(record: RawViewerLikeRecord): ViewerLikedPostRecord {
   return {
     likeRecordId: record.$id,
     postId: record.postId,
@@ -38,6 +42,7 @@ function createEmptyViewerLikedPostsResult(): ViewerLikedPostsResult {
   return {
     records: [],
     postIds: [],
+    recordByPostId: {},
   };
 }
 
@@ -46,37 +51,29 @@ function mapViewerLikeRecords(records: RawViewerLikeRecord[]): ViewerLikedPostsR
     return createEmptyViewerLikedPostsResult();
   }
 
-  const mappedRecords: ViewerLikedPostRecord[] = [];
-  const postIds = new Set<string>();
+  const recordByPostId: Record<string, ViewerLikedPostRecord> = {};
 
   for (let index = 0; index < records.length; index += 1) {
     const mappedRecord = mapViewerLikeRecord(records[index]);
 
-    if (!mappedRecord) {
-      continue;
+    if (!recordByPostId[mappedRecord.postId]) {
+      recordByPostId[mappedRecord.postId] = mappedRecord;
     }
-
-    mappedRecords.push(mappedRecord);
-    postIds.add(mappedRecord.postId);
   }
+
+  const mappedRecords = Object.values(recordByPostId);
 
   return {
     records: mappedRecords,
-    postIds: Array.from(postIds),
+    postIds: mappedRecords.map((record) => record.postId),
+    recordByPostId,
   };
 }
 
-function mapViewerSaveRecord(record: RawViewerSaveRecord): ViewerSavedPostRecord | null {
-  const postId =
-    typeof record.postId === 'string' && record.postId.trim().length > 0 ? record.postId : null;
-
-  if (!postId) {
-    return null;
-  }
-
+function mapViewerSaveRecord(record: RawViewerSaveRecord): ViewerSavedPostRecord {
   return {
     saveRecordId: record.$id,
-    postId,
+    postId: record.postId,
   };
 }
 
@@ -84,6 +81,7 @@ function createEmptyViewerSavedPostsResult(): ViewerSavedPostsResult {
   return {
     records: [],
     postIds: [],
+    recordByPostId: {},
     recordIdsByPostId: {},
   };
 }
@@ -93,33 +91,44 @@ function mapViewerSaveRecords(records: RawViewerSaveRecord[]): ViewerSavedPostsR
     return createEmptyViewerSavedPostsResult();
   }
 
-  const mappedRecords: ViewerSavedPostRecord[] = [];
-  const postIds = new Set<string>();
-  const recordIdsByPostId: Record<string, string[]> = {};
+  const recordByPostId: Record<string, ViewerSavedPostRecord> = {};
 
   for (let index = 0; index < records.length; index += 1) {
     const mappedRecord = mapViewerSaveRecord(records[index]);
 
-    if (!mappedRecord) {
-      continue;
-    }
-
-    mappedRecords.push(mappedRecord);
-    postIds.add(mappedRecord.postId);
-
-    const existingRecordIds = recordIdsByPostId[mappedRecord.postId];
-    if (existingRecordIds) {
-      existingRecordIds.push(mappedRecord.saveRecordId);
-    } else {
-      recordIdsByPostId[mappedRecord.postId] = [mappedRecord.saveRecordId];
+    if (!recordByPostId[mappedRecord.postId]) {
+      recordByPostId[mappedRecord.postId] = mappedRecord;
     }
   }
 
+  const mappedRecords = Object.values(recordByPostId);
+  const recordIdsByPostId = Object.fromEntries(
+    mappedRecords.map((record) => [record.postId, [record.saveRecordId]]),
+  );
+
   return {
     records: mappedRecords,
-    postIds: Array.from(postIds),
+    postIds: mappedRecords.map((record) => record.postId),
+    recordByPostId,
     recordIdsByPostId,
   };
+}
+
+export async function getViewerLikedPost(
+  viewerProfileId: string,
+  postId: string,
+): Promise<ViewerLikedPostResult> {
+  if (!viewerProfileId || !postId) {
+    return null;
+  }
+
+  try {
+    const record = await findViewerLikeRecord(viewerProfileId, postId);
+    return record ? mapViewerLikeRecord(record) : null;
+  } catch (error) {
+    console.error('[PostEngagementService.getViewerLikedPost] Error:', error);
+    throw error;
+  }
 }
 
 export async function getViewerLikedPosts(viewerProfileId: string): Promise<ViewerLikedPostsResult> {
@@ -128,10 +137,44 @@ export async function getViewerLikedPosts(viewerProfileId: string): Promise<View
   }
 
   try {
-    const records = await listViewerLikeRecords(viewerProfileId);
+    const records = await listAllViewerLikeRecords(viewerProfileId);
     return mapViewerLikeRecords(records);
   } catch (error) {
     console.error('[PostEngagementService.getViewerLikedPosts] Error:', error);
+    throw error;
+  }
+}
+
+export async function getViewerLikedPostsByPostIds(
+  viewerProfileId: string,
+  postIds: string[],
+): Promise<ViewerLikedPostsByPostIdsResult> {
+  if (!viewerProfileId || postIds.length === 0) {
+    return createEmptyViewerLikedPostsResult();
+  }
+
+  try {
+    const records = await listViewerLikeRecordsByPostIds(viewerProfileId, postIds);
+    return mapViewerLikeRecords(records);
+  } catch (error) {
+    console.error('[PostEngagementService.getViewerLikedPostsByPostIds] Error:', error);
+    throw error;
+  }
+}
+
+export async function getViewerSavedPost(
+  viewerProfileId: string,
+  postId: string,
+): Promise<ViewerSavedPostResult> {
+  if (!viewerProfileId || !postId) {
+    return null;
+  }
+
+  try {
+    const record = await findViewerSaveRecord(viewerProfileId, postId);
+    return record ? mapViewerSaveRecord(record) : null;
+  } catch (error) {
+    console.error('[PostEngagementService.getViewerSavedPost] Error:', error);
     throw error;
   }
 }
@@ -142,10 +185,27 @@ export async function getViewerSavedPosts(viewerProfileId: string): Promise<View
   }
 
   try {
-    const records = await listViewerSaveRecords(viewerProfileId);
+    const records = await listAllViewerSaveRecords(viewerProfileId);
     return mapViewerSaveRecords(records);
   } catch (error) {
     console.error('[PostEngagementService.getViewerSavedPosts] Error:', error);
+    throw error;
+  }
+}
+
+export async function getViewerSavedPostsByPostIds(
+  viewerProfileId: string,
+  postIds: string[],
+): Promise<ViewerSavedPostsByPostIdsResult> {
+  if (!viewerProfileId || postIds.length === 0) {
+    return createEmptyViewerSavedPostsResult();
+  }
+
+  try {
+    const records = await listViewerSaveRecordsByPostIds(viewerProfileId, postIds);
+    return mapViewerSaveRecords(records);
+  } catch (error) {
+    console.error('[PostEngagementService.getViewerSavedPostsByPostIds] Error:', error);
     throw error;
   }
 }
@@ -180,10 +240,7 @@ export async function savePostForViewer(
 
     return {
       saveRecordId: createdRecord.$id,
-      postId:
-        typeof createdRecord.postId === 'string' && createdRecord.postId.trim().length > 0
-          ? createdRecord.postId
-          : input.postId,
+      postId: createdRecord.postId,
       viewerProfileId: input.viewerProfileId,
     };
   } catch (error) {
