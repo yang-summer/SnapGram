@@ -1,38 +1,51 @@
 import { useEffect, useState } from 'react';
 import {
+  useCreateViewerPostLikeMutation,
   useCreateViewerPostSaveMutation,
+  useDeleteViewerPostLikeMutation,
   useDeleteViewerPostSaveMutation,
-  useUpdatePostLikesMutation,
 } from '../queries/post.engagement.mutations';
-import { useViewerSavedPostsQuery } from '../queries/post.engagement.queries';
+import { useViewerLikedPostsQuery, useViewerSavedPostsQuery } from '../queries/post.engagement.queries';
 
 type PostStatsProps = {
   post: {
     id: string;
-    likes: string[];
+    likeCount: number;
+    saveCount: number;
   };
   userId: string;
 };
 
 export default function PostStats({ post, userId }: PostStatsProps) {
-  const [likes, setLikes] = useState<string[]>(post.likes);
+  const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [saveCount, setSaveCount] = useState(post.saveCount);
+  const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const viewerId = userId;
+  const { data: viewerLikedPosts } = useViewerLikedPostsQuery(viewerId);
   const { data: viewerSavedPosts } = useViewerSavedPostsQuery(viewerId);
 
-  const { mutateAsync: updatePostLikes } = useUpdatePostLikesMutation();
+  const { mutateAsync: createViewerPostLike } = useCreateViewerPostLikeMutation();
+  const { mutateAsync: deleteViewerPostLike } = useDeleteViewerPostLikeMutation();
   const { mutateAsync: createViewerPostSave } = useCreateViewerPostSaveMutation();
   const { mutateAsync: deleteViewerPostSave } = useDeleteViewerPostSaveMutation();
 
-  const savedPostRecord = viewerSavedPosts?.records.find((record) => record.postId === post.id);
+  const likedPostRecord = viewerLikedPosts?.records.find((record) => record.postId === post.id);
+  const savedPostRecordIds = viewerSavedPosts?.recordIdsByPostId[post.id] ?? [];
+  const hasSavedRecord = savedPostRecordIds.length > 0;
 
   useEffect(() => {
-    setLikes(post.likes);
-  }, [post.likes]);
+    setLikeCount(post.likeCount);
+    setSaveCount(post.saveCount);
+  }, [post.id, post.likeCount, post.saveCount]);
 
   useEffect(() => {
-    setIsSaved(viewerSavedPosts?.postIds.includes(post.id) ?? false);
-  }, [post.id, viewerSavedPosts]);
+    setIsLiked(viewerLikedPosts?.postIds.includes(post.id) ?? false);
+  }, [post.id, viewerLikedPosts]);
+
+  useEffect(() => {
+    setIsSaved(hasSavedRecord);
+  }, [hasSavedRecord]);
 
   async function handleLikePost(e: React.MouseEvent) {
     e.stopPropagation();
@@ -41,26 +54,33 @@ export default function PostStats({ post, userId }: PostStatsProps) {
       return;
     }
 
-    const previousLikes = likes;
-    let nextLikes = [...previousLikes];
-
-    const hasLiked = nextLikes.includes(viewerId);
-
-    if (hasLiked) {
-      nextLikes = nextLikes.filter((id) => id !== viewerId);
-    } else {
-      nextLikes.push(viewerId);
-    }
-
-    setLikes(nextLikes);
+    const previousIsLiked = isLiked;
+    const previousLikeCount = likeCount;
 
     try {
-      await updatePostLikes({
+      if (likedPostRecord) {
+        setIsLiked(false);
+        setLikeCount((currentCount) => Math.max(0, currentCount - 1));
+
+        await deleteViewerPostLike({
+          likeRecordId: likedPostRecord.likeRecordId,
+          viewerId,
+          postId: post.id,
+        });
+
+        return;
+      }
+
+      setIsLiked(true);
+      setLikeCount((currentCount) => currentCount + 1);
+
+      await createViewerPostLike({
+        viewerId,
         postId: post.id,
-        likes: nextLikes,
       });
     } catch {
-      setLikes(previousLikes);
+      setIsLiked(previousIsLiked);
+      setLikeCount(previousLikeCount);
     }
   }
 
@@ -71,25 +91,30 @@ export default function PostStats({ post, userId }: PostStatsProps) {
       return;
     }
 
-    if (savedPostRecord) {
+    if (hasSavedRecord) {
       const previousIsSaved = isSaved;
+      const previousSaveCount = saveCount;
       setIsSaved(false);
+      setSaveCount((currentCount) => Math.max(0, currentCount - 1));
 
       try {
         await deleteViewerPostSave({
-          saveRecordId: savedPostRecord.saveRecordId,
+          saveRecordIds: savedPostRecordIds,
           viewerId,
           postId: post.id,
         });
       } catch {
         setIsSaved(previousIsSaved);
+        setSaveCount(previousSaveCount);
       }
 
       return;
     }
 
     const previousIsSaved = isSaved;
+    const previousSaveCount = saveCount;
     setIsSaved(true);
+    setSaveCount((currentCount) => currentCount + 1);
 
     try {
       await createViewerPostSave({
@@ -98,25 +123,22 @@ export default function PostStats({ post, userId }: PostStatsProps) {
       });
     } catch {
       setIsSaved(previousIsSaved);
+      setSaveCount(previousSaveCount);
     }
   }
-
-  const checkIsLiked = (userId: string) => {
-    return likes.includes(userId);
-  };
 
   return (
     <div className="flex justify-between items-center z-20">
       <div className="flex gap-2 mr-5">
         <img
-          src={checkIsLiked(userId) ? '/assets/icons/liked.svg' : '/assets/icons/like.svg'}
+          src={isLiked ? '/assets/icons/liked.svg' : '/assets/icons/like.svg'}
           alt="like"
           width={20}
           height={20}
           onClick={(e) => handleLikePost(e)}
           className="cursor-pointer"
         />
-        <p>{likes.length}</p>
+        <p>{likeCount}</p>
       </div>
       <div className="flex gap-2">
         <img
@@ -127,6 +149,7 @@ export default function PostStats({ post, userId }: PostStatsProps) {
           onClick={(e) => handleSavePost(e)}
           className="cursor-pointer"
         />
+        <p>{saveCount}</p>
       </div>
     </div>
   );

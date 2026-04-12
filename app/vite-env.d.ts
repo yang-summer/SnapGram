@@ -14,6 +14,7 @@ interface ImportMetaEnv {
   readonly VITE_APPWRITE_USERS_TABLE_ID: string;
   readonly VITE_APPWRITE_POSTS_TABLE_ID: string;
   readonly VITE_APPWRITE_SAVES_TABLE_ID: string;
+  readonly VITE_APPWRITE_LIKES_TABLE_ID: string;
   // 更多环境变量...
 }
 

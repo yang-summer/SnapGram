@@ -66,6 +66,11 @@ export function useSignOutMutation() {
 
       if (viewerId) {
         queryClient.removeQueries({
+          queryKey: postKeys.viewerLikes(viewerId),
+          exact: true,
+        });
+
+        queryClient.removeQueries({
           queryKey: postKeys.viewerSaves(viewerId),
           exact: true,
         });

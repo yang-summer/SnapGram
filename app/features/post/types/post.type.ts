@@ -6,21 +6,20 @@ export type RawPostCreator = {
   imageUrl?: string | null;
 };
 
-export type RawPostLikeRow = Models.Row & {
-  $id: string;
-};
-
-export type RawPostLikeMutationRow = Models.Row & {
-  likes?: string[] | RawPostLikeRow[] | null;
-};
-
 export type RawViewerSavePostReference = {
   $id: string;
 };
 
 export type RawViewerSaveRecord = Models.Row & {
+  postId?: string | null;
+  userId?: string | null;
   post?: string | RawViewerSavePostReference | null;
   user?: string | null;
+};
+
+export type RawViewerLikeRecord = Models.Row & {
+  postId?: string | null;
+  userId?: string | null;
 };
 
 export type RawPostRow = Models.Row & {
@@ -30,7 +29,8 @@ export type RawPostRow = Models.Row & {
   location?: string | null;
   tags?: string[] | null;
   creator?: RawPostCreator;
-  likes?: RawPostLikeRow[] | null;
+  likeCount?: number | null;
+  saveCount?: number | null;
 };
 
 export type RawPostListRow = Models.Row &
@@ -44,7 +44,8 @@ export type RawPostListRow = Models.Row &
     | 'location'
     | 'tags'
     | 'creator'
-    | 'likes'
+    | 'likeCount'
+    | 'saveCount'
   >;
 
 export type RawPostEditorRow = Models.Row & {
@@ -62,6 +63,8 @@ export type RawPostWriteRow = Models.Row & {
   imageUrl: string;
   location?: string | null;
   tags?: string[] | null;
+  status?: string | null;
+  searchText?: string | null;
 };
 
 export type RawPostMutationRow = Models.Row & {
@@ -91,7 +94,8 @@ export type PostCardViewModel = {
     name: string;
     imageUrl: string | null;
   };
-  likes: string[];
+  likeCount: number;
+  saveCount: number;
 };
 
 export type PostDetailViewModel = {
@@ -107,7 +111,8 @@ export type PostDetailViewModel = {
     name: string;
     imageUrl: string | null;
   };
-  likes: string[];
+  likeCount: number;
+  saveCount: number;
 };
 
 export type PostDeleteSnapshot = Models.Row & {
@@ -127,7 +132,8 @@ export type PostGridItemViewModel = {
     name: string;
     imageUrl: string | null;
   };
-  likes: string[];
+  likeCount: number;
+  saveCount: number;
 };
 
 export type CursorPage<T> = {
@@ -193,14 +199,35 @@ export type PostMutationResult = {
   imageUrl: string;
 };
 
-export type UpdatePostLikesInput = {
+export type CreateViewerPostLikeInput = {
   postId: string;
-  likes: string[];
+  viewerId: string;
 };
 
-export type PostLikeMutationResult = {
+export type DeleteViewerPostLikeInput = {
+  likeRecordId: string;
+  viewerId: string;
   postId: string;
-  likes: string[];
+};
+
+export type ViewerLikedPostRecord = {
+  likeRecordId: string;
+  postId: string;
+};
+
+export type ViewerLikedPostsResult = {
+  records: ViewerLikedPostRecord[];
+  postIds: string[];
+};
+
+export type ViewerPostLikeMutationResult = {
+  likeRecordId: string;
+  postId: string;
+  viewerId: string;
+};
+
+export type DeleteViewerPostLikeResult = {
+  likeRecordId: string;
 };
 
 export type CreateViewerPostSaveInput = {
@@ -209,7 +236,7 @@ export type CreateViewerPostSaveInput = {
 };
 
 export type DeleteViewerPostSaveInput = {
-  saveRecordId: string;
+  saveRecordIds: string[];
   viewerId: string;
   postId?: string;
 };
@@ -222,6 +249,7 @@ export type ViewerSavedPostRecord = {
 export type ViewerSavedPostsResult = {
   records: ViewerSavedPostRecord[];
   postIds: string[];
+  recordIdsByPostId: Record<string, string[]>;
 };
 
 export type ViewerPostSaveMutationResult = {
@@ -231,5 +259,5 @@ export type ViewerPostSaveMutationResult = {
 };
 
 export type DeleteViewerPostSaveResult = {
-  saveRecordId: string;
+  saveRecordIds: string[];
 };

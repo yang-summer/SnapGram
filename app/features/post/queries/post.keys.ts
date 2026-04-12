@@ -8,6 +8,8 @@ export const postKeys = {
   detail: (id: string) => [...postKeys.details(), id] as const,
   editor: (id: string) => [...postKeys.all, 'editor', id] as const,
   engagement: () => [...postKeys.all, 'engagement'] as const,
+  viewerLikesRoot: () => [...postKeys.engagement(), 'viewer-likes'] as const,
+  viewerLikes: (viewerId: string) => [...postKeys.viewerLikesRoot(), viewerId] as const,
   viewerSavesRoot: () => [...postKeys.engagement(), 'viewer-saves'] as const,
   viewerSaves: (viewerId: string) => [...postKeys.viewerSavesRoot(), viewerId] as const,
 };

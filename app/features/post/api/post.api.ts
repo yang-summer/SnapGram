@@ -1,6 +1,7 @@
 import type { Models } from 'appwrite';
 import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, storage, tablesDB } from '~/lib/appwrite/config';
+import { buildPostSearchText } from '../lib/post-search';
 import type {
   CreatePostApiInput,
   DeletePostResult,
@@ -18,8 +19,53 @@ import type {
 const DEFAULT_EXPLORE_POSTS_LIMIT = 9;
 const DEFAULT_SEARCH_POSTS_LIMIT = 20;
 const APPWRITE_MAX_LIST_LIMIT = 100;
+const PUBLISHED_POST_STATUS = 'published';
 
-const POST_LIST_SELECT = ['*', 'creator.$id', 'creator.name', 'creator.imageUrl', 'likes.$id'];
+const POST_CARD_SELECT = [
+  '$id',
+  '$createdAt',
+  '$updatedAt',
+  'caption',
+  'imageId',
+  'imageUrl',
+  'location',
+  'tags',
+  'likeCount',
+  'saveCount',
+  'creator.$id',
+  'creator.name',
+  'creator.imageUrl',
+];
+const POST_GRID_SELECT = [
+  '$id',
+  '$createdAt',
+  '$updatedAt',
+  'caption',
+  'imageUrl',
+  'location',
+  'tags',
+  'likeCount',
+  'saveCount',
+  'creator.$id',
+  'creator.name',
+  'creator.imageUrl',
+];
+const POST_DETAIL_SELECT = [
+  '$id',
+  '$createdAt',
+  '$updatedAt',
+  'caption',
+  'imageId',
+  'imageUrl',
+  'location',
+  'tags',
+  'likeCount',
+  'saveCount',
+  'creator.$id',
+  'creator.name',
+  'creator.imageUrl',
+];
+const POST_EDITOR_SELECT = ['$id', 'caption', 'imageId', 'imageUrl', 'location', 'tags'];
 
 function clampListLimit(limit: number | undefined, fallback: number): number {
   if (typeof limit !== 'number' || Number.isNaN(limit)) {
@@ -38,20 +84,18 @@ function createEmptyRowList<Row extends Models.Row>(): Models.RowList<Row> {
 
 export async function getRecentPosts(): Promise<Models.RowList<RawPostRow>> {
   try {
-    // 需要通过Queries选择加载的字段来加载关系数据, 首先需要加载全部字段, 之后选择关系的字段
     const posts = await tablesDB.listRows<RawPostRow>({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.postsTableId,
       queries: [
-        // 只要关系被展开成 row，对象就会带系统字段，所以 likes.$id 会带上其他系统字段
-        Query.select(['*', 'creator.*', 'likes.$id']),
+        Query.select(POST_CARD_SELECT),
+        Query.equal('status', PUBLISHED_POST_STATUS),
         Query.orderDesc('$createdAt'),
         Query.limit(20),
       ],
     });
 
     if (!posts) throw Error;
-    console.log('posts: ', posts);
     return posts;
   } catch (error) {
     console.error(error);
@@ -67,7 +111,7 @@ export async function getPostById(postId: string): Promise<RawPostRow> {
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.postsTableId,
       rowId: postId,
-      queries: [Query.select(['*', 'creator.*', 'likes.$id'])],
+      queries: [Query.select(POST_DETAIL_SELECT)],
     });
 
     if (!post) throw Error;
@@ -89,7 +133,7 @@ export async function getPostEditorRow(postId: string): Promise<RawPostEditorRow
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.postsTableId,
       rowId: postId,
-      queries: [Query.select(['$id', 'caption', 'imageId', 'imageUrl', 'location', 'tags'])],
+      queries: [Query.select(POST_EDITOR_SELECT)],
     });
 
     if (!post) {
@@ -160,6 +204,8 @@ export async function createPostRow(input: CreatePostApiInput): Promise<RawPostM
         imageUrl: input.imageUrl,
         location: input.location,
         tags: input.tags,
+        status: PUBLISHED_POST_STATUS,
+        searchText: buildPostSearchText(input.caption, input.tags),
       },
     });
 
@@ -192,6 +238,7 @@ export async function updatePostRow(input: UpdatePostApiInput): Promise<RawPostM
         imageUrl: input.imageUrl,
         location: input.location,
         tags: input.tags,
+        searchText: buildPostSearchText(input.caption, input.tags),
       },
     });
 
@@ -218,7 +265,8 @@ export async function listExplorePostRows({
 }: ListPostRowsParams = {}): Promise<Models.RowList<RawPostListRow>> {
   const normalizedLimit = clampListLimit(limit, DEFAULT_EXPLORE_POSTS_LIMIT);
   const queries = [
-    Query.select(POST_LIST_SELECT),
+    Query.select(POST_GRID_SELECT),
+    Query.equal('status', PUBLISHED_POST_STATUS),
     Query.orderDesc('$updatedAt'),
     Query.limit(normalizedLimit),
   ];
@@ -263,8 +311,9 @@ export async function searchPostRows({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.postsTableId,
       queries: [
-        Query.select(POST_LIST_SELECT),
-        Query.search('caption', normalizedTerm),
+        Query.select(POST_GRID_SELECT),
+        Query.equal('status', PUBLISHED_POST_STATUS),
+        Query.search('searchText', normalizedTerm),
         Query.orderDesc('$updatedAt'),
         Query.limit(normalizedLimit),
       ],

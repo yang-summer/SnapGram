@@ -20,8 +20,20 @@ function mapPostCreator(row: RawPostRow | RawPostListRow) {
   };
 }
 
-function mapPostLikes(row: RawPostRow | RawPostListRow): string[] {
-  return (row.likes ?? []).map((like) => like.$id);
+function mapPostLikeCount(row: RawPostRow | RawPostListRow): number {
+  if (typeof row.likeCount === 'number' && Number.isFinite(row.likeCount)) {
+    return Math.max(0, Math.trunc(row.likeCount));
+  }
+
+  return 0;
+}
+
+function mapPostSaveCount(row: RawPostRow | RawPostListRow): number {
+  if (typeof row.saveCount === 'number' && Number.isFinite(row.saveCount)) {
+    return Math.max(0, Math.trunc(row.saveCount));
+  }
+
+  return 0;
 }
 
 export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | null {
@@ -40,7 +52,8 @@ export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | 
     location: row.location ?? null,
     tags: row.tags ?? [],
     creator,
-    likes: mapPostLikes(row),
+    likeCount: mapPostLikeCount(row),
+    saveCount: mapPostSaveCount(row),
   };
 }
 
@@ -80,7 +93,8 @@ export function mapPostRowToDetailViewModel(row: RawPostRow): PostDetailViewMode
     location: row.location ?? null,
     tags: row.tags ?? [],
     creator,
-    likes: mapPostLikes(row),
+    likeCount: mapPostLikeCount(row),
+    saveCount: mapPostSaveCount(row),
   };
 }
 
@@ -95,7 +109,8 @@ export function mapPostRowToGridItemViewModel(row: RawPostListRow): PostGridItem
     id: row.$id,
     imageUrl: row.imageUrl,
     creator,
-    likes: mapPostLikes(row),
+    likeCount: mapPostLikeCount(row),
+    saveCount: mapPostSaveCount(row),
   };
 }
 
