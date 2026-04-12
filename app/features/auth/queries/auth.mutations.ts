@@ -17,7 +17,7 @@ function setCurrentUserCache(
   queryClient.setQueryData(authKeys.currentUser(), currentUser);
 }
 
-function getAuthenticatedViewerId(currentUser: CurrentUserResult | undefined): string | null {
+function getAuthenticatedViewerProfileId(currentUser: CurrentUserResult | undefined): string | null {
   if (currentUser?.status !== 'authenticated') {
     return null;
   }
@@ -57,21 +57,21 @@ export function useSignOutMutation() {
     retry: false,
     onSuccess: () => {
       const cachedCurrentUser = queryClient.getQueryData<CurrentUserResult>(authKeys.currentUser());
-      const viewerId = getAuthenticatedViewerId(cachedCurrentUser);
+      const viewerProfileId = getAuthenticatedViewerProfileId(cachedCurrentUser);
 
       queryClient.removeQueries({
         queryKey: authKeys.currentUser(),
         exact: true,
       });
 
-      if (viewerId) {
+      if (viewerProfileId) {
         queryClient.removeQueries({
-          queryKey: postKeys.viewerLikes(viewerId),
+          queryKey: postKeys.viewerLikes(viewerProfileId),
           exact: true,
         });
 
         queryClient.removeQueries({
-          queryKey: postKeys.viewerSaves(viewerId),
+          queryKey: postKeys.viewerSaves(viewerProfileId),
           exact: true,
         });
       }

@@ -158,7 +158,8 @@ export type PostEditorInitialData = {
 };
 
 export type CreatePostInput = {
-  creatorId: string;
+  creatorProfileId: string;
+  ownerAccountId: string;
   caption: string;
   file: File;
   location: string;
@@ -166,7 +167,8 @@ export type CreatePostInput = {
 };
 
 export type CreatePostApiInput = {
-  creatorId: string;
+  creatorProfileId: string;
+  ownerAccountId: string;
   caption: string;
   imageId: string;
   imageUrl: string;
@@ -176,6 +178,7 @@ export type CreatePostApiInput = {
 
 export type UpdatePostInput = {
   postId: string;
+  ownerAccountId: string;
   caption: string;
   location: string;
   tags: string[];
@@ -201,12 +204,13 @@ export type PostMutationResult = {
 
 export type CreateViewerPostLikeInput = {
   postId: string;
-  viewerId: string;
+  viewerProfileId: string;
+  viewerAccountId: string;
 };
 
 export type DeleteViewerPostLikeInput = {
   likeRecordId: string;
-  viewerId: string;
+  viewerProfileId: string;
   postId: string;
 };
 
@@ -223,7 +227,7 @@ export type ViewerLikedPostsResult = {
 export type ViewerPostLikeMutationResult = {
   likeRecordId: string;
   postId: string;
-  viewerId: string;
+  viewerProfileId: string;
 };
 
 export type DeleteViewerPostLikeResult = {
@@ -232,12 +236,13 @@ export type DeleteViewerPostLikeResult = {
 
 export type CreateViewerPostSaveInput = {
   postId: string;
-  viewerId: string;
+  viewerProfileId: string;
+  viewerAccountId: string;
 };
 
 export type DeleteViewerPostSaveInput = {
   saveRecordIds: string[];
-  viewerId: string;
+  viewerProfileId: string;
   postId?: string;
 };
 
@@ -255,7 +260,7 @@ export type ViewerSavedPostsResult = {
 export type ViewerPostSaveMutationResult = {
   saveRecordId: string;
   postId: string;
-  viewerId: string;
+  viewerProfileId: string;
 };
 
 export type DeleteViewerPostSaveResult = {

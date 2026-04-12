@@ -27,7 +27,7 @@ export function useCreateViewerPostLikeMutation() {
     onSuccess: (_, variables) => {
       invalidatePostViews(queryClient, variables.postId);
       queryClient.invalidateQueries({
-        queryKey: postKeys.viewerLikes(variables.viewerId),
+        queryKey: postKeys.viewerLikes(variables.viewerProfileId),
       });
     },
   });
@@ -41,7 +41,7 @@ export function useDeleteViewerPostLikeMutation() {
     onSuccess: (_, variables) => {
       invalidatePostViews(queryClient, variables.postId);
       queryClient.invalidateQueries({
-        queryKey: postKeys.viewerLikes(variables.viewerId),
+        queryKey: postKeys.viewerLikes(variables.viewerProfileId),
       });
     },
   });
@@ -55,7 +55,7 @@ export function useCreateViewerPostSaveMutation() {
     onSuccess: (_, variables) => {
       invalidatePostViews(queryClient, variables.postId);
       queryClient.invalidateQueries({
-        queryKey: postKeys.viewerSaves(variables.viewerId),
+        queryKey: postKeys.viewerSaves(variables.viewerProfileId),
       });
     },
   });
@@ -72,7 +72,7 @@ export function useDeleteViewerPostSaveMutation() {
       }
 
       queryClient.invalidateQueries({
-        queryKey: postKeys.viewerSaves(variables.viewerId),
+        queryKey: postKeys.viewerSaves(variables.viewerProfileId),
       });
     },
   });

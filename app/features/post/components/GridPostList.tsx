@@ -17,6 +17,7 @@ export default function GridPostList({
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   const currentUserProfileId = currentUser?.profileId ?? '';
+  const currentUserAccountId = currentUser?.accountId ?? '';
   return (
     <ul className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-7 max-w-5xl">
       {posts.map((post) => (
@@ -39,7 +40,13 @@ export default function GridPostList({
                 <p className="line-clamp-1">{post.creator.name}</p>
               </div>
             )}
-            {showStats && <PostStats post={post} userId={currentUserProfileId} />}
+            {showStats && (
+              <PostStats
+                post={post}
+                viewerProfileId={currentUserProfileId}
+                viewerAccountId={currentUserAccountId}
+              />
+            )}
           </div>
         </li>
       ))}

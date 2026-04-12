@@ -1,5 +1,6 @@
 import { AppwriteException, Query } from 'appwrite';
 import { appwriteConfig, tablesDB } from '~/lib/appwrite/config';
+import { buildPrivateOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
   CreateViewerPostLikeInput,
   CreateViewerPostSaveInput,
@@ -23,10 +24,10 @@ const POST_SAVE_COUNT_STEP = 1;
 
 function createDeterministicEngagementRowId(
   kind: 'like' | 'save',
-  viewerId: string,
+  viewerProfileId: string,
   postId: string,
 ): string {
-  const source = `${viewerId}:${postId}`;
+  const source = `${viewerProfileId}:${postId}`;
   let forward = 2166136261;
   let backward = 2166136261;
 
@@ -45,12 +46,12 @@ function createDeterministicEngagementRowId(
   return `${kind}_${forwardHash}${backwardHash}`.slice(0, 36);
 }
 
-function createDeterministicLikeRowId(viewerId: string, postId: string): string {
-  return createDeterministicEngagementRowId('like', viewerId, postId);
+function createDeterministicLikeRowId(viewerProfileId: string, postId: string): string {
+  return createDeterministicEngagementRowId('like', viewerProfileId, postId);
 }
 
-function createDeterministicSaveRowId(viewerId: string, postId: string): string {
-  return createDeterministicEngagementRowId('save', viewerId, postId);
+function createDeterministicSaveRowId(viewerProfileId: string, postId: string): string {
+  return createDeterministicEngagementRowId('save', viewerProfileId, postId);
 }
 
 function createSyntheticViewerSaveRecord(
@@ -60,14 +61,14 @@ function createSyntheticViewerSaveRecord(
   return {
     $id: saveRecordId,
     postId: input.postId,
-    userId: input.viewerId,
+    userId: input.viewerProfileId,
     post: input.postId,
-    user: input.viewerId,
+    user: input.viewerProfileId,
   } as RawViewerSaveRecord;
 }
 
-export async function listViewerLikeRecords(viewerId: string): Promise<RawViewerLikeRecord[]> {
-  if (!viewerId) {
+export async function listViewerLikeRecords(viewerProfileId: string): Promise<RawViewerLikeRecord[]> {
+  if (!viewerProfileId) {
     return [];
   }
 
@@ -77,7 +78,7 @@ export async function listViewerLikeRecords(viewerId: string): Promise<RawViewer
       tableId: appwriteConfig.likesTableId,
       queries: [
         Query.select(VIEWER_LIKE_RECORD_SELECT),
-        Query.equal('userId', viewerId),
+        Query.equal('userId', viewerProfileId),
         Query.limit(VIEWER_LIKE_RECORD_LIMIT),
       ],
       total: false,
@@ -93,8 +94,8 @@ export async function listViewerLikeRecords(viewerId: string): Promise<RawViewer
   }
 }
 
-export async function listViewerSaveRecords(viewerId: string): Promise<RawViewerSaveRecord[]> {
-  if (!viewerId) {
+export async function listViewerSaveRecords(viewerProfileId: string): Promise<RawViewerSaveRecord[]> {
+  if (!viewerProfileId) {
     return [];
   }
 
@@ -104,7 +105,7 @@ export async function listViewerSaveRecords(viewerId: string): Promise<RawViewer
       tableId: appwriteConfig.saveTableId,
       queries: [
         Query.select(VIEWER_SAVE_RECORD_SELECT),
-        Query.equal('userId', viewerId),
+        Query.equal('userId', viewerProfileId),
         Query.limit(VIEWER_SAVE_RECORD_LIMIT),
       ],
       total: false,
@@ -123,15 +124,19 @@ export async function listViewerSaveRecords(viewerId: string): Promise<RawViewer
 export async function createViewerLikeRecord(
   input: CreateViewerPostLikeInput,
 ): Promise<ViewerPostLikeMutationResult> {
-  if (!input.viewerId) {
-    throw new Error('Viewer ID is required to like a post.');
+  if (!input.viewerProfileId) {
+    throw new Error('Viewer profile ID is required to like a post.');
+  }
+
+  if (!input.viewerAccountId) {
+    throw new Error('Viewer account ID is required to like a post.');
   }
 
   if (!input.postId) {
     throw new Error('Post ID is required to like a post.');
   }
 
-  const likeRecordId = createDeterministicLikeRowId(input.viewerId, input.postId);
+  const likeRecordId = createDeterministicLikeRowId(input.viewerProfileId, input.postId);
 
   try {
     await tablesDB.createRow<RawViewerLikeRecord>({
@@ -139,9 +144,10 @@ export async function createViewerLikeRecord(
       tableId: appwriteConfig.likesTableId,
       rowId: likeRecordId,
       data: {
-        userId: input.viewerId,
+        userId: input.viewerProfileId,
         postId: input.postId,
       },
+      permissions: buildPrivateOwnerPermissions(input.viewerAccountId),
     });
 
     await tablesDB.incrementRowColumn({
@@ -155,14 +161,14 @@ export async function createViewerLikeRecord(
     return {
       likeRecordId,
       postId: input.postId,
-      viewerId: input.viewerId,
+      viewerProfileId: input.viewerProfileId,
     };
   } catch (error) {
     if (error instanceof AppwriteException && error.code === 409) {
       return {
         likeRecordId,
         postId: input.postId,
-        viewerId: input.viewerId,
+        viewerProfileId: input.viewerProfileId,
       };
     }
 
@@ -174,15 +180,19 @@ export async function createViewerLikeRecord(
 export async function createViewerSaveRecord(
   input: CreateViewerPostSaveInput,
 ): Promise<RawViewerSaveRecord> {
-  if (!input.viewerId) {
-    throw new Error('Viewer ID is required to save a post.');
+  if (!input.viewerProfileId) {
+    throw new Error('Viewer profile ID is required to save a post.');
+  }
+
+  if (!input.viewerAccountId) {
+    throw new Error('Viewer account ID is required to save a post.');
   }
 
   if (!input.postId) {
     throw new Error('Post ID is required to save a post.');
   }
 
-  const saveRecordId = createDeterministicSaveRowId(input.viewerId, input.postId);
+  const saveRecordId = createDeterministicSaveRowId(input.viewerProfileId, input.postId);
 
   try {
     const createdRecord = await tablesDB.createRow<RawViewerSaveRecord>({
@@ -190,11 +200,12 @@ export async function createViewerSaveRecord(
       tableId: appwriteConfig.saveTableId,
       rowId: saveRecordId,
       data: {
-        user: input.viewerId,
+        user: input.viewerProfileId,
         post: input.postId,
-        userId: input.viewerId,
+        userId: input.viewerProfileId,
         postId: input.postId,
       },
+      permissions: buildPrivateOwnerPermissions(input.viewerAccountId),
     });
 
     await tablesDB.incrementRowColumn({

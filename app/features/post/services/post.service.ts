@@ -137,11 +137,12 @@ export async function createPost(input: CreatePostInput): Promise<PostMutationRe
   let uploadedFileId: string | null = null;
 
   try {
-    const uploadedFile = await uploadPostImage(input.file);
+    const uploadedFile = await uploadPostImage(input.file, input.ownerAccountId);
     uploadedFileId = uploadedFile.$id;
 
     const createdPost = await createPostRow({
-      creatorId: input.creatorId,
+      creatorProfileId: input.creatorProfileId,
+      ownerAccountId: input.ownerAccountId,
       caption: input.caption,
       imageId: uploadedFileId,
       imageUrl: getPostImageView(uploadedFileId),
@@ -181,7 +182,7 @@ export async function updatePost(input: UpdatePostInput): Promise<PostMutationRe
   let uploadedFileId: string | null = null;
 
   try {
-    const uploadedFile = await uploadPostImage(nextFile);
+    const uploadedFile = await uploadPostImage(nextFile, input.ownerAccountId);
     uploadedFileId = uploadedFile.$id;
 
     const updatedPost = await updatePostRow({

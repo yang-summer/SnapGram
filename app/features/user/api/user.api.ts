@@ -1,5 +1,6 @@
 import { ID, Query } from 'appwrite';
 import { appwriteConfig, avatars, tablesDB } from '~/lib/appwrite/config';
+import { buildPublicOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
   CreateUserProfileInput,
   UpdateUserProfileInput,
@@ -14,6 +15,10 @@ export function getDefaultUserProfileImageUrl(name: string): string {
 }
 
 export async function createUserProfile(input: CreateUserProfileInput): Promise<UserProfileRecord> {
+  if (!input.accountId) {
+    throw new Error('Account ID is required to create a user profile.');
+  }
+
   try {
     return await tablesDB.createRow<UserProfileRecord>({
       databaseId: appwriteConfig.databaseId,
@@ -27,6 +32,7 @@ export async function createUserProfile(input: CreateUserProfileInput): Promise<
         imageUrl: input.imageUrl,
         bio: input.bio ?? null,
       },
+      permissions: buildPublicOwnerPermissions(input.accountId),
     });
   } catch (error) {
     console.error('[UserApi.createUserProfile] Failed to create user profile.', error);

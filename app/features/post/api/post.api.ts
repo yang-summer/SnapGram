@@ -1,6 +1,10 @@
 import type { Models } from 'appwrite';
 import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, storage, tablesDB } from '~/lib/appwrite/config';
+import {
+  buildPublicOwnerPermissions,
+  buildTransitionalPostPermissions,
+} from '~/lib/appwrite/permissions';
 import { buildPostSearchText } from '../lib/post-search';
 import type {
   CreatePostApiInput,
@@ -154,9 +158,13 @@ export function getPostImageView(fileId: string): string {
   });
 }
 
-export async function uploadPostImage(file: File): Promise<Models.File> {
+export async function uploadPostImage(file: File, ownerAccountId: string): Promise<Models.File> {
   if (!file) {
     throw new Error('A post image file is required.');
+  }
+
+  if (!ownerAccountId) {
+    throw new Error('Owner account ID is required to upload a post image.');
   }
 
   try {
@@ -164,6 +172,7 @@ export async function uploadPostImage(file: File): Promise<Models.File> {
       bucketId: appwriteConfig.storageId,
       fileId: ID.unique(),
       file,
+      permissions: buildPublicOwnerPermissions(ownerAccountId),
     });
   } catch (error) {
     console.error('[PostApi.uploadPostImage] Failed to upload post image.', error);
@@ -192,13 +201,21 @@ export async function deletePostImage(fileId: string): Promise<void> {
 }
 
 export async function createPostRow(input: CreatePostApiInput): Promise<RawPostMutationRow> {
+  if (!input.creatorProfileId) {
+    throw new Error('Creator profile ID is required to create a post.');
+  }
+
+  if (!input.ownerAccountId) {
+    throw new Error('Owner account ID is required to create a post.');
+  }
+
   try {
     const row = await tablesDB.createRow<RawPostWriteRow>({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.postsTableId,
       rowId: ID.unique(),
       data: {
-        creator: input.creatorId,
+        creator: input.creatorProfileId,
         caption: input.caption,
         imageId: input.imageId,
         imageUrl: input.imageUrl,
@@ -207,6 +224,7 @@ export async function createPostRow(input: CreatePostApiInput): Promise<RawPostM
         status: PUBLISHED_POST_STATUS,
         searchText: buildPostSearchText(input.caption, input.tags),
       },
+      permissions: buildTransitionalPostPermissions(input.ownerAccountId),
     });
 
     return {

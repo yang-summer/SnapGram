@@ -133,13 +133,13 @@ function mapViewerSaveRecords(records: RawViewerSaveRecord[]): ViewerSavedPostsR
   };
 }
 
-export async function getViewerLikedPosts(viewerId: string): Promise<ViewerLikedPostsResult> {
-  if (!viewerId) {
+export async function getViewerLikedPosts(viewerProfileId: string): Promise<ViewerLikedPostsResult> {
+  if (!viewerProfileId) {
     return createEmptyViewerLikedPostsResult();
   }
 
   try {
-    const records = await listViewerLikeRecords(viewerId);
+    const records = await listViewerLikeRecords(viewerProfileId);
     return mapViewerLikeRecords(records);
   } catch (error) {
     console.error('[PostEngagementService.getViewerLikedPosts] Error:', error);
@@ -147,13 +147,13 @@ export async function getViewerLikedPosts(viewerId: string): Promise<ViewerLiked
   }
 }
 
-export async function getViewerSavedPosts(viewerId: string): Promise<ViewerSavedPostsResult> {
-  if (!viewerId) {
+export async function getViewerSavedPosts(viewerProfileId: string): Promise<ViewerSavedPostsResult> {
+  if (!viewerProfileId) {
     return createEmptyViewerSavedPostsResult();
   }
 
   try {
-    const records = await listViewerSaveRecords(viewerId);
+    const records = await listViewerSaveRecords(viewerProfileId);
     return mapViewerSaveRecords(records);
   } catch (error) {
     console.error('[PostEngagementService.getViewerSavedPosts] Error:', error);
@@ -192,7 +192,7 @@ export async function savePostForViewer(
     return {
       saveRecordId: createdRecord.$id,
       postId: resolveSavedPostId(createdRecord) ?? input.postId,
-      viewerId: input.viewerId,
+      viewerProfileId: input.viewerProfileId,
     };
   } catch (error) {
     console.error('[PostEngagementService.savePostForViewer] Error:', error);

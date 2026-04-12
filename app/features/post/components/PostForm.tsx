@@ -65,9 +65,15 @@ export default function PostForm({ action, post }: PostFormProps) {
         return;
       }
 
+      if (nextFile && !currentUser) {
+        setSubmitError('Unable to resolve the current user.');
+        return;
+      }
+
       try {
         const updatedPost = await updatePost({
           postId: post.id,
+          ownerAccountId: currentUser?.accountId ?? '',
           caption: values.caption,
           location: values.location,
           tags: normalizedTags,
@@ -97,7 +103,8 @@ export default function PostForm({ action, post }: PostFormProps) {
       }
 
       const newPost = await createPost({
-        creatorId: currentUser.profileId,
+        creatorProfileId: currentUser.profileId,
+        ownerAccountId: currentUser.accountId,
         caption: values.caption,
         file: nextFile,
         location: values.location,

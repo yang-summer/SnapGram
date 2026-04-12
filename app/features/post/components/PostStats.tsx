@@ -13,17 +13,21 @@ type PostStatsProps = {
     likeCount: number;
     saveCount: number;
   };
-  userId: string;
+  viewerProfileId: string;
+  viewerAccountId: string;
 };
 
-export default function PostStats({ post, userId }: PostStatsProps) {
+export default function PostStats({
+  post,
+  viewerProfileId,
+  viewerAccountId,
+}: PostStatsProps) {
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [saveCount, setSaveCount] = useState(post.saveCount);
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const viewerId = userId;
-  const { data: viewerLikedPosts } = useViewerLikedPostsQuery(viewerId);
-  const { data: viewerSavedPosts } = useViewerSavedPostsQuery(viewerId);
+  const { data: viewerLikedPosts } = useViewerLikedPostsQuery(viewerProfileId);
+  const { data: viewerSavedPosts } = useViewerSavedPostsQuery(viewerProfileId);
 
   const { mutateAsync: createViewerPostLike } = useCreateViewerPostLikeMutation();
   const { mutateAsync: deleteViewerPostLike } = useDeleteViewerPostLikeMutation();
@@ -50,7 +54,7 @@ export default function PostStats({ post, userId }: PostStatsProps) {
   async function handleLikePost(e: React.MouseEvent) {
     e.stopPropagation();
 
-    if (!viewerId) {
+    if (!viewerProfileId || !viewerAccountId) {
       return;
     }
 
@@ -64,7 +68,7 @@ export default function PostStats({ post, userId }: PostStatsProps) {
 
         await deleteViewerPostLike({
           likeRecordId: likedPostRecord.likeRecordId,
-          viewerId,
+          viewerProfileId,
           postId: post.id,
         });
 
@@ -75,7 +79,8 @@ export default function PostStats({ post, userId }: PostStatsProps) {
       setLikeCount((currentCount) => currentCount + 1);
 
       await createViewerPostLike({
-        viewerId,
+        viewerProfileId,
+        viewerAccountId,
         postId: post.id,
       });
     } catch {
@@ -87,7 +92,7 @@ export default function PostStats({ post, userId }: PostStatsProps) {
   async function handleSavePost(e: React.MouseEvent) {
     e.stopPropagation();
 
-    if (!viewerId) {
+    if (!viewerProfileId || !viewerAccountId) {
       return;
     }
 
@@ -100,7 +105,7 @@ export default function PostStats({ post, userId }: PostStatsProps) {
       try {
         await deleteViewerPostSave({
           saveRecordIds: savedPostRecordIds,
-          viewerId,
+          viewerProfileId,
           postId: post.id,
         });
       } catch {
@@ -118,7 +123,8 @@ export default function PostStats({ post, userId }: PostStatsProps) {
 
     try {
       await createViewerPostSave({
-        viewerId,
+        viewerProfileId,
+        viewerAccountId,
         postId: post.id,
       });
     } catch {
