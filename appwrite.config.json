@@ -284,7 +284,7 @@
                 {
                     "key": "userId",
                     "type": "varchar",
-                    "required": false,
+                    "required": true,
                     "array": false,
                     "size": 64,
                     "default": null,
@@ -293,7 +293,7 @@
                 {
                     "key": "postId",
                     "type": "varchar",
-                    "required": false,
+                    "required": true,
                     "array": false,
                     "size": 64,
                     "default": null,
@@ -322,6 +322,19 @@
                     "orders": [
                         "asc"
                     ]
+                },
+                {
+                    "key": "saves_user_post_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "postId"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
                 }
             ]
         },
@@ -338,7 +351,7 @@
                 {
                     "key": "userId",
                     "type": "varchar",
-                    "required": false,
+                    "required": true,
                     "array": false,
                     "size": 64,
                     "default": null,
@@ -347,7 +360,7 @@
                 {
                     "key": "postId",
                     "type": "varchar",
-                    "required": false,
+                    "required": true,
                     "array": false,
                     "size": 64,
                     "default": null,
@@ -374,6 +387,19 @@
                         "postId"
                     ],
                     "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "likes_user_post_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "postId"
+                    ],
+                    "orders": [
+                        "asc",
                         "asc"
                     ]
                 }

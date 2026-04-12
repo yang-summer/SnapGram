@@ -19,6 +19,18 @@ function invalidatePostViews(queryClient: QueryClient, postId: string) {
   queryClient.invalidateQueries({ queryKey: postKeys.lists() });
 }
 
+function invalidateViewerLikes(queryClient: QueryClient, viewerProfileId: string) {
+  queryClient.invalidateQueries({
+    queryKey: postKeys.viewerLikesScope(viewerProfileId),
+  });
+}
+
+function invalidateViewerSaves(queryClient: QueryClient, viewerProfileId: string) {
+  queryClient.invalidateQueries({
+    queryKey: postKeys.viewerSavesScope(viewerProfileId),
+  });
+}
+
 export function useCreateViewerPostLikeMutation() {
   const queryClient = useQueryClient();
 
@@ -26,9 +38,7 @@ export function useCreateViewerPostLikeMutation() {
     mutationFn: (input: CreateViewerPostLikeInput) => likePostForViewer(input),
     onSuccess: (_, variables) => {
       invalidatePostViews(queryClient, variables.postId);
-      queryClient.invalidateQueries({
-        queryKey: postKeys.viewerLikes(variables.viewerProfileId),
-      });
+      invalidateViewerLikes(queryClient, variables.viewerProfileId);
     },
   });
 }
@@ -40,9 +50,7 @@ export function useDeleteViewerPostLikeMutation() {
     mutationFn: (input: DeleteViewerPostLikeInput) => deleteViewerPostLike(input),
     onSuccess: (_, variables) => {
       invalidatePostViews(queryClient, variables.postId);
-      queryClient.invalidateQueries({
-        queryKey: postKeys.viewerLikes(variables.viewerProfileId),
-      });
+      invalidateViewerLikes(queryClient, variables.viewerProfileId);
     },
   });
 }
@@ -54,9 +62,7 @@ export function useCreateViewerPostSaveMutation() {
     mutationFn: (input: CreateViewerPostSaveInput) => savePostForViewer(input),
     onSuccess: (_, variables) => {
       invalidatePostViews(queryClient, variables.postId);
-      queryClient.invalidateQueries({
-        queryKey: postKeys.viewerSaves(variables.viewerProfileId),
-      });
+      invalidateViewerSaves(queryClient, variables.viewerProfileId);
     },
   });
 }
@@ -67,13 +73,8 @@ export function useDeleteViewerPostSaveMutation() {
   return useMutation({
     mutationFn: (input: DeleteViewerPostSaveInput) => deleteViewerPostSave(input),
     onSuccess: (_, variables) => {
-      if (variables.postId) {
-        invalidatePostViews(queryClient, variables.postId);
-      }
-
-      queryClient.invalidateQueries({
-        queryKey: postKeys.viewerSaves(variables.viewerProfileId),
-      });
+      invalidatePostViews(queryClient, variables.postId);
+      invalidateViewerSaves(queryClient, variables.viewerProfileId);
     },
   });
 }

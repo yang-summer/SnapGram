@@ -1,4 +1,4 @@
-import { AppwriteException, Query } from 'appwrite';
+import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, tablesDB } from '~/lib/appwrite/config';
 import { buildPrivateOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
@@ -13,110 +13,224 @@ import type {
   ViewerPostLikeMutationResult,
 } from '../types/post.type';
 
-const VIEWER_LIKE_RECORD_SELECT = ['$id', 'postId'];
-const VIEWER_LIKE_RECORD_LIMIT = 100;
-const VIEWER_SAVE_RECORD_SELECT = ['$id', 'postId', 'userId'];
-const VIEWER_SAVE_RECORD_LIMIT = 100;
+const VIEWER_ENGAGEMENT_RECORD_SELECT = ['$id', 'postId', 'userId'];
+const VIEWER_RECORD_LIMIT = 100;
 const POST_LIKE_COUNT_COLUMN = 'likeCount';
 const POST_LIKE_COUNT_STEP = 1;
 const POST_SAVE_COUNT_COLUMN = 'saveCount';
 const POST_SAVE_COUNT_STEP = 1;
 
-function createDeterministicEngagementRowId(
-  kind: 'like' | 'save',
+function normalizePostIds(postIds: string[]): string[] {
+  return Array.from(
+    new Set(postIds.map((postId) => postId.trim()).filter((postId) => postId.length > 0)),
+  );
+}
+
+function createViewerRecordLookupQueries(viewerProfileId: string, postId: string) {
+  return [
+    Query.select(VIEWER_ENGAGEMENT_RECORD_SELECT),
+    Query.equal('userId', viewerProfileId),
+    Query.equal('postId', postId),
+    Query.limit(1),
+  ];
+}
+
+async function listAllViewerRecords<Row extends RawViewerLikeRecord | RawViewerSaveRecord>(
+  tableId: string,
+  viewerProfileId: string,
+): Promise<Row[]> {
+  if (!viewerProfileId) {
+    return [];
+  }
+
+  const result = await tablesDB.listRows<Row>({
+    databaseId: appwriteConfig.databaseId,
+    tableId,
+    queries: [
+      Query.select(VIEWER_ENGAGEMENT_RECORD_SELECT),
+      Query.equal('userId', viewerProfileId),
+      Query.limit(VIEWER_RECORD_LIMIT),
+    ],
+    total: false,
+  });
+
+  return result.rows;
+}
+
+async function findViewerRecord<Row extends RawViewerLikeRecord | RawViewerSaveRecord>(
+  tableId: string,
   viewerProfileId: string,
   postId: string,
-): string {
-  const source = `${viewerProfileId}:${postId}`;
-  let forward = 2166136261;
-  let backward = 2166136261;
-
-  for (let index = 0; index < source.length; index += 1) {
-    forward ^= source.charCodeAt(index);
-    forward = Math.imul(forward, 16777619);
-
-    const reverseIndex = source.length - 1 - index;
-    backward ^= source.charCodeAt(reverseIndex);
-    backward = Math.imul(backward, 16777619);
+): Promise<Row | null> {
+  if (!viewerProfileId || !postId) {
+    return null;
   }
 
-  const forwardHash = (forward >>> 0).toString(36).padStart(7, '0');
-  const backwardHash = (backward >>> 0).toString(36).padStart(7, '0');
+  const result = await tablesDB.listRows<Row>({
+    databaseId: appwriteConfig.databaseId,
+    tableId,
+    queries: createViewerRecordLookupQueries(viewerProfileId, postId),
+    total: false,
+  });
 
-  return `${kind}_${forwardHash}${backwardHash}`.slice(0, 36);
+  return result.rows[0] ?? null;
 }
 
-function createDeterministicLikeRowId(viewerProfileId: string, postId: string): string {
-  return createDeterministicEngagementRowId('like', viewerProfileId, postId);
-}
+async function listViewerRecordsByPostIds<Row extends RawViewerLikeRecord | RawViewerSaveRecord>(
+  tableId: string,
+  viewerProfileId: string,
+  postIds: string[],
+): Promise<Row[]> {
+  const normalizedPostIds = normalizePostIds(postIds);
 
-function createDeterministicSaveRowId(viewerProfileId: string, postId: string): string {
-  return createDeterministicEngagementRowId('save', viewerProfileId, postId);
-}
-
-function createSyntheticViewerSaveRecord(
-  saveRecordId: string,
-  input: CreateViewerPostSaveInput,
-): RawViewerSaveRecord {
-  return {
-    $id: saveRecordId,
-    postId: input.postId,
-    userId: input.viewerProfileId,
-  } as RawViewerSaveRecord;
-}
-
-export async function listViewerLikeRecords(viewerProfileId: string): Promise<RawViewerLikeRecord[]> {
-  if (!viewerProfileId) {
+  if (!viewerProfileId || normalizedPostIds.length === 0) {
     return [];
   }
 
-  try {
-    const result = await tablesDB.listRows<RawViewerLikeRecord>({
+  const rows: Row[] = [];
+
+  for (let index = 0; index < normalizedPostIds.length; index += VIEWER_RECORD_LIMIT) {
+    const postIdsBatch = normalizedPostIds.slice(index, index + VIEWER_RECORD_LIMIT);
+    const result = await tablesDB.listRows<Row>({
       databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.likesTableId,
+      tableId,
       queries: [
-        Query.select(VIEWER_LIKE_RECORD_SELECT),
+        Query.select(VIEWER_ENGAGEMENT_RECORD_SELECT),
         Query.equal('userId', viewerProfileId),
-        Query.limit(VIEWER_LIKE_RECORD_LIMIT),
+        Query.equal('postId', postIdsBatch),
+        Query.limit(postIdsBatch.length),
       ],
       total: false,
     });
 
-    return result.rows;
+    rows.push(...result.rows);
+  }
+
+  return rows;
+}
+
+export async function listAllViewerLikeRecords(
+  viewerProfileId: string,
+): Promise<RawViewerLikeRecord[]> {
+  try {
+    return await listAllViewerRecords<RawViewerLikeRecord>(appwriteConfig.likesTableId, viewerProfileId);
   } catch (error) {
     console.error(
-      '[PostEngagementApi.listViewerLikeRecords] Failed to load viewer like records.',
+      '[PostEngagementApi.listAllViewerLikeRecords] Failed to load viewer like records.',
       error,
     );
     throw error;
   }
 }
 
-export async function listViewerSaveRecords(viewerProfileId: string): Promise<RawViewerSaveRecord[]> {
-  if (!viewerProfileId) {
-    return [];
-  }
-
+export async function listAllViewerSaveRecords(
+  viewerProfileId: string,
+): Promise<RawViewerSaveRecord[]> {
   try {
-    const result = await tablesDB.listRows<RawViewerSaveRecord>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.saveTableId,
-      queries: [
-        Query.select(VIEWER_SAVE_RECORD_SELECT),
-        Query.equal('userId', viewerProfileId),
-        Query.limit(VIEWER_SAVE_RECORD_LIMIT),
-      ],
-      total: false,
-    });
-
-    return result.rows;
+    return await listAllViewerRecords<RawViewerSaveRecord>(appwriteConfig.saveTableId, viewerProfileId);
   } catch (error) {
     console.error(
-      '[PostEngagementApi.listViewerSaveRecords] Failed to load viewer save records.',
+      '[PostEngagementApi.listAllViewerSaveRecords] Failed to load viewer save records.',
       error,
     );
     throw error;
   }
+}
+
+export async function findViewerLikeRecord(
+  viewerProfileId: string,
+  postId: string,
+): Promise<RawViewerLikeRecord | null> {
+  try {
+    return await findViewerRecord<RawViewerLikeRecord>(
+      appwriteConfig.likesTableId,
+      viewerProfileId,
+      postId,
+    );
+  } catch (error) {
+    console.error('[PostEngagementApi.findViewerLikeRecord] Failed to load viewer like record.', error);
+    throw error;
+  }
+}
+
+export async function findViewerSaveRecord(
+  viewerProfileId: string,
+  postId: string,
+): Promise<RawViewerSaveRecord | null> {
+  try {
+    return await findViewerRecord<RawViewerSaveRecord>(
+      appwriteConfig.saveTableId,
+      viewerProfileId,
+      postId,
+    );
+  } catch (error) {
+    console.error('[PostEngagementApi.findViewerSaveRecord] Failed to load viewer save record.', error);
+    throw error;
+  }
+}
+
+export async function listViewerLikeRecordsByPostIds(
+  viewerProfileId: string,
+  postIds: string[],
+): Promise<RawViewerLikeRecord[]> {
+  try {
+    return await listViewerRecordsByPostIds<RawViewerLikeRecord>(
+      appwriteConfig.likesTableId,
+      viewerProfileId,
+      postIds,
+    );
+  } catch (error) {
+    console.error(
+      '[PostEngagementApi.listViewerLikeRecordsByPostIds] Failed to load viewer like records.',
+      error,
+    );
+    throw error;
+  }
+}
+
+export async function listViewerSaveRecordsByPostIds(
+  viewerProfileId: string,
+  postIds: string[],
+): Promise<RawViewerSaveRecord[]> {
+  try {
+    return await listViewerRecordsByPostIds<RawViewerSaveRecord>(
+      appwriteConfig.saveTableId,
+      viewerProfileId,
+      postIds,
+    );
+  } catch (error) {
+    console.error(
+      '[PostEngagementApi.listViewerSaveRecordsByPostIds] Failed to load viewer save records.',
+      error,
+    );
+    throw error;
+  }
+}
+
+async function getRequiredViewerLikeRecord(
+  viewerProfileId: string,
+  postId: string,
+): Promise<RawViewerLikeRecord> {
+  const existingRecord = await findViewerLikeRecord(viewerProfileId, postId);
+
+  if (!existingRecord) {
+    throw new Error('The like record already exists, but it could not be loaded.');
+  }
+
+  return existingRecord;
+}
+
+async function getRequiredViewerSaveRecord(
+  viewerProfileId: string,
+  postId: string,
+): Promise<RawViewerSaveRecord> {
+  const existingRecord = await findViewerSaveRecord(viewerProfileId, postId);
+
+  if (!existingRecord) {
+    throw new Error('The save record already exists, but it could not be loaded.');
+  }
+
+  return existingRecord;
 }
 
 export async function createViewerLikeRecord(
@@ -134,13 +248,11 @@ export async function createViewerLikeRecord(
     throw new Error('Post ID is required to like a post.');
   }
 
-  const likeRecordId = createDeterministicLikeRowId(input.viewerProfileId, input.postId);
-
   try {
-    await tablesDB.createRow<RawViewerLikeRecord>({
+    const createdRecord = await tablesDB.createRow<RawViewerLikeRecord>({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.likesTableId,
-      rowId: likeRecordId,
+      rowId: ID.unique(),
       data: {
         userId: input.viewerProfileId,
         postId: input.postId,
@@ -157,15 +269,17 @@ export async function createViewerLikeRecord(
     });
 
     return {
-      likeRecordId,
-      postId: input.postId,
+      likeRecordId: createdRecord.$id,
+      postId: createdRecord.postId,
       viewerProfileId: input.viewerProfileId,
     };
   } catch (error) {
     if (error instanceof AppwriteException && error.code === 409) {
+      const existingRecord = await getRequiredViewerLikeRecord(input.viewerProfileId, input.postId);
+
       return {
-        likeRecordId,
-        postId: input.postId,
+        likeRecordId: existingRecord.$id,
+        postId: existingRecord.postId,
         viewerProfileId: input.viewerProfileId,
       };
     }
@@ -190,13 +304,11 @@ export async function createViewerSaveRecord(
     throw new Error('Post ID is required to save a post.');
   }
 
-  const saveRecordId = createDeterministicSaveRowId(input.viewerProfileId, input.postId);
-
   try {
     const createdRecord = await tablesDB.createRow<RawViewerSaveRecord>({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.saveTableId,
-      rowId: saveRecordId,
+      rowId: ID.unique(),
       data: {
         userId: input.viewerProfileId,
         postId: input.postId,
@@ -215,7 +327,7 @@ export async function createViewerSaveRecord(
     return createdRecord;
   } catch (error) {
     if (error instanceof AppwriteException && error.code === 409) {
-      return createSyntheticViewerSaveRecord(saveRecordId, input);
+      return await getRequiredViewerSaveRecord(input.viewerProfileId, input.postId);
     }
 
     console.error(
@@ -229,8 +341,8 @@ export async function createViewerSaveRecord(
 export async function deleteViewerLikeRecord(
   input: DeleteViewerPostLikeInput,
 ): Promise<DeleteViewerPostLikeResult> {
-  if (!input.likeRecordId) {
-    throw new Error('Like record ID is required to delete a liked post.');
+  if (!input.viewerProfileId) {
+    throw new Error('Viewer profile ID is required to delete a liked post.');
   }
 
   if (!input.postId) {
@@ -238,10 +350,20 @@ export async function deleteViewerLikeRecord(
   }
 
   try {
+    const existingRecord = await findViewerLikeRecord(input.viewerProfileId, input.postId);
+    const resolvedLikeRecordId = existingRecord?.$id ?? null;
+
+    if (!existingRecord) {
+      return {
+        likeRecordId: resolvedLikeRecordId,
+        deleted: false,
+      };
+    }
+
     await tablesDB.deleteRow({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.likesTableId,
-      rowId: input.likeRecordId,
+      rowId: existingRecord.$id,
     });
 
     await tablesDB.decrementRowColumn({
@@ -254,12 +376,14 @@ export async function deleteViewerLikeRecord(
     });
 
     return {
-      likeRecordId: input.likeRecordId,
+      likeRecordId: resolvedLikeRecordId,
+      deleted: true,
     };
   } catch (error) {
     if (error instanceof AppwriteException && error.code === 404) {
       return {
-        likeRecordId: input.likeRecordId,
+        likeRecordId: null,
+        deleted: false,
       };
     }
 
@@ -271,12 +395,8 @@ export async function deleteViewerLikeRecord(
 export async function deleteViewerSaveRecord(
   input: DeleteViewerPostSaveInput,
 ): Promise<DeleteViewerPostSaveResult> {
-  const saveRecordIds = Array.from(
-    new Set(input.saveRecordIds.filter((saveRecordId) => saveRecordId.trim().length > 0)),
-  );
-
-  if (saveRecordIds.length === 0) {
-    throw new Error('At least one save record ID is required to delete a saved post.');
+  if (!input.viewerProfileId) {
+    throw new Error('Viewer profile ID is required to delete a saved post.');
   }
 
   if (!input.postId) {
@@ -284,41 +404,43 @@ export async function deleteViewerSaveRecord(
   }
 
   try {
-    let deletedCount = 0;
+    const existingRecord = await findViewerSaveRecord(input.viewerProfileId, input.postId);
+    const resolvedSaveRecordId = existingRecord?.$id ?? null;
 
-    for (let index = 0; index < saveRecordIds.length; index += 1) {
-      try {
-        await tablesDB.deleteRow({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.saveTableId,
-          rowId: saveRecordIds[index],
-        });
-
-        deletedCount += 1;
-      } catch (error) {
-        if (error instanceof AppwriteException && error.code === 404) {
-          continue;
-        }
-
-        throw error;
-      }
+    if (!existingRecord) {
+      return {
+        saveRecordId: resolvedSaveRecordId,
+        deleted: false,
+      };
     }
 
-    if (deletedCount > 0) {
-      await tablesDB.decrementRowColumn({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.postsTableId,
-        rowId: input.postId,
-        column: POST_SAVE_COUNT_COLUMN,
-        value: POST_SAVE_COUNT_STEP,
-        min: 0,
-      });
-    }
+    await tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.saveTableId,
+      rowId: existingRecord.$id,
+    });
+
+    await tablesDB.decrementRowColumn({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      rowId: input.postId,
+      column: POST_SAVE_COUNT_COLUMN,
+      value: POST_SAVE_COUNT_STEP,
+      min: 0,
+    });
 
     return {
-      saveRecordIds,
+      saveRecordId: resolvedSaveRecordId,
+      deleted: true,
     };
   } catch (error) {
+    if (error instanceof AppwriteException && error.code === 404) {
+      return {
+        saveRecordId: null,
+        deleted: false,
+      };
+    }
+
     console.error(
       '[PostEngagementApi.deleteViewerSaveRecord] Failed to delete a viewer save record.',
       error,
