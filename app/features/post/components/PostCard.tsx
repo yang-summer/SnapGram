@@ -1,14 +1,17 @@
-import type { Models } from 'appwrite';
 import { Link } from 'react-router';
-import { useUserContext } from '~/context/AuthContext';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import PostStats from './PostStats';
+import type { PostCardViewModel } from '../types/post.type';
 
 type PostCardProps = {
-  post: Models.Row;
+  post: PostCardViewModel;
 };
 
 export default function PostCard({ post }: PostCardProps) {
-  const { user } = useUserContext();
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
+  const currentUserProfileId = currentUser?.profileId ?? '';
+  const currentUserAccountId = currentUser?.accountId ?? '';
 
   if (!post.creator) return null;
 
@@ -16,7 +19,7 @@ export default function PostCard({ post }: PostCardProps) {
     <div className="rounded-3xl border border-amber-900 p-5 lg:p-7 w-full max-w-screen-sm">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <Link to={`/profile/${post.creator.$id}`}>
+          <Link to={`/profile/${post.creator.id}`}>
             <img
               src={post?.creator?.imageUrl || '/assets/icons/profile-placeholder.svg'}
               alt="creator"
@@ -26,22 +29,22 @@ export default function PostCard({ post }: PostCardProps) {
           <div className="flex flex-col">
             <p>{post.creator.name}</p>
             <div className="flex items-center gap-2">
-              <p>{post.$createdAt}</p>-<p>{post.location}</p>
+              <p>{post.createdAt}</p>-<p>{post.location}</p>
             </div>
           </div>
         </div>
         <Link
-          to={`/update-post/${post.$id}`}
-          className={user.id !== post.creator.$id ? 'hidden' : ''}
+          to={`/update-post/${post.id}`}
+          className={currentUserProfileId !== post.creator.id ? 'hidden' : ''}
         >
           <img src={'/assets/icons/edit.svg'} alt="edit" width={20} height={20} />
         </Link>
       </div>
-      <Link to={`/posts/${post.$id}`}>
+      <Link to={`/posts/${post.id}`}>
         <div>
           <p>{post.caption}</p>
           <ul className="flex gap-1 mt-2">
-            {post.tags.map((tag: string) => (
+            {post.tags?.map((tag: string) => (
               <li key={tag}>#{tag}</li>
             ))}
           </ul>
@@ -52,7 +55,11 @@ export default function PostCard({ post }: PostCardProps) {
           alt="post image"
         />
       </Link>
-      <PostStats post={post} userId={user.id} />
+      <PostStats
+        post={post}
+        viewerProfileId={currentUserProfileId}
+        viewerAccountId={currentUserAccountId}
+      />
     </div>
   );
 }

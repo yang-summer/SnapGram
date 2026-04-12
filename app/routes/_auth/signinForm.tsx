@@ -1,18 +1,26 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import * as z from 'zod';
+import InlineErrorAlert from '~/components/feedback/inline-error-alert';
 import { Button } from '~/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
-import { useUserContext } from '~/context/AuthContext';
-import { useSignInAccountMutation } from '~/lib/react-query/queriesAndMutations';
+import { useSignInMutation } from '~/features/auth/queries/auth.mutations';
 import { SigninValidation } from '~/lib/validation';
+
+const PROFILE_RECOVERY_MESSAGE =
+  'You are signed in, but your profile is not fully initialized yet. Please complete recovery before continuing.';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Sign in failed. Please try again.';
+}
 
 export default function SigninForm() {
   const navigate = useNavigate();
-  const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
-  const { mutateAsync: signInAccount, isPending: isSigningIn } = useSignInAccountMutation();
+  const { mutateAsync: signIn, isPending: isSigningIn } = useSignInMutation();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof SigninValidation>>({
     resolver: zodResolver(SigninValidation),
@@ -23,22 +31,33 @@ export default function SigninForm() {
   });
 
   async function onSubmit(data: z.infer<typeof SigninValidation>) {
-    const session = await signInAccount({
-      email: data.email,
-      password: data.password,
-    });
+    setSubmitError(null);
 
-    if (!session) {
-      console.error('Sign in failed');
-    }
+    try {
+      const currentUser = await signIn({
+        email: data.email,
+        password: data.password,
+      });
 
-    const isLoggedIn = await checkAuthUser();
+      if (currentUser.status === 'authenticated') {
+        form.reset();
+        navigate('/', { replace: true });
+        return;
+      }
 
-    if (isLoggedIn) {
-      form.reset();
-      navigate('/');
-    } else {
-      console.error('Sign in failed');
+      if (currentUser.status === 'profile_missing') {
+        navigate('/', {
+          replace: true,
+          state: {
+            recoveryMessage: PROFILE_RECOVERY_MESSAGE,
+          },
+        });
+        return;
+      }
+
+      setSubmitError('Sign in failed. Please try again.');
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
     }
   }
 
@@ -54,6 +73,13 @@ export default function SigninForm() {
         <p className="text-xs sm:text-sm">To use Snapgram please enter your details</p>
       </div>
       <FieldGroup className="flex flex-col items-center gap-5">
+        {submitError ? (
+          <InlineErrorAlert
+            title="Sign in failed"
+            message={submitError}
+            className="w-full max-w-xs"
+          />
+        ) : null}
         <Controller
           name="email"
           control={form.control}
@@ -91,8 +117,8 @@ export default function SigninForm() {
           )}
         />
       </FieldGroup>
-      <Button type="submit" className="w-full max-w-xs rounded-full">
-        Submit
+      <Button type="submit" className="w-full max-w-xs rounded-full" disabled={isSigningIn}>
+        {isSigningIn ? 'Signing in...' : 'Submit'}
       </Button>
       <p className="text-center">
         Don't have an account?

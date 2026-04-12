@@ -1,16 +1,16 @@
 import { PiSignOut, PiUser } from 'react-icons/pi';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, useLocation } from 'react-router';
 import { sidebarLinks } from '~/constants';
-import { useUserContext } from '~/context/AuthContext';
-import { useSignOutAccountMutation } from '~/lib/react-query/queriesAndMutations';
+import { useSignOutMutation } from '~/features/auth/queries/auth.mutations';
+import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import type { NavBarLink } from '~/lib/types';
 import { Button } from '../ui/button';
 
 export default function LeftSidebar() {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { mutate: signOut, isSuccess } = useSignOutAccountMutation();
-  const { user } = useUserContext();
+  const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
+  const { data } = useCurrentUserQuery();
+  const currentUser = data?.status === 'authenticated' ? data.user : null;
 
   return (
     <nav className="hidden md:flex px-6 py-10 flex-col justify-between min-w-67.5">
@@ -18,15 +18,15 @@ export default function LeftSidebar() {
         <Link to="/">
           <img src="/assets/images/logo.svg" alt="logo" width={130} height={36} />
         </Link>
-        <Link to={`/profile/${user.id}`} className="flex gap-3 items-center">
-          {user.imageUrl ? (
-            <img src={user.imageUrl} alt="profile" className="h-8 w-8 rounded-full" />
+        <Link to={`/profile/${currentUser?.profileId ?? ''}`} className="flex gap-3 items-center">
+          {currentUser?.imageUrl ? (
+            <img src={currentUser.imageUrl} alt="profile" className="h-8 w-8 rounded-full" />
           ) : (
             <PiUser className="h-8 w-8" />
           )}
           <div className="flex flex-col">
-            <p className="font-bold">{user.name}</p>
-            <p className="text-[14px] font-normal">@{user.username}</p>
+            <p className="font-bold">{currentUser?.name ?? ''}</p>
+            <p className="text-[14px] font-normal">@{currentUser?.username ?? ''}</p>
           </div>
         </Link>
         <ul>
@@ -57,6 +57,7 @@ export default function LeftSidebar() {
         <Button
           variant="ghost"
           onClick={() => signOut()}
+          disabled={isSigningOut}
           className="flex gap-4 justify-start items-center"
         >
           <PiSignOut />

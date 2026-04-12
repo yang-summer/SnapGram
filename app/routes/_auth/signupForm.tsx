@@ -1,23 +1,26 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import * as z from 'zod';
+import InlineErrorAlert from '~/components/feedback/inline-error-alert';
 import { Button } from '~/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
-import { useUserContext } from '~/context/AuthContext';
-import {
-  useCreateUserAccountMutation,
-  useSignInAccountMutation,
-} from '~/lib/react-query/queriesAndMutations';
+import { useSignUpMutation } from '~/features/auth/queries/auth.mutations';
 import { SignupValidation } from '~/lib/validation';
+
+const PROFILE_INITIALIZATION_ERROR_MESSAGE =
+  'Account created and signed in, but your profile initialization is incomplete. Please finish profile recovery to continue.';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Sign up failed. Please try again.';
+}
 
 export default function SignupForm() {
   const navigate = useNavigate();
-  const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
-  const { mutateAsync: createAccount, isPending: isCreatingAccount } =
-    useCreateUserAccountMutation();
-  const { mutateAsync: signInAccount, isPending: isSigningIn } = useSignInAccountMutation();
+  const { mutateAsync: signUp, isPending: isSigningUp } = useSignUpMutation();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof SignupValidation>>({
     resolver: zodResolver(SignupValidation),
@@ -30,28 +33,30 @@ export default function SignupForm() {
   });
 
   async function onSubmit(data: z.infer<typeof SignupValidation>) {
-    const newUser = await createAccount(data);
+    setSubmitError(null);
 
-    if (!newUser) {
-      console.error('Sign up failed');
-    }
+    try {
+      const currentUser = await signUp(data);
 
-    const session = await signInAccount({
-      email: data.email,
-      password: data.password,
-    });
+      if (currentUser.status === 'authenticated') {
+        form.reset();
+        navigate('/', { replace: true });
+        return;
+      }
 
-    if (!session) {
-      console.error('Sign in failed');
-    }
+      if (currentUser.status === 'profile_missing') {
+        navigate('/', {
+          replace: true,
+          state: {
+            recoveryMessage: PROFILE_INITIALIZATION_ERROR_MESSAGE,
+          },
+        });
+        return;
+      }
 
-    const isLoggedIn = await checkAuthUser();
-
-    if (isLoggedIn) {
-      form.reset();
-      navigate('/');
-    } else {
-      console.error('Sign up failed');
+      setSubmitError('Sign up failed. Please try again.');
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
     }
   }
 
@@ -67,6 +72,13 @@ export default function SignupForm() {
         <p className="text-xs sm:text-sm">To use Snapgram please enter your details</p>
       </div>
       <FieldGroup className="flex flex-col items-center gap-5">
+        {submitError ? (
+          <InlineErrorAlert
+            title="Sign up failed"
+            message={submitError}
+            className="w-full max-w-xs"
+          />
+        ) : null}
         <Controller
           name="name"
           control={form.control}
@@ -140,8 +152,8 @@ export default function SignupForm() {
           )}
         />
       </FieldGroup>
-      <Button type="submit" className="w-full max-w-xs rounded-full">
-        Submit
+      <Button type="submit" className="w-full max-w-xs rounded-full" disabled={isSigningUp}>
+        {isSigningUp ? 'Creating account...' : 'Submit'}
       </Button>
       <p className="text-center">
         Already have an account?

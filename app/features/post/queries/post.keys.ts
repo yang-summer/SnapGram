@@ -1,0 +1,15 @@
+export const postKeys = {
+  all: ['posts'] as const,
+  lists: () => [...postKeys.all, 'list'] as const,
+  recent: () => [...postKeys.lists(), 'recent'] as const,
+  explore: (params: { limit: number }) => [...postKeys.lists(), 'explore', params] as const,
+  search: (params: { term: string; limit: number }) => [...postKeys.lists(), 'search', params] as const,
+  details: () => [...postKeys.all, 'detail'] as const,
+  detail: (id: string) => [...postKeys.details(), id] as const,
+  editor: (id: string) => [...postKeys.all, 'editor', id] as const,
+  engagement: () => [...postKeys.all, 'engagement'] as const,
+  viewerLikesRoot: () => [...postKeys.engagement(), 'viewer-likes'] as const,
+  viewerLikes: (viewerProfileId: string) => [...postKeys.viewerLikesRoot(), viewerProfileId] as const,
+  viewerSavesRoot: () => [...postKeys.engagement(), 'viewer-saves'] as const,
+  viewerSaves: (viewerProfileId: string) => [...postKeys.viewerSavesRoot(), viewerProfileId] as const,
+};
