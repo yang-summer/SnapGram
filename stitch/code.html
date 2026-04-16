@@ -1,0 +1,777 @@
+<!doctype html>
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      const appFontStack = [
+        'system-ui',
+        'Apple Color Emoji',
+        'Segoe UI Emoji',
+        'Segoe UI Symbol',
+        'Noto Color Emoji',
+        '-apple-system',
+        'Segoe UI',
+        'Roboto',
+        'Ubuntu',
+        'Cantarell',
+        'Noto Sans',
+        'sans-serif',
+        'BlinkMacSystemFont',
+        'Helvetica Neue',
+        'Arial',
+        'PingFang SC',
+        'PingFang TC',
+        'PingFang HK',
+        'Microsoft Yahei',
+        'Microsoft JhengHei',
+      ];
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          screens: {
+            sm: '640px',
+            md: '768px',
+            lg: '1024px',
+            xl: '1280px',
+            '2xl': '1536px',
+          },
+          extend: {
+            colors: {
+              'surface-dim': '#dcd9d9',
+              'on-primary-fixed': '#410007',
+              'on-surface': '#1b1c1c',
+              'secondary-fixed': '#ffdadb',
+              'on-secondary-fixed-variant': '#8a172f',
+              'outline-variant': '#e8bcbb',
+              'on-primary': '#ffffff',
+              'inverse-on-surface': '#f3f0f0',
+              'on-primary-container': '#fffbff',
+              'on-secondary-container': '#70001f',
+              'surface-container-low': '#f6f3f2',
+              'on-secondary': '#ffffff',
+              outline: '#926e6d',
+              background: '#fbf9f8',
+              'on-error-container': '#93000a',
+              'surface-variant': '#e4e2e1',
+              'on-error': '#ffffff',
+              'tertiary-fixed-dim': '#ffba36',
+              'surface-container-lowest': '#ffffff',
+              'on-tertiary-fixed-variant': '#5f4100',
+              'primary-fixed-dim': '#ffb3b1',
+              'surface-tint': '#bf0029',
+              'tertiary-fixed': '#ffdeac',
+              'surface-container-high': '#eae8e7',
+              tertiary: '#7b5500',
+              'surface-container-highest': '#e4e2e1',
+              secondary: '#ab3145',
+              'on-tertiary': '#ffffff',
+              'on-tertiary-container': '#fffbff',
+              'surface-bright': '#fbf9f8',
+              'on-tertiary-fixed': '#281900',
+              'inverse-primary': '#ffb3b1',
+              'secondary-fixed-dim': '#ffb2b7',
+              primary: '#bb0028',
+              'on-primary-fixed-variant': '#92001d',
+              error: '#ba1a1a',
+              'primary-fixed': '#ffdad8',
+              'tertiary-container': '#9b6c00',
+              'surface-container': '#f0eded',
+              'on-secondary-fixed': '#40000e',
+              'on-background': '#1b1c1c',
+              'secondary-container': '#fe6f80',
+              'on-surface-variant': '#5e3f3e',
+              'primary-container': '#e80535',
+              'error-container': '#ffdad6',
+              surface: '#fbf9f8',
+              'inverse-surface': '#303030',
+            },
+            borderRadius: {
+              DEFAULT: '1rem',
+              lg: '2rem',
+              xl: '3rem',
+              full: '9999px',
+            },
+            fontFamily: {
+              headline: appFontStack,
+              body: appFontStack,
+              label: appFontStack,
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --pc-muted-fill: rgba(0, 0, 0, 0.03);
+        --pc-ink-strong: rgba(51, 51, 51, 1);
+        --pc-ink-medium: rgba(51, 51, 51, 0.8);
+        --pc-ink-placeholder: rgba(51, 51, 51, 0.3);
+      }
+
+      .masonry-grid {
+        column-count: 1;
+        column-gap: 1rem;
+      }
+      @media (min-width: 640px) {
+        .masonry-grid {
+          column-count: 2;
+        }
+      }
+      @media (min-width: 1024px) {
+        .masonry-grid {
+          column-count: 3;
+        }
+      }
+      @media (min-width: 1280px) {
+        .masonry-grid {
+          column-count: 4;
+        }
+      }
+      @media (min-width: 1536px) {
+        .masonry-grid {
+          column-count: 5;
+        }
+      }
+
+      .masonry-item {
+        break-inside: avoid;
+        margin-bottom: 1rem;
+      }
+
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .pc-muted-fill {
+        background-color: var(--pc-muted-fill);
+      }
+
+      input.pc-muted-fill {
+        background-color: var(--pc-muted-fill) !important;
+      }
+
+      .pc-muted-fill-hover:hover {
+        background-color: var(--pc-muted-fill);
+      }
+
+      .pc-sidebar-ink {
+        color: var(--pc-ink-strong);
+      }
+
+      .pc-tag-active {
+        color: var(--pc-ink-strong);
+      }
+
+      .pc-tag-inactive {
+        color: var(--pc-ink-medium);
+      }
+
+      .pc-search-input::placeholder {
+        color: var(--pc-ink-placeholder);
+        font-size: 16px;
+        font-weight: 400;
+      }
+
+      .pc-card-title {
+        color: rgb(51, 51, 51);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .pc-card-meta {
+        color: rgb(51, 51, 51);
+        font-size: 12px;
+        font-weight: 400;
+      }
+
+      .pc-mobile-header-action {
+        color: rgba(51, 51, 51, 0.6);
+        border-radius: 9999px;
+        background-color: transparent;
+        transition:
+          background-color 200ms ease,
+          color 200ms ease;
+      }
+
+      .pc-mobile-header-action:hover {
+        background-color: rgba(51, 51, 51, 0.3);
+      }
+
+      .pc-bottom-nav-active {
+        color: rgb(51, 51, 51);
+      }
+
+      .pc-bottom-nav-inactive {
+        color: rgba(51, 51, 51, 0.6);
+      }
+
+      .pc-bottom-nav-link {
+        height: 100%;
+      }
+
+      .pc-bottom-nav-icon {
+        width: 24px;
+        height: 24px;
+        font-size: 24px;
+        line-height: 1;
+        font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24;
+      }
+
+      .pc-bottom-nav-label {
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      @media (min-width: 1024px) {
+        .masonry-item {
+          margin-bottom: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="bg-white text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container"
+  >
+    <!-- Desktop SideNavBar -->
+    <aside
+      class="hidden lg:flex fixed left-0 top-[72px] z-40 h-[calc(100vh-72px)] w-[248px] xl:w-[272px] flex-col bg-white px-5 py-6 xl:px-6"
+    >
+      <div>
+        <nav class="space-y-1">
+          <a
+            class="pc-muted-fill pc-sidebar-ink flex items-center gap-4 rounded-full px-4 py-4 transition-colors"
+            href="#"
+            style=""
+          >
+            <span
+              class="material-symbols-outlined"
+              data-icon="home"
+              style="font-variation-settings: 'FILL' 1"
+              >home</span
+            >
+            <span class="font-headline text-base font-semibold" style="">首页</span>
+          </a>
+          <a
+            class="pc-sidebar-ink flex items-center gap-4 rounded-full px-4 py-4 transition-colors hover:bg-zinc-100"
+            href="#"
+            style=""
+          >
+            <span class="material-symbols-outlined" data-icon="explore" style="">explore</span>
+            <span class="font-headline text-base font-semibold" style="">发现</span>
+          </a>
+          <a
+            class="pc-sidebar-ink flex items-center gap-4 rounded-full px-4 py-4 transition-colors hover:bg-zinc-100"
+            href="#"
+            style=""
+          >
+            <span class="material-symbols-outlined" data-icon="live_tv" style="">live_tv</span>
+            <span class="font-headline text-base font-semibold" style="">直播</span>
+          </a>
+          <a
+            class="pc-sidebar-ink flex items-center gap-4 rounded-full px-4 py-4 transition-colors hover:bg-zinc-100"
+            href="#"
+            style=""
+          >
+            <span class="material-symbols-outlined" data-icon="add_box" style="">add_box</span>
+            <span class="font-headline text-base font-semibold" style="">发布笔记</span>
+          </a>
+          <a
+            class="mt-3 flex items-center gap-3 rounded-full px-3 py-3.5 transition-colors hover:bg-zinc-50"
+            href="#"
+            style=""
+          >
+            <img
+              alt="User Profile"
+              class="h-11 w-11 rounded-full object-cover"
+              data-alt="Close up portrait of a stylish woman with a confident expression in soft studio lighting"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7HaWUqtK0PnMDtd4TPoDH0XRtNe7KTmA_BBzpP8szcndVktvNf0RWBRbQ1GZ3UGMII-69HkvliZl6o8VwFZJnB3no20weF_w-ox3vuz-Jr4jopdq5W5C3a74IJ7gdpzgItGxvw8rQ5qvRpW8QPls3xFAODRfFPxfGxaRi187SdvEF1_7Cron5W-yPHTENnCk8acp63xd4sF7fpv8jQvbde9nVhxMzvEbvOnDwFN88JF_NRqqQrX9kDPdyR8lQlzhZcsqSOGBD5LU"
+              style=""
+            />
+            <div class="min-w-0">
+              <div class="truncate text-sm font-semibold pc-sidebar-ink" style="">Alex Curator</div>
+              <div class="truncate text-xs pc-sidebar-ink" style="">@alexcurator</div>
+            </div>
+          </a>
+        </nav>
+      </div>
+      <button
+        class="pc-sidebar-ink mt-auto flex items-center gap-4 rounded-full px-4 py-4 text-left transition-colors hover:bg-zinc-100"
+        type="button"
+      >
+        <span class="material-symbols-outlined" data-icon="menu" style="">menu</span>
+        <span class="font-headline text-base font-semibold" style="">更多</span>
+      </button>
+    </aside>
+    <!-- Main Content Area -->
+    <main class="min-h-screen lg:ml-[248px] xl:ml-[272px]">
+      <!-- Responsive Header -->
+      <header class="sticky top-0 z-30 bg-white">
+        <div class="hidden lg:flex fixed left-5 top-0 z-40 h-[72px] items-center gap-3 xl:left-6">
+          <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary">
+            <span class="material-symbols-outlined text-white" data-icon="auto_awesome" style=""
+              >auto_awesome</span
+            >
+          </div>
+          <div class="flex flex-col">
+            <span
+              class="font-headline text-[1.75rem] font-black tracking-[-0.04em] text-primary"
+              style=""
+              >小红书</span
+            >
+            <span
+              class="text-[10px] font-semibold uppercase tracking-[0.28em] text-on-surface-variant/70"
+              style=""
+              >Inspire Daily</span
+            >
+          </div>
+        </div>
+        <div class="mx-auto max-w-[1600px] px-4 py-4 md:px-8 lg:py-0 xl:px-12">
+          <div class="relative flex min-h-10 items-center justify-between gap-3 lg:hidden">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
+                <span class="material-symbols-outlined text-white" data-icon="auto_awesome" style=""
+                  >auto_awesome</span
+                >
+              </div>
+              <div class="flex flex-col">
+                <span
+                  class="font-headline text-xl font-black tracking-[-0.04em] text-primary"
+                  style=""
+                  >小红书</span
+                >
+              </div>
+            </div>
+            <div
+              class="pointer-events-none absolute inset-y-0 left-1/2 hidden -translate-x-1/2 items-center sm:flex lg:hidden"
+            >
+              <div class="pointer-events-auto relative w-[min(50vw,22rem)] md:w-[22rem]">
+                <input
+                  class="pc-muted-fill pc-search-input w-full rounded-full border-none py-2.5 pl-4 pr-10 text-sm text-black focus:border-none focus:outline-none focus:ring-0"
+                  placeholder="搜索穿搭、旅行、探店灵感"
+                  type="text"
+                />
+                <span
+                  class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-xl text-[rgba(51,51,51,0.6)]"
+                  data-icon="search"
+                  style=""
+                  >search</span
+                >
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button
+                class="pc-mobile-header-action flex h-10 w-10 items-center justify-center sm:hidden"
+                type="button"
+              >
+                <span class="material-symbols-outlined" data-icon="search" style="">search</span>
+              </button>
+              <button
+                class="pc-mobile-header-action flex h-10 w-10 items-center justify-center"
+                type="button"
+              >
+                <span class="material-symbols-outlined" data-icon="menu" style="">menu</span>
+              </button>
+            </div>
+          </div>
+          <div class="mt-3 lg:hidden">
+            <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
+              <a
+                class="pc-muted-fill pc-tag-active inline-flex h-12 items-center rounded-full px-5 text-base font-semibold"
+                href="#"
+                >推荐</a
+              >
+              <a
+                class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+                href="#"
+                >穿搭</a
+              >
+              <a
+                class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+                href="#"
+                >美食</a
+              >
+              <a
+                class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+                href="#"
+                >彩妆</a
+              >
+              <a
+                class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+                href="#"
+                >旅行</a
+              >
+              <a
+                class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+                href="#"
+                >家居</a
+              >
+              <a
+                class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+                href="#"
+                >健身</a
+              >
+            </nav>
+          </div>
+          <div class="hidden h-[72px] items-center lg:flex">
+            <div class="relative w-full max-w-xl">
+              <input
+                class="pc-muted-fill pc-search-input w-full rounded-full border-none py-3.5 pl-5 pr-12 text-sm text-black focus:border-none focus:outline-none focus:ring-0"
+                placeholder="搜索穿搭、旅行、探店灵感"
+                type="text"
+              />
+              <span
+                class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-xl text-zinc-500"
+                data-icon="search"
+                style=""
+                >search</span
+              >
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="mx-auto hidden max-w-[1600px] px-4 pb-2 pt-6 md:px-8 xl:px-12 lg:block">
+        <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
+          <a
+            class="pc-muted-fill pc-tag-active inline-flex h-12 items-center rounded-full px-5 text-base font-semibold"
+            href="#"
+            >推荐</a
+          >
+          <a
+            class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+            href="#"
+            >穿搭</a
+          >
+          <a
+            class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+            href="#"
+            >美食</a
+          >
+          <a
+            class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+            href="#"
+            >彩妆</a
+          >
+          <a
+            class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+            href="#"
+            >旅行</a
+          >
+          <a
+            class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+            href="#"
+            >家居</a
+          >
+          <a
+            class="pc-muted-fill-hover pc-tag-inactive inline-flex h-12 items-center rounded-full px-5 text-base font-normal transition-colors"
+            href="#"
+            >健身</a
+          >
+        </nav>
+      </div>
+      <!-- Feed Canvas -->
+      <section class="mx-auto max-w-[1600px] px-4 pb-6 pt-4 md:px-8 xl:px-12">
+        <div class="masonry-grid">
+          <!-- Card 1: Fashion -->
+          <article class="masonry-item group cursor-pointer">
+            <div
+              class="relative bg-surface-container-lowest rounded-[16px] overflow-hidden transition-all duration-300 hover:shadow-[0px_20px_40px_rgba(27,28,28,0.06)]"
+            >
+              <img
+                alt="Fashion model"
+                class="w-full object-cover"
+                data-alt="High fashion photography of a model in vibrant yellow clothing against a minimalist light grey wall in daylight"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsrZ4ex6vreTIToTqnsQAF2M6vP6IM24xuRFTPpmkxVPsnnTgg6T4-aVXJRXCKKiFrvKxl2U0U7Q6vn8mR9u5SlXR-w_o6YbxqSlwIMXsL9OHgxqxKMat1ewEuR9RGA_h_HzcAJ8OjGn1ARu2kBPQz9x1ciY9T3mrWSaYQ2P6QxF2SJP-qlh_fQGQgFpiTpMsXPQPFYJIr_51SXLZ9_1uyfwgFKPd1roVBmaICrHRGjqfVjAuiiuHTPYM9KatA6wJnvLAbiduz9T8"
+                style=""
+              />
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+              ></div>
+            </div>
+            <div class="mt-3 px-1">
+              <h3 class="pc-card-title font-headline leading-snug line-clamp-2" style="">
+                Minimalist Autumn Essentials: Why Less is More This Season
+              </h3>
+              <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center space-x-2">
+                  <img
+                    alt="User"
+                    class="w-6 h-6 rounded-full object-cover"
+                    data-alt="Portrait of a smiling young woman with natural makeup in bright airy setting"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9dRidCxc35LynriRQ4Ei7TnKfRNGVrVNxzyMyuKOSgVh5GaDHGcJnNNOJrShjOALmnIc-QggZ59PcXq6G5qob6uiMjUF_RkY4f9JDGF4IvWYlCy5mr7MOu285PSdSEunZREd4Jd1f1kauROl117OQk7XlwwKEBzWd2k4MKjlUM_H4dfkB45bw5qGa5DS3-VZoJSwSvSZZokw9R91xc7yY-ssBrC2QcuFFGzZEIVrvU9khUXaa8Jg0bREb-KQN4oPgBrHIqnR7ato"
+                    style=""
+                  />
+                  <span class="pc-card-meta" style="">StyleEdit</span>
+                </div>
+                <div
+                  class="flex items-center space-x-1 text-zinc-400 hover:text-primary transition-colors"
+                >
+                  <span class="material-symbols-outlined text-sm" data-icon="favorite" style=""
+                    >favorite</span
+                  >
+                  <span class="pc-card-meta" style="">12.5k</span>
+                </div>
+              </div>
+            </div>
+          </article>
+          <!-- Card 2: Food -->
+          <article class="masonry-item group cursor-pointer">
+            <div
+              class="relative bg-surface-container-lowest rounded-[16px] overflow-hidden transition-all duration-300 hover:shadow-[0px_20px_40px_rgba(27,28,28,0.06)]"
+            >
+              <img
+                alt="Artisan Food"
+                class="w-full object-cover h-96"
+                data-alt="Gourmet breakfast spread on a rustic wooden table with pancakes, fresh berries, and maple syrup in warm morning sunlight"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9BkkO-OJc6rhZxG89CHHgVqm0lpE7wfyDGd090YDMllxTfBJpDq91ADifaBp92cHlSsQcCxEvC2trLfmORNUEnYNtYwJY6yE2Ncajiu4HeTaQ7yYVrONQxlTVRl4vmaBVeELN7kvFb3knYez6P3VvkoJGLveZUuJidPK0i_k90l_3dgvLPOkUNypfB8FI-W_yBW14vkGvmbUgqiL3po8CTtb-siCbOn-UXoOEpcrXnA3I4H80TRyWM2fTQ_9JEQQw2rM5eTKV41g"
+                style=""
+              />
+            </div>
+            <div class="mt-3 px-1">
+              <h3 class="pc-card-title font-headline leading-snug line-clamp-2" style="">
+                The Secret to the Perfect Fluffy Pancakes: A 5-Minute Guide
+              </h3>
+              <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center space-x-2">
+                  <div
+                    class="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center text-[10px] font-bold text-amber-600"
+                    style=""
+                  >
+                    FK
+                  </div>
+                  <span class="pc-card-meta" style="">FoodieKin</span>
+                </div>
+                <div class="flex items-center space-x-1 text-zinc-400">
+                  <span class="material-symbols-outlined text-sm" data-icon="favorite" style=""
+                    >favorite</span
+                  >
+                  <span class="pc-card-meta" style="">8k</span>
+                </div>
+              </div>
+            </div>
+          </article>
+          <!-- Card 3: Travel -->
+          <article class="masonry-item group cursor-pointer">
+            <div
+              class="relative bg-surface-container-lowest rounded-[16px] overflow-hidden transition-all duration-300 hover:shadow-[0px_20px_40px_rgba(27,28,28,0.06)]"
+            >
+              <img
+                alt="Mountain View"
+                class="w-full object-cover h-[500px]"
+                data-alt="Wide angle shot of snow-capped mountains reflected in a crystal clear alpine lake during blue hour with misty atmosphere"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3unmJaU8oy1kw6bLYrYpv6WSx3rgXkM53qB9_S0buBuioKCzAQfGmdyoGkXhAxGw1Wxyr-IH1jwQGbXFM3GV1JxstbgTCc98oINsXQNfxL0JEah13BCfbwtQq0hlfaMWhyoQSC07z6MgxwBwoXyVSovjV7jIaF2jJgPgKSQS7XX4nhjlvurIl4dlWcPEbchcZrCOvi4CUFJB7ae41SoFG4HUcITbYTIbrpXfIn8Gj0Ff-0WWaMMBmh8R7zyg2GIcZsUTKKbmaQMs"
+                style=""
+              />
+            </div>
+            <div class="mt-3 px-1">
+              <h3 class="pc-card-title font-headline leading-snug line-clamp-2" style="">
+                Lost in the Alps: My Solo Journey Through the Dolomites
+              </h3>
+              <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center space-x-2">
+                  <img
+                    alt="User"
+                    class="w-6 h-6 rounded-full object-cover"
+                    data-alt="Close up headshot of a man with short beard and glasses in outdoor natural light"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5uR9SQ6oj4rRLldU3_FofX3kT0nsP8hiHYf4ehk85gwAQCagSO4buGaJfXyVEgBAozJp6zA8YrQ_fN642FNzc9l4wyFzOWveIXD0kHxxphKPF__9eQ_3ZtT0tRn4HBWI6DvocT0YVxbF2jVJONrIVetjK9QhUa6DEJc78e91mimPYOq_sj3QYDKOA5tCxmuOxI8YMnn5US9iYIkFkhhgcCQlRf1O5ledXu1mCMb9D_PMYsT3qErTSMUI2Mkg2STB27SDnSI9Bm3U"
+                    style=""
+                  />
+                  <span class="pc-card-meta" style="">Wanderlust</span>
+                </div>
+                <div class="flex items-center space-x-1 text-zinc-400">
+                  <span class="material-symbols-outlined text-sm" data-icon="favorite" style=""
+                    >favorite</span
+                  >
+                  <span class="pc-card-meta" style="">24k</span>
+                </div>
+              </div>
+            </div>
+          </article>
+          <!-- Card 4: Sketch/Art -->
+          <article class="masonry-item group cursor-pointer">
+            <div
+              class="relative bg-surface-container-lowest rounded-[16px] overflow-hidden transition-all duration-300 hover:shadow-[0px_20px_40px_rgba(27,28,28,0.06)]"
+            >
+              <img
+                alt="Digital Art"
+                class="w-full object-cover"
+                data-alt="Hand drawing a complex digital illustration on a tablet screen with vibrant neon pink and blue colors in a dim room"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3M9IfJdIKZoeGY_8n827ZZStZuTPkJI5VZqwifBlzjQx4z_FQK9XJWSJ9PXW_gYcd2hd7T6HDDLiobXwx_z1OEjn4sBcAyBYAdYZp2NJEclgQRi7yJv2tyx1loZJ99oDYjna2vR_npXVfugrOigQU9uO4B7bp_js91kQJxS7sI7vXieawlqAoGD3fGR_1CtssgoGmHLu49wzeZvpvtjcTQg9IoF0KDq_Yymsc_c4EzQZz2XTxTtAq2Z1zsuAKXMQI2Tf_xyty6b0"
+                style=""
+              />
+            </div>
+            <div class="mt-3 px-1">
+              <h3 class="pc-card-title font-headline leading-snug line-clamp-2" style="">
+                Unlocking Creativity: 3 Exercises to Break Artist's Block
+              </h3>
+              <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center space-x-2">
+                  <div
+                    class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-[10px] font-bold text-purple-600"
+                    style=""
+                  >
+                    AD
+                  </div>
+                  <span class="pc-card-meta" style="">ArtDaily</span>
+                </div>
+                <div class="flex items-center space-x-1 text-zinc-400">
+                  <span class="material-symbols-outlined text-sm" data-icon="favorite" style=""
+                    >favorite</span
+                  >
+                  <span class="pc-card-meta" style="">15.2k</span>
+                </div>
+              </div>
+            </div>
+          </article>
+          <!-- Card 5: Beauty -->
+          <article class="masonry-item group cursor-pointer">
+            <div
+              class="relative bg-surface-container-lowest rounded-[16px] overflow-hidden transition-all duration-300 hover:shadow-[0px_20px_40px_rgba(27,28,28,0.06)]"
+            >
+              <img
+                alt="Beauty Products"
+                class="w-full object-cover h-80"
+                data-alt="Aesthetic arrangement of luxury skincare bottles and cosmetic containers on a white marble surface with soft shadows"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAj3bjahjbbK4ajoJFt1lkkJ9Dh52FDm7lvgBIYEhqxB2BEOz-vqGsoOHHmaAP5PaQrgS0QWj32cjvzgcPg1HhIxAt5jnCtmlnxsuOFDsBgu-B0mnjyRUEr6-lyjW0rnYeK4E4FrkohlljbzY7JaAXc8Wa63Cv34NSdnbiKgCXC6ho8yc0ZRDRrN3ajSROToHIWrjn9Ird1GMDA_3JvSLByKAXhLZiTbtXNu5OMWgOM_Z_Q9C4nF_AiGUCA-6jgPEuxwSVq5Xf3DM"
+                style=""
+              />
+            </div>
+            <div class="mt-3 px-1">
+              <h3 class="pc-card-title font-headline leading-snug line-clamp-2" style="">
+                My 10-Step Skincare Routine for That Glass Skin Glow
+              </h3>
+              <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center space-x-2">
+                  <img
+                    alt="User"
+                    class="w-6 h-6 rounded-full object-cover"
+                    data-alt="Portrait of a young woman with freckles and natural glowing skin looking at camera"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0SC3zAjoZkNE7zLKFjjIyJcdto6nIiGm250nWGbKmj82M80zYhXS53PyLjch3waGThYeIectS1blYefpkhXowpeqPyBHTX8zQW4Z9ybPkPhRdIZnPdojllSnQL8xOp8vJPgRkcod0TqcK5OKczHSA6x218udP0wwJZuglvgrFKAxFv_dw0c7IHgzHFfTKmpI9lHk-qrANZdWkJZtKS0tLXVd77qAdgqFnOLum1qvUmRnebdQ0SmjBFs8jX6hJbhWwuCj2t1P-wuw"
+                    style=""
+                  />
+                  <span class="pc-card-meta" style="">SkinFirst</span>
+                </div>
+                <div class="flex items-center space-x-1 text-zinc-400">
+                  <span class="material-symbols-outlined text-sm" data-icon="favorite" style=""
+                    >favorite</span
+                  >
+                  <span class="pc-card-meta" style="">31k</span>
+                </div>
+              </div>
+            </div>
+          </article>
+          <!-- Card 6: Fashion Interior -->
+          <article class="masonry-item group cursor-pointer">
+            <div
+              class="relative bg-surface-container-lowest rounded-[16px] overflow-hidden transition-all duration-300 hover:shadow-[0px_20px_40px_rgba(27,28,28,0.06)]"
+            >
+              <img
+                alt="Home Design"
+                class="w-full object-cover h-[450px]"
+                data-alt="Modern minimalist living room with a cream sofa, light wood coffee table, and large windows with soft natural light"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzjPcq67ecPS2Ym8SghNuC-sVjTndCVrwsVXJ694ohhUs9n1_1NRcekAW4X6I1Riv6BN60P2hYF9ORT_1tmdkHsdiB7AHvbFPe7SFADgBb9sUBDI8lZBb4EatMotrRnJjRiB_7YHQk6PJeSech8AGm5Gbn1ULV6Z6vYf8LN39RYsGfFQuXb4fBtlhmeaox4cL1s1Vd5CHvXBpohrlfsMBtm9hKRgSGwf8amybUw-bPw2TDiyKspmThAq0P5zh4KA_80KBLM52txrg"
+                style=""
+              />
+            </div>
+            <div class="mt-3 px-1">
+              <h3 class="pc-card-title font-headline leading-snug line-clamp-2" style="">
+                Designing a Productive Home Office on a Budget
+              </h3>
+              <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center space-x-2">
+                  <div
+                    class="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center text-[10px] font-bold text-emerald-600"
+                    style=""
+                  >
+                    ID
+                  </div>
+                  <span class="pc-card-meta" style="">InDesign</span>
+                </div>
+                <div class="flex items-center space-x-1 text-zinc-400">
+                  <span class="material-symbols-outlined text-sm" data-icon="favorite" style=""
+                    >favorite</span
+                  >
+                  <span class="pc-card-meta" style="">9.4k</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+      <!-- Spacer for Bottom Nav on Mobile -->
+      <div class="h-12 lg:hidden"></div>
+    </main>
+    <!-- BottomNavBar (Mobile) -->
+    <nav
+      class="lg:hidden fixed inset-x-0 bottom-0 z-50 grid h-12 grid-cols-5 items-stretch bg-white shadow-[0_-8px_24px_rgba(27,28,28,0.06)]"
+    >
+      <a
+        class="pc-bottom-nav-link pc-bottom-nav-active flex min-w-0 items-center justify-center gap-1 px-2 transition-colors hover:bg-black/5"
+        href="#"
+      >
+        <span
+          class="material-symbols-outlined pc-bottom-nav-icon"
+          data-icon="home"
+          style="
+            font-variation-settings:
+              'FILL' 1,
+              'wght' 400,
+              'GRAD' 0,
+              'opsz' 24;
+          "
+          >home</span
+        >
+        <span class="hidden md:block pc-bottom-nav-label">首页</span>
+      </a>
+      <a
+        class="pc-bottom-nav-link pc-bottom-nav-inactive flex min-w-0 items-center justify-center gap-1 px-2 transition-colors hover:bg-black/5"
+        href="#"
+      >
+        <span class="material-symbols-outlined pc-bottom-nav-icon" data-icon="explore"
+          >explore</span
+        >
+        <span class="hidden md:block pc-bottom-nav-label">发现</span>
+      </a>
+      <a
+        class="pc-bottom-nav-link pc-bottom-nav-inactive flex min-w-0 items-center justify-center gap-1 px-2 transition-colors hover:bg-black/5"
+        href="#"
+      >
+        <span class="material-symbols-outlined pc-bottom-nav-icon" data-icon="add_box"
+          >add_box</span
+        >
+        <span class="hidden md:block pc-bottom-nav-label">发布</span>
+      </a>
+      <a
+        class="pc-bottom-nav-link pc-bottom-nav-inactive flex min-w-0 items-center justify-center gap-1 px-2 transition-colors hover:bg-black/5"
+        href="#"
+      >
+        <span class="material-symbols-outlined pc-bottom-nav-icon" data-icon="live_tv"
+          >live_tv</span
+        >
+        <span class="hidden md:block pc-bottom-nav-label">直播</span>
+      </a>
+      <a
+        class="pc-bottom-nav-link pc-bottom-nav-inactive flex min-w-0 items-center justify-center gap-1 px-2 transition-colors hover:bg-black/5"
+        href="#"
+      >
+        <span class="material-symbols-outlined pc-bottom-nav-icon" data-icon="person">person</span>
+        <span class="hidden md:block pc-bottom-nav-label">我</span>
+      </a>
+    </nav>
+  </body>
+</html>

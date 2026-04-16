@@ -13,22 +13,28 @@
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
-
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+  @apply bg-background;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  color-scheme: light;
+
+  --background: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-soft: rgb(0 0 0 / 0.03);
+
+  --ink-strong: rgb(51 51 51);
+  --ink-medium: rgb(51 51 51 / 0.8);
+  --ink-subtle: rgb(51 51 51 / 0.6);
+  --ink-placeholder: rgb(51 51 51 / 0.3);
+
+  --foreground: var(--ink-strong);
+  --card: var(--surface-raised);
+  --card-foreground: var(--ink-strong);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--ink-strong);
+  --primary: #bb0028;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -56,14 +62,24 @@ body {
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  color-scheme: dark;
+
+  --background: #211c1d;
+  --surface-raised: #211c1d;
+  --surface-soft: rgb(243 240 240 / 0.08);
+
+  --ink-strong: #f3f0f0;
+  --ink-medium: rgb(243 240 240 / 0.8);
+  --ink-subtle: rgb(243 240 240 / 0.6);
+  --ink-placeholder: rgb(243 240 240 / 0.32);
+
+  --foreground: var(--ink-strong);
+  --card: var(--surface-raised);
+  --card-foreground: var(--ink-strong);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--ink-strong);
+  --primary: #e80535;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -129,6 +145,14 @@ body {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-soft: var(--surface-soft);
+
+  --color-ink-strong: var(--ink-strong);
+  --color-ink-medium: var(--ink-medium);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-placeholder: var(--ink-placeholder);
 }
 
 @layer base {
