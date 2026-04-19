@@ -14,14 +14,20 @@ type RootLayoutFrameProps = {
 function RootLayoutFrame({ children }: RootLayoutFrameProps) {
   return (
     <RequireAuth>
-      <div className="grid h-dvh w-full grid-rows-[auto_minmax(0,1fr)_auto] md:grid-cols-[270px_minmax(0,1fr)] md:grid-rows-1">
-        <Topbar />
+      <aside className="hidden lg:flex flex-col fixed z-50 top-18 left-0 w-62 xl:w-68 h-[calc(100vh-72px)] px-5 py-6 xl:px-6">
         <LeftSidebar />
-
-        <section className="min-h-0 min-w-0 overflow-y-auto">{children}</section>
-
+      </aside>
+      <header className="sticky z-50 top-0 w-full h-18 px-5 xl:px-6">
+        <Topbar />
+      </header>
+      <main className="lg:ml-62 xl:ml-68">
+        <section>{children}</section>
+        {/* Spacer for Bottom Nav on Mobile */}
+        <div className="h-12 lg:hidden"></div>
+      </main>
+      <nav className="lg:hidden fixed z-50 inset-x-0 bottom-0 w-full h-12">
         <Bottombar />
-      </div>
+      </nav>
     </RequireAuth>
   );
 }

@@ -1,34 +1,66 @@
 import { Link } from 'react-router';
-import { Button } from '../ui/button';
-import { PiSignOut, PiUser } from 'react-icons/pi';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '../ui/input-group';
+import { LogOut, Menu, SearchIcon } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 import { useSignOutMutation } from '~/features/auth/queries/auth.mutations';
-import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 
 export default function Topbar() {
   const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
-  const { data } = useCurrentUserQuery();
-  const currentUser = data?.status === 'authenticated' ? data.user : null;
 
   return (
-    <section className="z-50 w-full shrink-0 md:hidden">
-      <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top))] pb-4">
-        <Link to="/">
-          <img src="/assets/images/logo.svg" alt="logo" width={130} height={325} />
-        </Link>
-
-        <div className="flex gap-4 items-center">
-          <Button variant="ghost" onClick={() => signOut()} disabled={isSigningOut}>
-            <PiSignOut />
-          </Button>
-          <Link to={`/profile/${currentUser?.profileId ?? ''}`}>
-            {currentUser?.imageUrl ? (
-              <img src={currentUser.imageUrl} alt="profile" className="h-8 w-8 rounded-full" />
-            ) : (
-              <PiUser className="h-8 w-8" />
-            )}
-          </Link>
+    <div className="flex items-center justify-between h-full bg-surface-raised">
+      <Link to="/">
+        <div className="flex gap-1 items-center">
+          <div className="bg-blue-600 w-12 h-12 rounded-full flex justify-center items-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+              <path d="M20 2v4"></path>
+              <path d="M22 4h-4"></path>
+              <circle cx="4" cy="20" r="2"></circle>
+            </svg>
+          </div>
+          <span className="text-[1.75rem] font-black text-blue-700">小蓝书</span>
         </div>
+      </Link>
+      <InputGroup className="w-[min(35vw,600px)] h-12 rounded-full bg-surface-soft border-0 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-transparent has-[[data-slot=input-group-control]:focus-visible]:ring-0 has-[[data-slot=input-group-control]:focus-visible]:shadow-none">
+        <InputGroupInput
+          className="placeholder:text-ink-placeholder focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-none"
+          placeholder="Search..."
+        />
+        <InputGroupAddon align="inline-end">
+          <SearchIcon className="h-5 w-5 text-ink-subtle" />
+        </InputGroupAddon>
+      </InputGroup>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <button
+          type="button"
+          onClick={() => signOut()}
+          disabled={isSigningOut}
+          aria-label="登出"
+          title="登出"
+          className="flex items-center justify-center h-10 w-10 text-ink-subtle rounded-full hover:bg-surface-soft cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          className="lg:hidden flex items-center justify-center h-10 w-10 text-ink-subtle rounded-full hover:bg-surface-soft cursor-pointer"
+          aria-label="更多"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
       </div>
-    </section>
+    </div>
   );
 }

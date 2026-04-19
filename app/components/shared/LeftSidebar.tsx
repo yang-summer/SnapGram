@@ -1,69 +1,67 @@
-import { PiSignOut, PiUser } from 'react-icons/pi';
-import { Link, NavLink, useLocation } from 'react-router';
-import { sidebarLinks } from '~/constants';
-import { useSignOutMutation } from '~/features/auth/queries/auth.mutations';
+import { PiUser } from 'react-icons/pi';
+import { Link, NavLink } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
-import type { NavBarLink } from '~/lib/types';
-import { Button } from '../ui/button';
+import { Compass, House, Menu, SquarePlus } from 'lucide-react';
+
+const sidebarLinks = [
+  {
+    Icon: House,
+    route: '/',
+    label: 'Home',
+  },
+  {
+    Icon: Compass,
+    route: '/explore',
+    label: 'Explore',
+  },
+  {
+    Icon: SquarePlus,
+    route: '/create-post',
+    label: 'Create Post',
+  },
+];
 
 export default function LeftSidebar() {
-  const { pathname } = useLocation();
-  const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
 
   return (
-    <nav className="hidden md:flex px-6 py-10 flex-col justify-between min-w-67.5">
-      <div className="flex flex-col gap-11">
-        <Link to="/">
-          <img src="/assets/images/logo.svg" alt="logo" width={130} height={36} />
-        </Link>
-        <Link to={`/profile/${currentUser?.profileId ?? ''}`} className="flex gap-3 items-center">
-          {currentUser?.imageUrl ? (
-            <img src={currentUser.imageUrl} alt="profile" className="h-8 w-8 rounded-full" />
-          ) : (
-            <PiUser className="h-8 w-8" />
-          )}
-          <div className="flex flex-col">
-            <p className="font-bold">{currentUser?.name ?? ''}</p>
-            <p className="text-[14px] font-normal">@{currentUser?.username ?? ''}</p>
-          </div>
-        </Link>
-        <ul>
-          {sidebarLinks.map((link: NavBarLink) => {
-            const isActive = pathname === link.route;
-
-            return (
-              <li
-                key={link.label}
-                className={`rounded-lg text-[16px] font-medium leading-[140%] hover:bg-indigo-600 transition group; ${
-                  isActive && 'bg-indigo-600'
-                }`}
+    <div className="flex flex-col gap-1 h-full bg-surface-raised">
+      <ul>
+        {sidebarLinks.map((link) => {
+          return (
+            <li key={link.label}>
+              <NavLink
+                to={link.route}
+                className={({ isActive }) =>
+                  `flex gap-4 items-center rounded-full p-4 text-base text-ink-strong font-semibold transition-colors hover:bg-surface-soft ${isActive ? 'bg-surface-soft' : ''}`
+                }
               >
-                <NavLink to={link.route} className="flex gap-4 items-center p-4">
-                  <img
-                    src={link.imgURL}
-                    alt={link.label}
-                    className={`group-hover:invert brightness-0 transition ${
-                      isActive && 'invert brightness-0 transition'
-                    }`}
-                  />
-                  {link.label}
-                </NavLink>
-              </li>
-            );
-          })}
-        </ul>
-        <Button
-          variant="ghost"
-          onClick={() => signOut()}
-          disabled={isSigningOut}
-          className="flex gap-4 justify-start items-center"
-        >
-          <PiSignOut />
-          <p className="text-[16px] font-medium">Log out</p>
-        </Button>
-      </div>
-    </nav>
+                <link.Icon className="w-6 h-6" />
+                <span>{link.label}</span>
+              </NavLink>
+            </li>
+          );
+        })}
+      </ul>
+      <Link
+        to={`/profile/${currentUser?.profileId ?? ''}`}
+        className="flex gap-3 items-center rounded-full p-3 text-ink-strong transition-colors hover:bg-surface-soft"
+      >
+        {currentUser?.imageUrl ? (
+          <img src={currentUser.imageUrl} alt="profile" className="h-11 w-11 rounded-full" />
+        ) : (
+          <PiUser className="h-11 w-11" />
+        )}
+        <div className="flex flex-col">
+          <span className="truncate text-sm font-semibold">{currentUser?.name ?? ''}</span>
+          <span className="truncate text-xs">@{currentUser?.username ?? ''}</span>
+        </div>
+      </Link>
+      <button className="flex gap-4 items-center rounded-full p-4 text-base text-ink-strong font-semibold transition-colors hover:bg-surface-soft mt-auto cursor-pointer">
+        <Menu className="w-6 h-6" />
+        <span>More</span>
+      </button>
+    </div>
   );
 }
