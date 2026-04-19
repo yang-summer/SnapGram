@@ -1,9 +1,12 @@
 import { Link } from 'react-router';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '../ui/input-group';
-import { Menu, SearchIcon } from 'lucide-react';
+import { LogOut, Menu, SearchIcon } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { useSignOutMutation } from '~/features/auth/queries/auth.mutations';
 
 export default function Topbar() {
+  const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
+
   return (
     <div className="flex items-center justify-between h-full bg-surface-raised">
       <Link to="/">
@@ -38,10 +41,26 @@ export default function Topbar() {
           <SearchIcon className="h-5 w-5 text-ink-subtle" />
         </InputGroupAddon>
       </InputGroup>
-      <ThemeToggle />
-      <button className="lg:hidden flex items-center justify-center h-10 w-10 text-ink-subtle rounded-full hover:bg-surface-soft cursor-pointer">
-        <Menu className="h-6 w-6" />
-      </button>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <button
+          type="button"
+          onClick={() => signOut()}
+          disabled={isSigningOut}
+          aria-label="登出"
+          title="登出"
+          className="flex items-center justify-center h-10 w-10 text-ink-subtle rounded-full hover:bg-surface-soft cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          className="lg:hidden flex items-center justify-center h-10 w-10 text-ink-subtle rounded-full hover:bg-surface-soft cursor-pointer"
+          aria-label="更多"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+      </div>
     </div>
   );
 }
