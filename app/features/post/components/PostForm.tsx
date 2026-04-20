@@ -11,7 +11,11 @@ import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { PostValidation } from '~/lib/validation';
-import type { PostEditorInitialData, PostFormValues } from '../types/post.type';
+import type {
+  PostEditorInitialData,
+  PostFormValues,
+  PreparedImageDraft,
+} from '../types/post.type';
 import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
 
 type PostFormProps = {
@@ -46,6 +50,7 @@ export default function PostForm({ action, post }: PostFormProps) {
   const { mutateAsync: createPost, isPending: isLoadingCreate } = useCreatePostMutation();
   const { mutateAsync: updatePost, isPending: isLoadingUpdate } = useUpdatePostMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [preparedImageDraft, setPreparedImageDraft] = useState<PreparedImageDraft | null>(null);
   const isEditMode = action === 'Update';
 
   const form = useForm<PostFormValues>({
@@ -58,6 +63,10 @@ export default function PostForm({ action, post }: PostFormProps) {
 
     const normalizedTags = normalizeTags(values.tags);
     const nextFile = values.file[0] ?? null;
+    const nextPreparedImageMetadata =
+      preparedImageDraft && nextFile && preparedImageDraft.file === nextFile
+        ? preparedImageDraft.metadata
+        : null;
 
     if (isEditMode) {
       if (!post) {
@@ -78,8 +87,13 @@ export default function PostForm({ action, post }: PostFormProps) {
           location: values.location,
           tags: normalizedTags,
           nextFile,
+          nextPreparedImageMetadata,
           currentImageId: post.imageId,
           currentImageUrl: post.imageUrl,
+          currentAspectRatioBucket: post.aspectRatioBucket,
+          currentImagePlaceholder: post.imagePlaceholder,
+          currentImageWidth: post.imageWidth,
+          currentImageHeight: post.imageHeight,
         });
 
         toast.success('Post updated successfully.');
@@ -107,6 +121,7 @@ export default function PostForm({ action, post }: PostFormProps) {
         ownerAccountId: currentUser.accountId,
         caption: values.caption,
         file: nextFile,
+        preparedImageMetadata: nextPreparedImageMetadata,
         location: values.location,
         tags: normalizedTags,
       });
@@ -159,7 +174,17 @@ export default function PostForm({ action, post }: PostFormProps) {
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="w-full">
               <FieldLabel htmlFor="form-createPost-file">Add Photos</FieldLabel>
-              <FileUploader fieldChange={field.onChange} mediaUrl={post?.imageUrl ?? ''} />
+              <FileUploader
+                fieldChange={(files) => {
+                  field.onChange(files);
+
+                  if (files.length === 0) {
+                    setPreparedImageDraft(null);
+                  }
+                }}
+                mediaUrl={post?.imageUrl ?? ''}
+                onPreparedChange={setPreparedImageDraft}
+              />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}

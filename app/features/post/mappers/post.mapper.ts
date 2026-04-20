@@ -9,7 +9,9 @@ import type {
   PostAspectRatioBucket,
   PostCardViewModel,
   PostDetailViewModel,
+  PostEditorInitialData,
   PostGridItemViewModel,
+  RawPostEditorRow,
   RawPostHomeFeedRow,
   RawPostListRow,
   RawPostRow,
@@ -176,6 +178,25 @@ export function mapPostRowToHomeFeedItemViewModel(
     imageHeight: normalizeOptionalImageDimension(row.imageHeight),
     creator,
     likeCount: mapPostLikeCount(row),
+  };
+}
+
+export function mapPostEditorRowToInitialData(row: RawPostEditorRow): PostEditorInitialData | null {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.$id,
+    caption: row.caption ?? '',
+    imageId: row.imageId,
+    imageUrl: row.imageUrl,
+    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
+    imagePlaceholder: normalizeOptionalImagePlaceholder(row.imagePlaceholder),
+    imageWidth: normalizeOptionalImageDimension(row.imageWidth),
+    imageHeight: normalizeOptionalImageDimension(row.imageHeight),
+    location: row.location ?? '',
+    tags: (row.tags ?? []).join(', '),
   };
 }
 

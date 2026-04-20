@@ -11,16 +11,19 @@ import {
   updatePostRow,
   uploadPostImage,
 } from '../api/post.api';
+import { getImageMetadata } from '../lib/image-metadata';
 import {
   mapPostRowsToCardViewModels,
   mapPostRowsToCursorPage,
   mapPostRowsToGridItemViewModels,
+  mapPostEditorRowToInitialData,
   mapPostRowToDetailViewModel,
 } from '../mappers/post.mapper';
 import type {
   CursorPage,
   CreatePostInput,
   DeletePostResult,
+  ImageMetadataResult,
   ListPostRowsParams,
   PostCardViewModel,
   PostDetailViewModel,
@@ -31,6 +34,7 @@ import type {
   SearchPostRowsParams,
   UpdatePostInput,
 } from '../types/post.type';
+import { DEFAULT_POST_ASPECT_RATIO_BUCKET } from '../types/post.type';
 
 const DEFAULT_EXPLORE_POST_PAGE_SIZE = 9;
 const DEFAULT_SEARCH_RESULTS_LIMIT = 20;
@@ -50,6 +54,46 @@ function mapPostMutationRowToResult(row: RawPostMutationRow): PostMutationResult
     imageId: row.imageId,
     imageUrl: row.imageUrl,
   };
+}
+
+function createFallbackImageMetadata(): ImageMetadataResult {
+  return {
+    width: null,
+    height: null,
+    aspectRatioBucket: DEFAULT_POST_ASPECT_RATIO_BUCKET,
+    placeholder: null,
+  };
+}
+
+function hasUsablePreparedImageMetadata(
+  metadata: ImageMetadataResult | null | undefined,
+): metadata is ImageMetadataResult {
+  if (!metadata) {
+    return false;
+  }
+
+  return metadata.width !== null && metadata.height !== null;
+}
+
+async function resolveImageMetadata(
+  file: File,
+  preparedImageMetadata?: ImageMetadataResult | null,
+): Promise<ImageMetadataResult> {
+  if (hasUsablePreparedImageMetadata(preparedImageMetadata)) {
+    return preparedImageMetadata;
+  }
+
+  try {
+    const resolvedMetadata = await getImageMetadata(file);
+
+    if (hasUsablePreparedImageMetadata(resolvedMetadata)) {
+      return resolvedMetadata;
+    }
+  } catch (error) {
+    console.error('[PostService.resolveImageMetadata] Failed to compute image metadata.', error);
+  }
+
+  return createFallbackImageMetadata();
 }
 
 async function cleanupUploadedImage(fileId: string | null, context: string): Promise<void> {
@@ -119,14 +163,7 @@ export async function getPostEditorInitialData(
       return null;
     }
 
-    return {
-      id: response.$id,
-      caption: response.caption ?? '',
-      imageId: response.imageId,
-      imageUrl: response.imageUrl,
-      location: response.location ?? '',
-      tags: (response.tags ?? []).join(', '),
-    };
+    return mapPostEditorRowToInitialData(response);
   } catch (error) {
     console.error(`[PostService.getPostEditorInitialData] Error:`, error);
     throw error;
@@ -137,6 +174,7 @@ export async function createPost(input: CreatePostInput): Promise<PostMutationRe
   let uploadedFileId: string | null = null;
 
   try {
+    const imageMetadata = await resolveImageMetadata(input.file, input.preparedImageMetadata);
     const uploadedFile = await uploadPostImage(input.file, input.ownerAccountId);
     uploadedFileId = uploadedFile.$id;
 
@@ -146,6 +184,10 @@ export async function createPost(input: CreatePostInput): Promise<PostMutationRe
       caption: input.caption,
       imageId: uploadedFileId,
       imageUrl: getPostImageView(uploadedFileId),
+      aspectRatioBucket: imageMetadata.aspectRatioBucket,
+      imagePlaceholder: imageMetadata.placeholder,
+      imageWidth: imageMetadata.width,
+      imageHeight: imageMetadata.height,
       location: input.location,
       tags: input.tags,
     });
@@ -168,6 +210,10 @@ export async function updatePost(input: UpdatePostInput): Promise<PostMutationRe
         caption: input.caption,
         imageId: input.currentImageId,
         imageUrl: input.currentImageUrl,
+        aspectRatioBucket: input.currentAspectRatioBucket,
+        imagePlaceholder: input.currentImagePlaceholder,
+        imageWidth: input.currentImageWidth,
+        imageHeight: input.currentImageHeight,
         location: input.location,
         tags: input.tags,
       });
@@ -182,6 +228,7 @@ export async function updatePost(input: UpdatePostInput): Promise<PostMutationRe
   let uploadedFileId: string | null = null;
 
   try {
+    const imageMetadata = await resolveImageMetadata(nextFile, input.nextPreparedImageMetadata);
     const uploadedFile = await uploadPostImage(nextFile, input.ownerAccountId);
     uploadedFileId = uploadedFile.$id;
 
@@ -190,6 +237,10 @@ export async function updatePost(input: UpdatePostInput): Promise<PostMutationRe
       caption: input.caption,
       imageId: uploadedFileId,
       imageUrl: getPostImageView(uploadedFileId),
+      aspectRatioBucket: imageMetadata.aspectRatioBucket,
+      imagePlaceholder: imageMetadata.placeholder,
+      imageWidth: imageMetadata.width,
+      imageHeight: imageMetadata.height,
       location: input.location,
       tags: input.tags,
     });

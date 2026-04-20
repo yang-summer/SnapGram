@@ -70,7 +70,18 @@ const POST_DETAIL_SELECT = [
   'creator.name',
   'creator.imageUrl',
 ];
-const POST_EDITOR_SELECT = ['$id', 'caption', 'imageId', 'imageUrl', 'location', 'tags'];
+const POST_EDITOR_SELECT = [
+  '$id',
+  'caption',
+  'imageId',
+  'imageUrl',
+  'aspectRatioBucket',
+  'imagePlaceholder',
+  'imageWidth',
+  'imageHeight',
+  'location',
+  'tags',
+];
 export const POST_HOME_FEED_SELECT = [
   '$id',
   '$createdAt',
@@ -269,6 +280,10 @@ export async function createPostRow(input: CreatePostApiInput): Promise<RawPostM
         caption: input.caption,
         imageId: input.imageId,
         imageUrl: input.imageUrl,
+        aspectRatioBucket: input.aspectRatioBucket,
+        imagePlaceholder: input.imagePlaceholder,
+        imageWidth: input.imageWidth,
+        imageHeight: input.imageHeight,
         location: input.location,
         tags: input.tags,
         status: PUBLISHED_POST_STATUS,
@@ -304,6 +319,10 @@ export async function updatePostRow(input: UpdatePostApiInput): Promise<RawPostM
         caption: input.caption,
         imageId: input.imageId,
         imageUrl: input.imageUrl,
+        aspectRatioBucket: input.aspectRatioBucket,
+        imagePlaceholder: input.imagePlaceholder,
+        imageWidth: input.imageWidth,
+        imageHeight: input.imageHeight,
         location: input.location,
         tags: input.tags,
         searchText: buildPostSearchText(input.caption, input.tags),

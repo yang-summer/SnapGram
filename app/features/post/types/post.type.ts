@@ -73,6 +73,10 @@ export type RawPostEditorRow = Models.Row & {
   caption?: string | null;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: string | null;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
 };
@@ -185,6 +189,14 @@ export type ImageMetadataResult = {
   placeholder: string | null;
 };
 
+export type PreparedImageMetadataStatus = 'idle' | 'pending' | 'ready' | 'failed';
+
+export type PreparedImageDraft = {
+  file: File;
+  metadata: ImageMetadataResult | null;
+  metadataStatus: Exclude<PreparedImageMetadataStatus, 'idle'>;
+};
+
 export type CursorPage<T> = {
   items: T[];
   nextCursor: string | null;
@@ -202,6 +214,10 @@ export type PostEditorInitialData = {
   caption: string;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket: PostAspectRatioBucket;
+  imagePlaceholder: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   location: string;
   tags: string;
 };
@@ -211,6 +227,7 @@ export type CreatePostInput = {
   ownerAccountId: string;
   caption: string;
   file: File;
+  preparedImageMetadata?: ImageMetadataResult | null;
   location: string;
   tags: string[];
 };
@@ -221,6 +238,10 @@ export type CreatePostApiInput = {
   caption: string;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: PostAspectRatioBucket;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location: string;
   tags: string[];
 };
@@ -232,8 +253,13 @@ export type UpdatePostInput = {
   location: string;
   tags: string[];
   nextFile?: File | null;
+  nextPreparedImageMetadata?: ImageMetadataResult | null;
   currentImageId: string;
   currentImageUrl: string;
+  currentAspectRatioBucket: PostAspectRatioBucket;
+  currentImagePlaceholder: string | null;
+  currentImageWidth: number | null;
+  currentImageHeight: number | null;
 };
 
 export type UpdatePostApiInput = {
@@ -241,6 +267,10 @@ export type UpdatePostApiInput = {
   caption: string;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: PostAspectRatioBucket;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location: string;
   tags: string[];
 };
