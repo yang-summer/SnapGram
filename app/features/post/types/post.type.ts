@@ -178,6 +178,13 @@ export type HomeFeedPostViewModel = {
   likeCount: number;
 };
 
+export type ImageMetadataResult = {
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
 export type CursorPage<T> = {
   items: T[];
   nextCursor: string | null;
