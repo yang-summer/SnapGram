@@ -12,6 +12,7 @@ export const postKeys = {
   all: ['posts'] as const,
   lists: () => [...postKeys.all, 'list'] as const,
   recent: () => [...postKeys.lists(), 'recent'] as const,
+  homeFeed: (params: { limit: number }) => [...postKeys.lists(), 'home-feed', params] as const,
   explore: (params: { limit: number }) => [...postKeys.lists(), 'explore', params] as const,
   search: (params: { term: string; limit: number }) => [...postKeys.lists(), 'search', params] as const,
   details: () => [...postKeys.all, 'detail'] as const,

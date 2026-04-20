@@ -1,11 +1,13 @@
 import {
   createPostRow,
+  DEFAULT_HOME_FEED_PAGE_SIZE,
   deletePost,
   deletePostImage,
   getPostImageView,
   getPostEditorRow,
   getPostById,
   getRecentPosts,
+  listHomeFeedPostRows,
   listExplorePostRows,
   searchPostRows,
   updatePostRow,
@@ -13,6 +15,7 @@ import {
 } from '../api/post.api';
 import { getImageMetadata } from '../lib/image-metadata';
 import {
+  mapHomeFeedRowsToCursorPage,
   mapPostRowsToCardViewModels,
   mapPostRowsToCursorPage,
   mapPostRowsToGridItemViewModels,
@@ -23,6 +26,7 @@ import type {
   CursorPage,
   CreatePostInput,
   DeletePostResult,
+  HomeFeedPostViewModel,
   ImageMetadataResult,
   ListPostRowsParams,
   PostCardViewModel,
@@ -292,6 +296,32 @@ export async function getExplorePostPage({
     return mapPostRowsToCursorPage(response, normalizedLimit);
   } catch (error) {
     console.error(`[PostService.getExplorePostPage] Error:`, error);
+    throw error;
+  }
+}
+
+export async function getHomeFeedPage({
+  cursor = null,
+  limit = DEFAULT_HOME_FEED_PAGE_SIZE,
+}: ListPostRowsParams = {}): Promise<CursorPage<HomeFeedPostViewModel>> {
+  const normalizedLimit = clampListLimit(limit, DEFAULT_HOME_FEED_PAGE_SIZE);
+
+  try {
+    const response = await listHomeFeedPostRows({
+      cursor,
+      limit: normalizedLimit,
+    });
+
+    if (!response || !Array.isArray(response.rows) || response.rows.length === 0) {
+      return {
+        items: [],
+        nextCursor: null,
+      };
+    }
+
+    return mapHomeFeedRowsToCursorPage(response, normalizedLimit);
+  } catch (error) {
+    console.error(`[PostService.getHomeFeedPage] Error:`, error);
     throw error;
   }
 }

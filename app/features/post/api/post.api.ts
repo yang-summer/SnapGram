@@ -21,6 +21,7 @@ import type {
   UpdatePostApiInput,
 } from '../types/post.type';
 
+export const DEFAULT_HOME_FEED_PAGE_SIZE = 20;
 const DEFAULT_EXPLORE_POSTS_LIMIT = 9;
 const DEFAULT_SEARCH_POSTS_LIMIT = 20;
 const APPWRITE_MAX_LIST_LIMIT = 100;
@@ -135,9 +136,9 @@ export async function getRecentPosts(): Promise<Models.RowList<RawPostRow>> {
 
 export async function listHomeFeedPostRows({
   cursor = null,
-  limit = DEFAULT_EXPLORE_POSTS_LIMIT,
+  limit = DEFAULT_HOME_FEED_PAGE_SIZE,
 }: ListPostRowsParams = {}): Promise<Models.RowList<RawPostHomeFeedRow>> {
-  const normalizedLimit = clampListLimit(limit, DEFAULT_EXPLORE_POSTS_LIMIT);
+  const normalizedLimit = clampListLimit(limit, DEFAULT_HOME_FEED_PAGE_SIZE);
   const queries = [
     Query.select(POST_HOME_FEED_SELECT),
     Query.equal('status', PUBLISHED_POST_STATUS),

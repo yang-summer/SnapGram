@@ -253,3 +253,17 @@ export function mapPostRowsToCursorPage(
     nextCursor,
   };
 }
+
+export function mapHomeFeedRowsToCursorPage(
+  data: Models.RowList<RawPostHomeFeedRow>,
+  pageSize: number,
+): CursorPage<HomeFeedPostViewModel> {
+  const items = mapPostRowsToHomeFeedItemViewModels(data);
+  const nextCursor =
+    data.rows.length === pageSize && data.rows.length > 0 ? data.rows[data.rows.length - 1].$id : null;
+
+  return {
+    items,
+    nextCursor,
+  };
+}
