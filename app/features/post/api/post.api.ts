@@ -12,6 +12,7 @@ import type {
   ListPostRowsParams,
   PostDeleteSnapshot,
   RawPostEditorRow,
+  RawPostHomeFeedRow,
   RawPostListRow,
   RawPostMutationRow,
   RawPostRow,
@@ -70,6 +71,20 @@ const POST_DETAIL_SELECT = [
   'creator.imageUrl',
 ];
 const POST_EDITOR_SELECT = ['$id', 'caption', 'imageId', 'imageUrl', 'location', 'tags'];
+export const POST_HOME_FEED_SELECT = [
+  '$id',
+  '$createdAt',
+  'caption',
+  'imageUrl',
+  'imagePlaceholder',
+  'aspectRatioBucket',
+  'imageWidth',
+  'imageHeight',
+  'likeCount',
+  'creator.$id',
+  'creator.name',
+  'creator.imageUrl',
+];
 
 function clampListLimit(limit: number | undefined, fallback: number): number {
   if (typeof limit !== 'number' || Number.isNaN(limit)) {
@@ -103,6 +118,41 @@ export async function getRecentPosts(): Promise<Models.RowList<RawPostRow>> {
     return posts;
   } catch (error) {
     console.error(error);
+    throw error;
+  }
+}
+
+export async function listHomeFeedPostRows({
+  cursor = null,
+  limit = DEFAULT_EXPLORE_POSTS_LIMIT,
+}: ListPostRowsParams = {}): Promise<Models.RowList<RawPostHomeFeedRow>> {
+  const normalizedLimit = clampListLimit(limit, DEFAULT_EXPLORE_POSTS_LIMIT);
+  const queries = [
+    Query.select(POST_HOME_FEED_SELECT),
+    Query.equal('status', PUBLISHED_POST_STATUS),
+    Query.orderDesc('$createdAt'),
+    Query.limit(normalizedLimit),
+  ];
+
+  if (cursor) {
+    queries.push(Query.cursorAfter(cursor));
+  }
+
+  try {
+    const posts = await tablesDB.listRows<RawPostHomeFeedRow>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      queries,
+      total: false,
+    });
+
+    if (!posts) {
+      throw new Error('Failed to load home feed posts.');
+    }
+
+    return posts;
+  } catch (error) {
+    console.error('[PostApi.listHomeFeedPostRows] Failed to list home feed posts.', error);
     throw error;
   }
 }

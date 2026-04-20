@@ -1,5 +1,11 @@
 import type { Models } from 'appwrite';
 
+export const POST_ASPECT_RATIO_BUCKETS = ['1:1', '3:4', '4:3'] as const;
+
+export type PostAspectRatioBucket = (typeof POST_ASPECT_RATIO_BUCKETS)[number];
+
+export const DEFAULT_POST_ASPECT_RATIO_BUCKET: PostAspectRatioBucket = '3:4';
+
 export type RawPostCreator = {
   $id: string;
   name?: string | null;
@@ -20,6 +26,10 @@ export type RawPostRow = Models.Row & {
   caption?: string | null;
   imageUrl: string;
   imageId: string;
+  aspectRatioBucket?: string | null;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
   creator?: RawPostCreator;
@@ -35,11 +45,28 @@ export type RawPostListRow = Models.Row &
     | '$updatedAt'
     | 'caption'
     | 'imageUrl'
+    | 'aspectRatioBucket'
+    | 'imagePlaceholder'
+    | 'imageWidth'
+    | 'imageHeight'
     | 'location'
     | 'tags'
     | 'creator'
     | 'likeCount'
     | 'saveCount'
+  >;
+
+export type RawPostHomeFeedRow = Models.Row &
+  Pick<
+    RawPostRow,
+    | 'caption'
+    | 'imageUrl'
+    | 'imagePlaceholder'
+    | 'aspectRatioBucket'
+    | 'imageWidth'
+    | 'imageHeight'
+    | 'creator'
+    | 'likeCount'
   >;
 
 export type RawPostEditorRow = Models.Row & {
@@ -55,6 +82,10 @@ export type RawPostWriteRow = Models.Row & {
   caption?: string | null;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: string | null;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
   status?: string | null;
@@ -128,6 +159,23 @@ export type PostGridItemViewModel = {
   };
   likeCount: number;
   saveCount: number;
+};
+
+export type HomeFeedPostViewModel = {
+  id: string;
+  createdAt: string;
+  caption: string;
+  imageUrl: string;
+  imagePlaceholder: string | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  creator: {
+    id: string;
+    name: string;
+    imageUrl: string | null;
+  };
+  likeCount: number;
 };
 
 export type CursorPage<T> = {
