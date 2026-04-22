@@ -12,6 +12,7 @@ import type {
   ListPostRowsParams,
   PostDeleteSnapshot,
   RawPostEditorRow,
+  RawPostHomeFeedRow,
   RawPostListRow,
   RawPostMutationRow,
   RawPostRow,
@@ -20,6 +21,7 @@ import type {
   UpdatePostApiInput,
 } from '../types/post.type';
 
+export const DEFAULT_HOME_FEED_PAGE_SIZE = 20;
 const DEFAULT_EXPLORE_POSTS_LIMIT = 9;
 const DEFAULT_SEARCH_POSTS_LIMIT = 20;
 const APPWRITE_MAX_LIST_LIMIT = 100;
@@ -69,7 +71,32 @@ const POST_DETAIL_SELECT = [
   'creator.name',
   'creator.imageUrl',
 ];
-const POST_EDITOR_SELECT = ['$id', 'caption', 'imageId', 'imageUrl', 'location', 'tags'];
+const POST_EDITOR_SELECT = [
+  '$id',
+  'caption',
+  'imageId',
+  'imageUrl',
+  'aspectRatioBucket',
+  'imagePlaceholder',
+  'imageWidth',
+  'imageHeight',
+  'location',
+  'tags',
+];
+export const POST_HOME_FEED_SELECT = [
+  '$id',
+  '$createdAt',
+  'caption',
+  'imageUrl',
+  'imagePlaceholder',
+  'aspectRatioBucket',
+  'imageWidth',
+  'imageHeight',
+  'likeCount',
+  'creator.$id',
+  'creator.name',
+  'creator.imageUrl',
+];
 
 function clampListLimit(limit: number | undefined, fallback: number): number {
   if (typeof limit !== 'number' || Number.isNaN(limit)) {
@@ -103,6 +130,41 @@ export async function getRecentPosts(): Promise<Models.RowList<RawPostRow>> {
     return posts;
   } catch (error) {
     console.error(error);
+    throw error;
+  }
+}
+
+export async function listHomeFeedPostRows({
+  cursor = null,
+  limit = DEFAULT_HOME_FEED_PAGE_SIZE,
+}: ListPostRowsParams = {}): Promise<Models.RowList<RawPostHomeFeedRow>> {
+  const normalizedLimit = clampListLimit(limit, DEFAULT_HOME_FEED_PAGE_SIZE);
+  const queries = [
+    Query.select(POST_HOME_FEED_SELECT),
+    Query.equal('status', PUBLISHED_POST_STATUS),
+    Query.orderDesc('$createdAt'),
+    Query.limit(normalizedLimit),
+  ];
+
+  if (cursor) {
+    queries.push(Query.cursorAfter(cursor));
+  }
+
+  try {
+    const posts = await tablesDB.listRows<RawPostHomeFeedRow>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      queries,
+      total: false,
+    });
+
+    if (!posts) {
+      throw new Error('Failed to load home feed posts.');
+    }
+
+    return posts;
+  } catch (error) {
+    console.error('[PostApi.listHomeFeedPostRows] Failed to list home feed posts.', error);
     throw error;
   }
 }
@@ -219,6 +281,10 @@ export async function createPostRow(input: CreatePostApiInput): Promise<RawPostM
         caption: input.caption,
         imageId: input.imageId,
         imageUrl: input.imageUrl,
+        aspectRatioBucket: input.aspectRatioBucket,
+        imagePlaceholder: input.imagePlaceholder,
+        imageWidth: input.imageWidth,
+        imageHeight: input.imageHeight,
         location: input.location,
         tags: input.tags,
         status: PUBLISHED_POST_STATUS,
@@ -254,6 +320,10 @@ export async function updatePostRow(input: UpdatePostApiInput): Promise<RawPostM
         caption: input.caption,
         imageId: input.imageId,
         imageUrl: input.imageUrl,
+        aspectRatioBucket: input.aspectRatioBucket,
+        imagePlaceholder: input.imagePlaceholder,
+        imageWidth: input.imageWidth,
+        imageHeight: input.imageHeight,
         location: input.location,
         tags: input.tags,
         searchText: buildPostSearchText(input.caption, input.tags),

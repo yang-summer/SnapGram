@@ -1,5 +1,11 @@
 import type { Models } from 'appwrite';
 
+export const POST_ASPECT_RATIO_BUCKETS = ['1:1', '3:4', '4:3'] as const;
+
+export type PostAspectRatioBucket = (typeof POST_ASPECT_RATIO_BUCKETS)[number];
+
+export const DEFAULT_POST_ASPECT_RATIO_BUCKET: PostAspectRatioBucket = '3:4';
+
 export type RawPostCreator = {
   $id: string;
   name?: string | null;
@@ -20,6 +26,10 @@ export type RawPostRow = Models.Row & {
   caption?: string | null;
   imageUrl: string;
   imageId: string;
+  aspectRatioBucket?: string | null;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
   creator?: RawPostCreator;
@@ -35,6 +45,10 @@ export type RawPostListRow = Models.Row &
     | '$updatedAt'
     | 'caption'
     | 'imageUrl'
+    | 'aspectRatioBucket'
+    | 'imagePlaceholder'
+    | 'imageWidth'
+    | 'imageHeight'
     | 'location'
     | 'tags'
     | 'creator'
@@ -42,10 +56,27 @@ export type RawPostListRow = Models.Row &
     | 'saveCount'
   >;
 
+export type RawPostHomeFeedRow = Models.Row &
+  Pick<
+    RawPostRow,
+    | 'caption'
+    | 'imageUrl'
+    | 'imagePlaceholder'
+    | 'aspectRatioBucket'
+    | 'imageWidth'
+    | 'imageHeight'
+    | 'creator'
+    | 'likeCount'
+  >;
+
 export type RawPostEditorRow = Models.Row & {
   caption?: string | null;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: string | null;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
 };
@@ -55,6 +86,10 @@ export type RawPostWriteRow = Models.Row & {
   caption?: string | null;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: string | null;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
   status?: string | null;
@@ -130,6 +165,38 @@ export type PostGridItemViewModel = {
   saveCount: number;
 };
 
+export type HomeFeedPostViewModel = {
+  id: string;
+  createdAt: string;
+  caption: string;
+  imageUrl: string;
+  imagePlaceholder: string | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  creator: {
+    id: string;
+    name: string;
+    imageUrl: string | null;
+  };
+  likeCount: number;
+};
+
+export type ImageMetadataResult = {
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type PreparedImageMetadataStatus = 'idle' | 'pending' | 'ready' | 'failed';
+
+export type PreparedImageDraft = {
+  file: File;
+  metadata: ImageMetadataResult | null;
+  metadataStatus: Exclude<PreparedImageMetadataStatus, 'idle'>;
+};
+
 export type CursorPage<T> = {
   items: T[];
   nextCursor: string | null;
@@ -147,6 +214,10 @@ export type PostEditorInitialData = {
   caption: string;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket: PostAspectRatioBucket;
+  imagePlaceholder: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   location: string;
   tags: string;
 };
@@ -156,6 +227,7 @@ export type CreatePostInput = {
   ownerAccountId: string;
   caption: string;
   file: File;
+  preparedImageMetadata?: ImageMetadataResult | null;
   location: string;
   tags: string[];
 };
@@ -166,6 +238,10 @@ export type CreatePostApiInput = {
   caption: string;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: PostAspectRatioBucket;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location: string;
   tags: string[];
 };
@@ -177,8 +253,13 @@ export type UpdatePostInput = {
   location: string;
   tags: string[];
   nextFile?: File | null;
+  nextPreparedImageMetadata?: ImageMetadataResult | null;
   currentImageId: string;
   currentImageUrl: string;
+  currentAspectRatioBucket: PostAspectRatioBucket;
+  currentImagePlaceholder: string | null;
+  currentImageWidth: number | null;
+  currentImageHeight: number | null;
 };
 
 export type UpdatePostApiInput = {
@@ -186,6 +267,10 @@ export type UpdatePostApiInput = {
   caption: string;
   imageId: string;
   imageUrl: string;
+  aspectRatioBucket?: PostAspectRatioBucket;
+  imagePlaceholder?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   location: string;
   tags: string[];
 };

@@ -1,29 +1,91 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDropzone, type FileWithPath } from 'react-dropzone';
+import { getImageMetadata } from '~/features/post/lib/image-metadata';
+import type { PreparedImageDraft } from '~/features/post/types/post.type';
 import { Button } from '../ui/button';
 
 type FileUploaderProps = {
   fieldChange: (files: File[]) => void;
   mediaUrl: string;
+  onPreparedChange?: (draft: PreparedImageDraft | null) => void;
 };
 
-export default function FileUploader({ fieldChange, mediaUrl }: FileUploaderProps) {
-  const [file, setFile] = useState<File[]>([]);
+export default function FileUploader({ fieldChange, mediaUrl, onPreparedChange }: FileUploaderProps) {
   const [fileUrl, setFileUrl] = useState(mediaUrl);
+  const fileUrlRef = useRef(mediaUrl);
+  const latestSelectionIdRef = useRef(0);
+
+  useEffect(() => {
+    setFileUrl(mediaUrl);
+    fileUrlRef.current = mediaUrl;
+  }, [mediaUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (fileUrlRef.current && fileUrlRef.current !== mediaUrl) {
+        URL.revokeObjectURL(fileUrlRef.current);
+      }
+    };
+  }, [mediaUrl]);
+
+  function updatePreviewUrl(nextUrl: string) {
+    if (fileUrlRef.current && fileUrlRef.current !== mediaUrl) {
+      URL.revokeObjectURL(fileUrlRef.current);
+    }
+
+    fileUrlRef.current = nextUrl;
+    setFileUrl(nextUrl);
+  }
 
   const onDrop = useCallback(
-    (acceptedFiles: FileWithPath[]) => {
-      setFile(acceptedFiles);
-      fieldChange(acceptedFiles);
-      setFileUrl(URL.createObjectURL(acceptedFiles[0]));
+    async (acceptedFiles: FileWithPath[]) => {
+      const nextFiles = acceptedFiles.slice(0, 1);
+      const nextFile = nextFiles[0] ?? null;
+
+      latestSelectionIdRef.current += 1;
+      const selectionId = latestSelectionIdRef.current;
+
+      if (!nextFile) {
+        fieldChange([]);
+        updatePreviewUrl(mediaUrl);
+        onPreparedChange?.(null);
+        return;
+      }
+
+      const nextPreviewUrl = URL.createObjectURL(nextFile);
+
+      fieldChange(nextFiles);
+      updatePreviewUrl(nextPreviewUrl);
+      onPreparedChange?.({
+        file: nextFile,
+        metadata: null,
+        metadataStatus: 'pending',
+      });
+
+      const metadata = await getImageMetadata(nextFile);
+
+      if (latestSelectionIdRef.current !== selectionId) {
+        return;
+      }
+
+      onPreparedChange?.({
+        file: nextFile,
+        metadata,
+        metadataStatus:
+          metadata.width !== null && metadata.height !== null
+            ? 'ready'
+            : 'failed',
+      });
     },
-    [file],
+    [fieldChange, mediaUrl, onPreparedChange],
   );
+
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: {
       'image/*': ['.png', '.jpeg', 'jpg', 'svg'],
     },
+    multiple: false,
   });
 
   return (

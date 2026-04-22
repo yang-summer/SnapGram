@@ -1,0 +1,67 @@
+import { Heart, ImageOff, UserRound } from 'lucide-react';
+import { Link } from 'react-router';
+import ProgressiveImage from './ProgressiveImage';
+import type { HomeFeedPostViewModel } from '../types/post.type';
+
+type MasonryPostCardProps = {
+  post: HomeFeedPostViewModel;
+};
+
+export default function MasonryPostCard({ post }: MasonryPostCardProps) {
+  const imageAlt = post.caption.trim().length > 0 ? post.caption : `${post.creator.name}'s post cover`;
+  const hasCoverImage = post.imageUrl.trim().length > 0;
+  const hasCreatorAvatar = typeof post.creator.imageUrl === 'string' && post.creator.imageUrl.length > 0;
+
+  return (
+    <article className="min-w-0 overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-sm">
+      <Link to={`/posts/${post.id}`} className="block">
+        {hasCoverImage ? (
+          <ProgressiveImage
+            src={post.imageUrl}
+            alt={imageAlt}
+            aspectRatioBucket={post.aspectRatioBucket}
+            placeholder={post.imagePlaceholder}
+          />
+        ) : (
+          <div
+            className="flex items-center justify-center rounded-[24px] bg-surface-soft text-ink-subtle"
+            style={{ aspectRatio: 3 / 4 }}
+          >
+            <ImageOff aria-hidden="true" className="size-8" />
+          </div>
+        )}
+      </Link>
+
+      <div className="flex flex-col gap-3 p-3">
+        <Link
+          to={`/posts/${post.id}`}
+          className="line-clamp-2 text-sm leading-5 font-medium text-ink-strong"
+        >
+          {post.caption || 'Untitled post'}
+        </Link>
+
+        <div className="flex items-center justify-between gap-3">
+          <Link to={`/profile/${post.creator.id}`} className="flex min-w-0 items-center gap-2">
+            {hasCreatorAvatar ? (
+              <img
+                src={post.creator.imageUrl ?? undefined}
+                alt={post.creator.name}
+                className="size-8 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-ink-subtle">
+                <UserRound aria-hidden="true" className="size-4" />
+              </div>
+            )}
+            <span className="truncate text-sm text-ink-medium">{post.creator.name}</span>
+          </Link>
+
+          <div className="flex shrink-0 items-center gap-1 text-sm text-ink-subtle">
+            <Heart aria-hidden="true" className="size-4" />
+            <span>{post.likeCount}</span>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}

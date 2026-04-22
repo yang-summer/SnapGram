@@ -1,7 +1,9 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { postKeys } from './post.keys';
+import { DEFAULT_HOME_FEED_PAGE_SIZE } from '../api/post.api';
 import {
   getExplorePostPage,
+  getHomeFeedPage,
   getPostDetail,
   getPostEditorInitialData,
   getRecentPostCards,
@@ -39,6 +41,20 @@ export function useExplorePostsInfiniteQuery(limit = DEFAULT_EXPLORE_POST_PAGE_S
     queryKey: postKeys.explore({ limit }),
     queryFn: ({ pageParam }) =>
       getExplorePostPage({
+        cursor: pageParam,
+        limit,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    staleTime: 30_000,
+  });
+}
+
+export function useHomeFeedInfiniteQuery(limit = DEFAULT_HOME_FEED_PAGE_SIZE) {
+  return useInfiniteQuery({
+    queryKey: postKeys.homeFeed({ limit }),
+    queryFn: ({ pageParam }) =>
+      getHomeFeedPage({
         cursor: pageParam,
         limit,
       }),
