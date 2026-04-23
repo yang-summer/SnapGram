@@ -1,9 +1,11 @@
 import { AppwriteException, ID, Query } from 'appwrite';
-import { appwriteConfig, avatars, tablesDB } from '~/lib/appwrite/config';
+import type { Models } from 'appwrite';
+import { appwriteConfig, avatars, storage, tablesDB } from '~/lib/appwrite/config';
 import { buildPublicOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
   CreateUserProfileInput,
   RepairUserProfileInput,
+  UpdateEditableUserProfileInput,
   UserProfileRecord,
   UserSaveRecord,
 } from '../types/user.type';
@@ -33,6 +35,55 @@ export const USER_PROFILE_EDIT_SELECT = [
 
 export function getDefaultUserProfileImageUrl(name: string): string {
   return avatars.getInitials({ name });
+}
+
+export function getUserAvatarImageView(fileId: string): string {
+  return storage.getFileView({
+    bucketId: appwriteConfig.storageId,
+    fileId,
+  });
+}
+
+export async function uploadUserAvatar(file: File, ownerAccountId: string): Promise<Models.File> {
+  if (!file) {
+    throw new Error('A user avatar file is required.');
+  }
+
+  if (!ownerAccountId) {
+    throw new Error('Owner account ID is required to upload a user avatar.');
+  }
+
+  try {
+    return await storage.createFile({
+      bucketId: appwriteConfig.storageId,
+      fileId: ID.unique(),
+      file,
+      permissions: buildPublicOwnerPermissions(ownerAccountId),
+    });
+  } catch (error) {
+    console.error('[UserApi.uploadUserAvatar] Failed to upload user avatar.', error);
+    throw error;
+  }
+}
+
+export async function deleteUserAvatarImage(fileId: string): Promise<void> {
+  if (!fileId) {
+    throw new Error('File ID is required to delete a user avatar image.');
+  }
+
+  try {
+    await storage.deleteFile({
+      bucketId: appwriteConfig.storageId,
+      fileId,
+    });
+  } catch (error) {
+    if (error instanceof AppwriteException && error.code === 404) {
+      return;
+    }
+
+    console.error('[UserApi.deleteUserAvatarImage] Failed to delete user avatar image.', error);
+    throw error;
+  }
 }
 
 export async function createUserProfile(input: CreateUserProfileInput): Promise<UserProfileRecord> {
@@ -84,6 +135,32 @@ export async function updateUserProfile(
     });
   } catch (error) {
     console.error('[UserApi.updateUserProfile] Failed to update user profile.', error);
+    throw error;
+  }
+}
+
+export async function updateEditableUserProfile(
+  profileId: string,
+  input: UpdateEditableUserProfileInput,
+): Promise<UserProfileRecord> {
+  if (!profileId) {
+    throw new Error('Profile ID is required to update an editable user profile.');
+  }
+
+  try {
+    return await tablesDB.updateRow<UserProfileRecord>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersTableId,
+      rowId: profileId,
+      data: {
+        name: input.name,
+        imageId: input.imageId ?? null,
+        imageUrl: input.imageUrl,
+        bio: input.bio ?? null,
+      },
+    });
+  } catch (error) {
+    console.error('[UserApi.updateEditableUserProfile] Failed to update editable user profile.', error);
     throw error;
   }
 }
