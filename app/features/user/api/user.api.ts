@@ -1,4 +1,4 @@
-import { ID, Query } from 'appwrite';
+import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, avatars, tablesDB } from '~/lib/appwrite/config';
 import { buildPublicOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
@@ -110,6 +110,57 @@ export async function getUserProfileByAccountId(
     return result.rows[0] ?? null;
   } catch (error) {
     console.error('[UserApi.getUserProfileByAccountId] Failed to load user profile.', error);
+    throw error;
+  }
+}
+
+export async function getPublicUserProfileById(
+  profileId: string,
+): Promise<UserProfileRecord | null> {
+  if (!profileId) {
+    throw new Error('Profile ID is required to load a public user profile.');
+  }
+
+  try {
+    return await tablesDB.getRow<UserProfileRecord>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersTableId,
+      rowId: profileId,
+      queries: [Query.select(USER_PROFILE_PUBLIC_SELECT)],
+    });
+  } catch (error) {
+    if (error instanceof AppwriteException && error.code === 404) {
+      return null;
+    }
+
+    console.error('[UserApi.getPublicUserProfileById] Failed to load public user profile.', error);
+    throw error;
+  }
+}
+
+export async function getEditableUserProfileById(
+  profileId: string,
+): Promise<UserProfileRecord | null> {
+  if (!profileId) {
+    throw new Error('Profile ID is required to load an editable user profile.');
+  }
+
+  try {
+    return await tablesDB.getRow<UserProfileRecord>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersTableId,
+      rowId: profileId,
+      queries: [Query.select(USER_PROFILE_EDIT_SELECT)],
+    });
+  } catch (error) {
+    if (error instanceof AppwriteException && error.code === 404) {
+      return null;
+    }
+
+    console.error(
+      '[UserApi.getEditableUserProfileById] Failed to load editable user profile.',
+      error,
+    );
     throw error;
   }
 }

@@ -63,7 +63,7 @@ function buildCurrentUser(account: AuthAccountDto, profile: UserProfileRecord): 
     email: profile.email || account.email,
     name: profile.name?.trim() || account.name,
     username: profile.username?.trim() || '',
-    imageUrl: profile.imageUrl ?? null,
+    imageUrl: profile.imageUrl,
     bio: profile.bio ?? null,
   };
 }

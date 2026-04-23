@@ -30,8 +30,27 @@ export type UserProfileRecord = Models.Row & {
   name?: string | null;
   username?: string | null;
   imageId?: string | null;
-  imageUrl?: string | null;
+  imageUrl: string;
   bio?: string | null;
+};
+
+export type PublicUserProfileViewModel = {
+  id: string;
+  name: string;
+  username: string;
+  imageUrl: string;
+  bio: string | null;
+};
+
+export type EditableUserProfileViewModel = {
+  id: string;
+  accountId: string;
+  email: string;
+  name: string;
+  username: string;
+  imageId: string | null;
+  imageUrl: string;
+  bio: string | null;
 };
 
 export type UserSavePostReference = {

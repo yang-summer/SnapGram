@@ -43,7 +43,7 @@ export type CurrentUserDto = {
   email: string;
   name: string;
   username: string;
-  imageUrl: string | null;
+  imageUrl: string;
   bio: string | null;
 };
 
