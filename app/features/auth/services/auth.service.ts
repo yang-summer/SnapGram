@@ -21,7 +21,7 @@ import {
   getUserProfileByAccountId,
   updateUserProfile,
 } from '~/features/user/api/user.api';
-import type { UserProfileRecord } from '~/features/user/types/user.type';
+import type { RepairUserProfileInput, UserProfileRecord } from '~/features/user/types/user.type';
 
 function mapAuthAccountRecordToDto(record: AuthAccountRecord): AuthAccountDto {
   return {
@@ -109,7 +109,7 @@ function buildRecoveryUsername(account: AuthAccountDto, profile: UserProfileReco
 
 async function initializeMissingUserProfile(account: AuthAccountDto): Promise<UserProfileRecord> {
   const existingProfile = await getUserProfileByAccountId(account.accountId);
-  const profilePayload = {
+  const profilePayload: RepairUserProfileInput = {
     email: existingProfile?.email?.trim() || account.email,
     name: existingProfile?.name?.trim() || account.name,
     username: buildRecoveryUsername(account, existingProfile),

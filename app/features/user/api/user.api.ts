@@ -3,12 +3,33 @@ import { appwriteConfig, avatars, tablesDB } from '~/lib/appwrite/config';
 import { buildPublicOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
   CreateUserProfileInput,
-  UpdateUserProfileInput,
+  RepairUserProfileInput,
   UserProfileRecord,
   UserSaveRecord,
 } from '../types/user.type';
 
-const USER_PROFILE_SELECT = ['$id', 'accountId', 'email', 'name', 'username', 'imageUrl', 'bio'];
+export const USER_PROFILE_AUTH_SELECT = [
+  '$id',
+  'accountId',
+  'email',
+  'name',
+  'username',
+  'imageUrl',
+  'bio',
+];
+
+export const USER_PROFILE_PUBLIC_SELECT = ['$id', 'name', 'username', 'imageUrl', 'bio'];
+
+export const USER_PROFILE_EDIT_SELECT = [
+  '$id',
+  'accountId',
+  'email',
+  'name',
+  'username',
+  'imageId',
+  'imageUrl',
+  'bio',
+];
 
 export function getDefaultUserProfileImageUrl(name: string): string {
   return avatars.getInitials({ name });
@@ -42,7 +63,7 @@ export async function createUserProfile(input: CreateUserProfileInput): Promise<
 
 export async function updateUserProfile(
   profileId: string,
-  input: UpdateUserProfileInput,
+  input: RepairUserProfileInput,
 ): Promise<UserProfileRecord> {
   if (!profileId) {
     throw new Error('Profile ID is required to update a user profile.');
@@ -79,7 +100,7 @@ export async function getUserProfileByAccountId(
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.usersTableId,
       queries: [
-        Query.select(USER_PROFILE_SELECT),
+        Query.select(USER_PROFILE_AUTH_SELECT),
         Query.equal('accountId', accountId),
         Query.limit(1),
       ],
