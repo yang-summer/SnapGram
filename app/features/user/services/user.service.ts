@@ -1,10 +1,18 @@
 import {
   deleteUserAvatarImage,
+  getEditableUserProfileById,
+  getPublicUserProfileById,
   getUserAvatarImageView,
   updateEditableUserProfile,
   uploadUserAvatar,
 } from '../api/user.api';
+import {
+  mapUserProfileRowToEditableViewModel,
+  mapUserProfileRowToPublicViewModel,
+} from '../mappers/user.mapper';
 import type {
+  EditableUserProfileViewModel,
+  PublicUserProfileViewModel,
   UpdateEditableUserProfileWithAvatarInput,
   UserProfileRecord,
 } from '../types/user.type';
@@ -56,6 +64,35 @@ async function cleanupPreviousAvatar(
       '[UserService.updateEditableUserProfileWithAvatar] Failed to delete previous user avatar.',
       error,
     );
+  }
+}
+
+export async function getPublicUserProfile(
+  profileId: string,
+): Promise<PublicUserProfileViewModel | null> {
+  try {
+    const profile = await getPublicUserProfileById(profileId);
+
+    return profile ? mapUserProfileRowToPublicViewModel(profile) : null;
+  } catch (error) {
+    console.error('[UserService.getPublicUserProfile] Failed to load public user profile.', error);
+    throw error;
+  }
+}
+
+export async function getEditableUserProfile(
+  profileId: string,
+): Promise<EditableUserProfileViewModel | null> {
+  try {
+    const profile = await getEditableUserProfileById(profileId);
+
+    return profile ? mapUserProfileRowToEditableViewModel(profile) : null;
+  } catch (error) {
+    console.error(
+      '[UserService.getEditableUserProfile] Failed to load editable user profile.',
+      error,
+    );
+    throw error;
   }
 }
 

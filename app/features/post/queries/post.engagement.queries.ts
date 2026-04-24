@@ -92,13 +92,17 @@ export function useProfileLikedFeedInfiniteQuery(
   });
 }
 
-export function useProfileLikedCountQuery(profileId: string) {
+export function useProfileLikedCountQuery(
+  profileId: string,
+  options?: { enabled?: boolean },
+) {
   const normalizedProfileId = profileId.trim();
+  const enabled = normalizedProfileId.length > 0 && (options?.enabled ?? true);
 
   return useQuery({
     queryKey: postKeys.profileLikedCount(normalizedProfileId),
     queryFn: () => getProfileLikedCount(normalizedProfileId),
-    enabled: normalizedProfileId.length > 0,
+    enabled,
     staleTime: PROFILE_ENGAGEMENT_STALE_TIME,
   });
 }
@@ -124,13 +128,17 @@ export function useProfileSavedFeedInfiniteQuery(
   });
 }
 
-export function useProfileSavedCountQuery(profileId: string) {
+export function useProfileSavedCountQuery(
+  profileId: string,
+  options?: { enabled?: boolean },
+) {
   const normalizedProfileId = profileId.trim();
+  const enabled = normalizedProfileId.length > 0 && (options?.enabled ?? true);
 
   return useQuery({
     queryKey: postKeys.profileSavedCount(normalizedProfileId),
     queryFn: () => getProfileSavedCount(normalizedProfileId),
-    enabled: normalizedProfileId.length > 0,
+    enabled,
     staleTime: PROFILE_ENGAGEMENT_STALE_TIME,
   });
 }

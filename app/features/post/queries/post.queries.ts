@@ -87,13 +87,17 @@ export function useProfilePostsInfiniteQuery(
   });
 }
 
-export function useProfilePostCountQuery(profileId: string) {
+export function useProfilePostCountQuery(
+  profileId: string,
+  options?: { enabled?: boolean },
+) {
   const normalizedProfileId = profileId.trim();
+  const enabled = normalizedProfileId.length > 0 && (options?.enabled ?? true);
 
   return useQuery({
     queryKey: postKeys.profilePostCount(normalizedProfileId),
     queryFn: () => getProfilePostCount(normalizedProfileId),
-    enabled: normalizedProfileId.length > 0,
+    enabled,
     staleTime: 30_000,
   });
 }
