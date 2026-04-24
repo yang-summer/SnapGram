@@ -24,6 +24,16 @@ export type UpdateEditableUserProfileInput = {
   bio?: string | null;
 };
 
+export type UpdateEditableUserProfileWithAvatarInput = {
+  profileId: string;
+  ownerAccountId: string;
+  name: string;
+  bio?: string | null;
+  currentImageId: string | null;
+  currentImageUrl: string;
+  nextAvatarFile?: File | null;
+};
+
 export type UserProfileRecord = Models.Row & {
   accountId?: string | null;
   email: string;
