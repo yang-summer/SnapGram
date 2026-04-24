@@ -106,6 +106,18 @@ export type ListPostRowsParams = {
   limit?: number;
 };
 
+export type ProfilePostPageParams = {
+  profileId: string;
+  cursor?: string | null;
+  limit?: number;
+};
+
+export type ProfileEngagementPageParams = {
+  profileId: string;
+  cursor?: string | null;
+  limit?: number;
+};
+
 export type SearchPostRowsParams = {
   term: string;
   limit?: number;
@@ -200,6 +212,12 @@ export type PreparedImageDraft = {
 export type CursorPage<T> = {
   items: T[];
   nextCursor: string | null;
+};
+
+export type ProfileFeedPage = CursorPage<HomeFeedPostViewModel>;
+
+export type ProfileTabCountResult = {
+  count: number;
 };
 
 export type PostFormValues = {
