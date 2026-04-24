@@ -1,3 +1,5 @@
+import { Navigate } from 'react-router';
+
 export default function ProfileIndex() {
-  return null;
+  return <Navigate to="posts" replace />;
 }

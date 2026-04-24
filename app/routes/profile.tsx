@@ -6,12 +6,13 @@ import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import ProfileHeader, {
   getProfileDisplayName,
 } from '~/features/profile/components/ProfileHeader';
+import ProfileRouteGuard from '~/features/profile/components/ProfileRouteGuard';
 import ProfileTabs from '~/features/profile/components/ProfileTabs';
 import type { ProfileRouteOutletContext } from '~/features/profile/types/profile-route.type';
 import { useProfileLikedCountQuery, useProfileSavedCountQuery } from '~/features/post/queries/post.engagement.queries';
 import { useProfilePostCountQuery } from '~/features/post/queries/post.queries';
 import { usePublicUserProfileQuery } from '~/features/user/queries/user.queries';
-import { Outlet, useParams } from 'react-router';
+import { Outlet, useMatch, useParams } from 'react-router';
 import type { Route } from './+types/profile';
 
 type ProfilePageFrameProps = {
@@ -36,6 +37,9 @@ export default function Profile() {
   }
 
   const profileId = id;
+  const isSavedTab = !!useMatch('/profile/:id/saved');
+  const isLikedTab = !!useMatch('/profile/:id/liked');
+  const activeTab = isSavedTab ? 'saved' : isLikedTab ? 'liked' : 'posts';
   const { data: currentUserResult } = useCurrentUserQuery();
   const currentUser =
     currentUserResult?.status === 'authenticated' ? currentUserResult.user : null;
@@ -108,26 +112,28 @@ export default function Profile() {
 
   return (
     <ProfilePageFrame>
-      <div className="space-y-6">
-        <ProfileHeader
-          profile={profile}
-          profileId={profileId}
-          postsCount={postsCount}
-          savedCount={savedCount}
-          likedCount={likedCount}
-          isOwner={isOwner}
-        />
-        <ProfileTabs
-          profileId={profileId}
-          postsCount={postsCount}
-          savedCount={savedCount}
-          likedCount={likedCount}
-          isOwner={isOwner}
-        />
-        <div className="w-full">
-          <Outlet context={outletContext} />
+      <ProfileRouteGuard profileId={profileId} isOwner={isOwner} activeTab={activeTab}>
+        <div className="space-y-6">
+          <ProfileHeader
+            profile={profile}
+            profileId={profileId}
+            postsCount={postsCount}
+            savedCount={savedCount}
+            likedCount={likedCount}
+            isOwner={isOwner}
+          />
+          <ProfileTabs
+            profileId={profileId}
+            postsCount={postsCount}
+            savedCount={savedCount}
+            likedCount={likedCount}
+            isOwner={isOwner}
+          />
+          <div className="w-full">
+            <Outlet context={outletContext} />
+          </div>
         </div>
-      </div>
+      </ProfileRouteGuard>
     </ProfilePageFrame>
   );
 }
