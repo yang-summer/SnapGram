@@ -27,6 +27,9 @@ const EditProfileAvatarValidation = z
   .refine((value) => value == null || value.type.startsWith('image/'), {
     message: 'Please choose an image file.',
   })
+  .refine((value) => value == null || value.type !== 'image/svg+xml', {
+    message: 'SVG avatars are not supported.',
+  })
   .refine((value) => value == null || value.size <= EDIT_PROFILE_AVATAR_MAX_SIZE_BYTES, {
     message: 'Avatar image must be 5MB or smaller.',
   })
