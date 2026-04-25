@@ -63,6 +63,12 @@ export type EditableUserProfileViewModel = {
   bio: string | null;
 };
 
+export type EditableUserProfileFormValues = {
+  name: string;
+  bio: string;
+  avatarFile: File | null;
+};
+
 export type UserSavePostReference = {
   $id: string;
 };

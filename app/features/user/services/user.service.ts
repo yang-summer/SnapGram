@@ -14,7 +14,6 @@ import type {
   EditableUserProfileViewModel,
   PublicUserProfileViewModel,
   UpdateEditableUserProfileWithAvatarInput,
-  UserProfileRecord,
 } from '../types/user.type';
 
 function assertEditableProfileUpdateInput(input: UpdateEditableUserProfileWithAvatarInput) {
@@ -98,7 +97,7 @@ export async function getEditableUserProfile(
 
 export async function updateEditableUserProfileWithAvatar(
   input: UpdateEditableUserProfileWithAvatarInput,
-): Promise<UserProfileRecord> {
+): Promise<EditableUserProfileViewModel> {
   assertEditableProfileUpdateInput(input);
 
   const currentImageId = input.currentImageId;
@@ -106,12 +105,14 @@ export async function updateEditableUserProfileWithAvatar(
 
   if (!nextAvatarFile) {
     try {
-      return await updateEditableUserProfile(input.profileId, {
+      const updatedProfile = await updateEditableUserProfile(input.profileId, {
         name: input.name,
         bio: input.bio ?? null,
         imageId: currentImageId,
         imageUrl: input.currentImageUrl,
       });
+
+      return mapUserProfileRowToEditableViewModel(updatedProfile);
     } catch (error) {
       console.error(
         '[UserService.updateEditableUserProfileWithAvatar] Failed to update profile text.',
@@ -138,7 +139,7 @@ export async function updateEditableUserProfileWithAvatar(
 
     await cleanupPreviousAvatar(currentImageId, uploadedAvatarFileId);
 
-    return updatedProfile;
+    return mapUserProfileRowToEditableViewModel(updatedProfile);
   } catch (error) {
     await cleanupUploadedAvatar(uploadedAvatarFileId, 'updateEditableUserProfileWithAvatar');
     console.error(
