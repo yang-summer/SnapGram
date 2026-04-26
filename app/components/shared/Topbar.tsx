@@ -1,11 +1,58 @@
-import { Link } from 'react-router';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '../ui/input-group';
+import { useEffect, useState, type SubmitEvent } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '../ui/input-group';
 import { LogOut, Menu, SearchIcon } from 'lucide-react';
+import { toast } from 'sonner';
 import { ThemeToggle } from './ThemeToggle';
 import { useSignOutMutation } from '~/features/auth/queries/auth.mutations';
 
+const SEARCH_RESULT_ROUTE = '/search-result';
+const SEARCH_KEYWORD_MIN_LENGTH = 3;
+
 export default function Topbar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
+  const isSearchResultRoute = location.pathname === SEARCH_RESULT_ROUTE;
+  const routeKeyword = isSearchResultRoute ? (searchParams.get('keyword') ?? '').trim() : null;
+  const [searchValue, setSearchValue] = useState(routeKeyword ?? '');
+
+  useEffect(() => {
+    if (!isSearchResultRoute) {
+      setSearchValue('');
+      return;
+    }
+
+    setSearchValue(routeKeyword ?? '');
+  }, [isSearchResultRoute, routeKeyword]);
+
+  function handleSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedKeyword = searchValue.trim();
+
+    if (normalizedKeyword.length === 0) {
+      toast.error('Enter a keyword to search posts.');
+      return;
+    }
+
+    if (normalizedKeyword.length < SEARCH_KEYWORD_MIN_LENGTH) {
+      toast.error('Enter at least 3 characters to search posts.');
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams({
+      keyword: normalizedKeyword,
+    });
+
+    void navigate(`${SEARCH_RESULT_ROUTE}?${nextSearchParams.toString()}`);
+  }
 
   return (
     <div className="flex items-center justify-between h-full bg-surface-raised">
@@ -32,15 +79,32 @@ export default function Topbar() {
           <span className="text-[1.75rem] font-black text-blue-700">小蓝书</span>
         </div>
       </Link>
-      <InputGroup className="w-[min(35vw,600px)] h-12 rounded-full bg-surface-soft border-0 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-transparent has-[[data-slot=input-group-control]:focus-visible]:ring-0 has-[[data-slot=input-group-control]:focus-visible]:shadow-none">
-        <InputGroupInput
-          className="placeholder:text-ink-placeholder focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-none"
-          placeholder="Search..."
-        />
-        <InputGroupAddon align="inline-end">
-          <SearchIcon className="h-5 w-5 text-ink-subtle" />
-        </InputGroupAddon>
-      </InputGroup>
+      <form onSubmit={handleSearchSubmit} className="w-[min(35vw,600px)]">
+        <InputGroup className="h-12 w-full rounded-full bg-surface-soft border-0 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-transparent has-[[data-slot=input-group-control]:focus-visible]:ring-0 has-[[data-slot=input-group-control]:focus-visible]:shadow-none">
+          <InputGroupInput
+            name="keyword"
+            value={searchValue}
+            onChange={(event) => {
+              setSearchValue(event.target.value);
+            }}
+            className="placeholder:text-ink-placeholder focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-none"
+            placeholder="Search..."
+            aria-label="Search posts"
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              type="submit"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full text-ink-subtle hover:bg-transparent"
+              aria-label="Search posts"
+              title="Search posts"
+            >
+              <SearchIcon className="h-5 w-5" />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+      </form>
       <div className="flex items-center gap-2">
         <ThemeToggle />
         <button

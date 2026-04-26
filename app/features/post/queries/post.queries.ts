@@ -1,6 +1,10 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { postKeys } from './post.keys';
-import { DEFAULT_HOME_FEED_PAGE_SIZE, DEFAULT_PROFILE_FEED_PAGE_SIZE } from '../api/post.api';
+import {
+  DEFAULT_HOME_FEED_PAGE_SIZE,
+  DEFAULT_PROFILE_FEED_PAGE_SIZE,
+  DEFAULT_SEARCH_POST_PAGE_SIZE,
+} from '../api/post.api';
 import {
   getExplorePostPage,
   getHomeFeedPage,
@@ -9,6 +13,7 @@ import {
   getProfilePostCount,
   getProfilePostPage,
   getRecentPostCards,
+  getSearchPostPage,
   searchExplorePosts,
 } from '../services/post.service';
 
@@ -98,6 +103,27 @@ export function useProfilePostCountQuery(
     queryKey: postKeys.profilePostCount(normalizedProfileId),
     queryFn: () => getProfilePostCount(normalizedProfileId),
     enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useSearchPostsInfiniteQuery(
+  rawKeyword: string,
+  limit = DEFAULT_SEARCH_POST_PAGE_SIZE,
+) {
+  const keyword = rawKeyword.trim();
+
+  return useInfiniteQuery({
+    queryKey: postKeys.searchFeed({ keyword, limit }),
+    queryFn: ({ pageParam }) =>
+      getSearchPostPage({
+        keyword,
+        cursor: pageParam,
+        limit,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    enabled: keyword.length >= 3,
     staleTime: 30_000,
   });
 }
