@@ -112,6 +112,12 @@ export type ProfilePostPageParams = {
   limit?: number;
 };
 
+export type SearchPostPageParams = {
+  keyword: string;
+  cursor?: string | null;
+  limit?: number;
+};
+
 export type ProfileEngagementPageParams = {
   profileId: string;
   cursor?: string | null;
@@ -215,6 +221,7 @@ export type CursorPage<T> = {
 };
 
 export type ProfileFeedPage = CursorPage<HomeFeedPostViewModel>;
+export type SearchFeedPage = CursorPage<HomeFeedPostViewModel>;
 
 export type ProfileTabCountResult = {
   count: number;

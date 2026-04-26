@@ -2,6 +2,7 @@ import {
   createPostRow,
   DEFAULT_HOME_FEED_PAGE_SIZE,
   DEFAULT_PROFILE_FEED_PAGE_SIZE,
+  DEFAULT_SEARCH_POST_PAGE_SIZE,
   countProfilePublishedPosts,
   deletePost,
   deletePostImage,
@@ -12,6 +13,7 @@ import {
   listHomeFeedPostRows,
   listExplorePostRows,
   listProfilePublishedPostRows,
+  listSearchPostRows,
   searchPostRows,
   updatePostRow,
   uploadPostImage,
@@ -40,6 +42,8 @@ import type {
   PostGridItemViewModel,
   PostMutationResult,
   RawPostMutationRow,
+  SearchFeedPage,
+  SearchPostPageParams,
   SearchPostRowsParams,
   UpdatePostInput,
 } from '../types/post.type';
@@ -364,6 +368,34 @@ export async function getProfilePostCount(profileId: string): Promise<number> {
     return await countProfilePublishedPosts(profileId);
   } catch (error) {
     console.error(`[PostService.getProfilePostCount] Error:`, error);
+    throw error;
+  }
+}
+
+export async function getSearchPostPage({
+  keyword,
+  cursor = null,
+  limit = DEFAULT_SEARCH_POST_PAGE_SIZE,
+}: SearchPostPageParams): Promise<SearchFeedPage> {
+  const normalizedLimit = clampListLimit(limit, DEFAULT_SEARCH_POST_PAGE_SIZE);
+
+  try {
+    const response = await listSearchPostRows({
+      keyword,
+      cursor,
+      limit: normalizedLimit,
+    });
+
+    if (!response || !Array.isArray(response.rows) || response.rows.length === 0) {
+      return {
+        items: [],
+        nextCursor: null,
+      };
+    }
+
+    return mapHomeFeedRowsToCursorPage(response, normalizedLimit);
+  } catch (error) {
+    console.error(`[PostService.getSearchPostPage] Error:`, error);
     throw error;
   }
 }

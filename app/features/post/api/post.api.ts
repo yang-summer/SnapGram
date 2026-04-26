@@ -18,12 +18,14 @@ import type {
   RawPostMutationRow,
   RawPostRow,
   RawPostWriteRow,
+  SearchPostPageParams,
   SearchPostRowsParams,
   UpdatePostApiInput,
 } from '../types/post.type';
 
 export const DEFAULT_HOME_FEED_PAGE_SIZE = 20;
 export const DEFAULT_PROFILE_FEED_PAGE_SIZE = 20;
+export const DEFAULT_SEARCH_POST_PAGE_SIZE = 20;
 const DEFAULT_EXPLORE_POSTS_LIMIT = 9;
 const DEFAULT_SEARCH_POSTS_LIMIT = 20;
 const APPWRITE_MAX_LIST_LIMIT = 100;
@@ -491,6 +493,49 @@ export async function listExplorePostRows({
     return posts;
   } catch (error) {
     console.error('[PostApi.listExplorePostRows] Failed to list explore posts.', error);
+    throw error;
+  }
+}
+
+export async function listSearchPostRows({
+  keyword,
+  cursor = null,
+  limit = DEFAULT_SEARCH_POST_PAGE_SIZE,
+}: SearchPostPageParams): Promise<Models.RowList<RawPostHomeFeedRow>> {
+  const normalizedKeyword = keyword.trim();
+
+  if (normalizedKeyword.length < 3) {
+    return createEmptyRowList<RawPostHomeFeedRow>();
+  }
+
+  const normalizedLimit = clampListLimit(limit, DEFAULT_SEARCH_POST_PAGE_SIZE);
+  const queries = [
+    Query.select(POST_HOME_FEED_SELECT),
+    Query.equal('status', PUBLISHED_POST_STATUS),
+    Query.search('searchText', normalizedKeyword),
+    Query.orderDesc('$createdAt'),
+    Query.limit(normalizedLimit),
+  ];
+
+  if (cursor) {
+    queries.push(Query.cursorAfter(cursor));
+  }
+
+  try {
+    const posts = await tablesDB.listRows<RawPostHomeFeedRow>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      queries,
+      total: false,
+    });
+
+    if (!posts) {
+      throw new Error('Failed to search posts.');
+    }
+
+    return posts;
+  } catch (error) {
+    console.error('[PostApi.listSearchPostRows] Failed to search posts.', error);
     throw error;
   }
 }
