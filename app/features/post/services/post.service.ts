@@ -1,6 +1,8 @@
 import {
   createPostRow,
   DEFAULT_HOME_FEED_PAGE_SIZE,
+  DEFAULT_PROFILE_FEED_PAGE_SIZE,
+  countProfilePublishedPosts,
   deletePost,
   deletePostImage,
   getPostImageView,
@@ -9,6 +11,7 @@ import {
   getRecentPosts,
   listHomeFeedPostRows,
   listExplorePostRows,
+  listProfilePublishedPostRows,
   searchPostRows,
   updatePostRow,
   uploadPostImage,
@@ -32,6 +35,8 @@ import type {
   PostCardViewModel,
   PostDetailViewModel,
   PostEditorInitialData,
+  ProfileFeedPage,
+  ProfilePostPageParams,
   PostGridItemViewModel,
   PostMutationResult,
   RawPostMutationRow,
@@ -322,6 +327,43 @@ export async function getHomeFeedPage({
     return mapHomeFeedRowsToCursorPage(response, normalizedLimit);
   } catch (error) {
     console.error(`[PostService.getHomeFeedPage] Error:`, error);
+    throw error;
+  }
+}
+
+export async function getProfilePostPage({
+  profileId,
+  cursor = null,
+  limit = DEFAULT_PROFILE_FEED_PAGE_SIZE,
+}: ProfilePostPageParams): Promise<ProfileFeedPage> {
+  const normalizedLimit = clampListLimit(limit, DEFAULT_PROFILE_FEED_PAGE_SIZE);
+
+  try {
+    const response = await listProfilePublishedPostRows({
+      profileId,
+      cursor,
+      limit: normalizedLimit,
+    });
+
+    if (!response || !Array.isArray(response.rows) || response.rows.length === 0) {
+      return {
+        items: [],
+        nextCursor: null,
+      };
+    }
+
+    return mapHomeFeedRowsToCursorPage(response, normalizedLimit);
+  } catch (error) {
+    console.error(`[PostService.getProfilePostPage] Error:`, error);
+    throw error;
+  }
+}
+
+export async function getProfilePostCount(profileId: string): Promise<number> {
+  try {
+    return await countProfilePublishedPosts(profileId);
+  } catch (error) {
+    console.error(`[PostService.getProfilePostCount] Error:`, error);
     throw error;
   }
 }

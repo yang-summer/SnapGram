@@ -1,5 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { DEFAULT_PROFILE_FEED_PAGE_SIZE } from '../api/post.api';
 import {
+  getProfileLikedCount,
+  getProfileLikedFeedPage,
+  getProfileSavedCount,
+  getProfileSavedFeedPage,
   getViewerLikedPost,
   getViewerLikedPosts,
   getViewerLikedPostsByPostIds,
@@ -10,6 +15,7 @@ import {
 import { postKeys } from './post.keys';
 
 const VIEWER_ENGAGEMENT_STALE_TIME = 30_000;
+const PROFILE_ENGAGEMENT_STALE_TIME = 30_000;
 
 export function useViewerLikedPostQuery(viewerProfileId: string, postId: string) {
   return useQuery({
@@ -62,5 +68,77 @@ export function useViewerSavedPostsByPostIdsQuery(viewerProfileId: string, postI
     queryFn: () => getViewerSavedPostsByPostIds(viewerProfileId, postIds),
     enabled: viewerProfileId.length > 0 && postIds.length > 0,
     staleTime: VIEWER_ENGAGEMENT_STALE_TIME,
+  });
+}
+
+export function useProfileLikedFeedInfiniteQuery(
+  profileId: string,
+  limit = DEFAULT_PROFILE_FEED_PAGE_SIZE,
+) {
+  const normalizedProfileId = profileId.trim();
+
+  return useInfiniteQuery({
+    queryKey: postKeys.profileLikedFeed(normalizedProfileId, { limit }),
+    queryFn: ({ pageParam }) =>
+      getProfileLikedFeedPage({
+        profileId: normalizedProfileId,
+        cursor: pageParam,
+        limit,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    enabled: normalizedProfileId.length > 0,
+    staleTime: PROFILE_ENGAGEMENT_STALE_TIME,
+  });
+}
+
+export function useProfileLikedCountQuery(
+  profileId: string,
+  options?: { enabled?: boolean },
+) {
+  const normalizedProfileId = profileId.trim();
+  const enabled = normalizedProfileId.length > 0 && (options?.enabled ?? true);
+
+  return useQuery({
+    queryKey: postKeys.profileLikedCount(normalizedProfileId),
+    queryFn: () => getProfileLikedCount(normalizedProfileId),
+    enabled,
+    staleTime: PROFILE_ENGAGEMENT_STALE_TIME,
+  });
+}
+
+export function useProfileSavedFeedInfiniteQuery(
+  profileId: string,
+  limit = DEFAULT_PROFILE_FEED_PAGE_SIZE,
+) {
+  const normalizedProfileId = profileId.trim();
+
+  return useInfiniteQuery({
+    queryKey: postKeys.profileSavedFeed(normalizedProfileId, { limit }),
+    queryFn: ({ pageParam }) =>
+      getProfileSavedFeedPage({
+        profileId: normalizedProfileId,
+        cursor: pageParam,
+        limit,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    enabled: normalizedProfileId.length > 0,
+    staleTime: PROFILE_ENGAGEMENT_STALE_TIME,
+  });
+}
+
+export function useProfileSavedCountQuery(
+  profileId: string,
+  options?: { enabled?: boolean },
+) {
+  const normalizedProfileId = profileId.trim();
+  const enabled = normalizedProfileId.length > 0 && (options?.enabled ?? true);
+
+  return useQuery({
+    queryKey: postKeys.profileSavedCount(normalizedProfileId),
+    queryFn: () => getProfileSavedCount(normalizedProfileId),
+    enabled,
+    staleTime: PROFILE_ENGAGEMENT_STALE_TIME,
   });
 }

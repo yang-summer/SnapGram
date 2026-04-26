@@ -1,3 +1,4 @@
+import type { Models } from 'appwrite';
 import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, tablesDB } from '~/lib/appwrite/config';
 import { buildPrivateOwnerPermissions } from '~/lib/appwrite/permissions';
@@ -8,13 +9,17 @@ import type {
   DeleteViewerPostLikeResult,
   DeleteViewerPostSaveInput,
   DeleteViewerPostSaveResult,
+  ProfileEngagementPageParams,
   RawViewerLikeRecord,
   RawViewerSaveRecord,
   ViewerPostLikeMutationResult,
 } from '../types/post.type';
 
 const VIEWER_ENGAGEMENT_RECORD_SELECT = ['$id', 'postId', 'userId'];
+const PROFILE_ENGAGEMENT_RECORD_SELECT = ['$id', '$createdAt', '$sequence', 'postId', 'userId'];
 const VIEWER_RECORD_LIMIT = 100;
+const DEFAULT_PROFILE_ENGAGEMENT_PAGE_SIZE = 20;
+const APPWRITE_MAX_LIST_LIMIT = 100;
 const POST_LIKE_COUNT_COLUMN = 'likeCount';
 const POST_LIKE_COUNT_STEP = 1;
 const POST_SAVE_COUNT_COLUMN = 'saveCount';
@@ -24,6 +29,14 @@ function normalizePostIds(postIds: string[]): string[] {
   return Array.from(
     new Set(postIds.map((postId) => postId.trim()).filter((postId) => postId.length > 0)),
   );
+}
+
+function clampListLimit(limit: number | undefined, fallback: number): number {
+  if (typeof limit !== 'number' || Number.isNaN(limit)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(Math.trunc(limit), 1), APPWRITE_MAX_LIST_LIMIT);
 }
 
 function createViewerRecordLookupQueries(viewerProfileId: string, postId: string) {
@@ -109,6 +122,54 @@ async function listViewerRecordsByPostIds<Row extends RawViewerLikeRecord | RawV
   return rows;
 }
 
+async function listProfileEngagementRecordsPage<
+  Row extends RawViewerLikeRecord | RawViewerSaveRecord,
+>(
+  tableId: string,
+  { profileId, cursor = null, limit = DEFAULT_PROFILE_ENGAGEMENT_PAGE_SIZE }: ProfileEngagementPageParams,
+): Promise<Models.RowList<Row>> {
+  if (!profileId) {
+    throw new Error('Profile ID is required to list profile engagement records.');
+  }
+
+  const normalizedLimit = clampListLimit(limit, DEFAULT_PROFILE_ENGAGEMENT_PAGE_SIZE);
+  const queries = [
+    Query.select(PROFILE_ENGAGEMENT_RECORD_SELECT),
+    Query.equal('userId', profileId),
+    Query.orderDesc('$sequence'),
+    Query.limit(normalizedLimit),
+  ];
+
+  if (cursor) {
+    queries.push(Query.cursorAfter(cursor));
+  }
+
+  return await tablesDB.listRows<Row>({
+    databaseId: appwriteConfig.databaseId,
+    tableId,
+    queries,
+    total: false,
+  });
+}
+
+async function countProfileEngagementRecords(
+  tableId: string,
+  profileId: string,
+  recordName: string,
+): Promise<number> {
+  if (!profileId) {
+    throw new Error(`Profile ID is required to count profile ${recordName} records.`);
+  }
+
+  const result = await tablesDB.listRows<Models.Row>({
+    databaseId: appwriteConfig.databaseId,
+    tableId,
+    queries: [Query.select(['$id']), Query.equal('userId', profileId), Query.limit(1)],
+  });
+
+  return result.total;
+}
+
 export async function listAllViewerLikeRecords(
   viewerProfileId: string,
 ): Promise<RawViewerLikeRecord[]> {
@@ -131,6 +192,72 @@ export async function listAllViewerSaveRecords(
   } catch (error) {
     console.error(
       '[PostEngagementApi.listAllViewerSaveRecords] Failed to load viewer save records.',
+      error,
+    );
+    throw error;
+  }
+}
+
+export async function listProfileLikeRecordsPage(
+  params: ProfileEngagementPageParams,
+): Promise<Models.RowList<RawViewerLikeRecord>> {
+  try {
+    return await listProfileEngagementRecordsPage<RawViewerLikeRecord>(
+      appwriteConfig.likesTableId,
+      params,
+    );
+  } catch (error) {
+    console.error(
+      '[PostEngagementApi.listProfileLikeRecordsPage] Failed to load profile like records.',
+      error,
+    );
+    throw error;
+  }
+}
+
+export async function listProfileSaveRecordsPage(
+  params: ProfileEngagementPageParams,
+): Promise<Models.RowList<RawViewerSaveRecord>> {
+  try {
+    return await listProfileEngagementRecordsPage<RawViewerSaveRecord>(
+      appwriteConfig.saveTableId,
+      params,
+    );
+  } catch (error) {
+    console.error(
+      '[PostEngagementApi.listProfileSaveRecordsPage] Failed to load profile save records.',
+      error,
+    );
+    throw error;
+  }
+}
+
+export async function countProfileLikeRecords(profileId: string): Promise<number> {
+  try {
+    return await countProfileEngagementRecords(
+      appwriteConfig.likesTableId,
+      profileId,
+      'like',
+    );
+  } catch (error) {
+    console.error(
+      '[PostEngagementApi.countProfileLikeRecords] Failed to count profile like records.',
+      error,
+    );
+    throw error;
+  }
+}
+
+export async function countProfileSaveRecords(profileId: string): Promise<number> {
+  try {
+    return await countProfileEngagementRecords(
+      appwriteConfig.saveTableId,
+      profileId,
+      'save',
+    );
+  } catch (error) {
+    console.error(
+      '[PostEngagementApi.countProfileSaveRecords] Failed to count profile save records.',
       error,
     );
     throw error;

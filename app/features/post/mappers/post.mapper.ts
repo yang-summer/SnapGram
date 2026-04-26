@@ -240,6 +240,45 @@ export function mapPostRowsToHomeFeedItemViewModels(
   return result;
 }
 
+export function mapPostRowsToOrderedHomeFeedItems(
+  rows: RawPostHomeFeedRow[],
+  orderedPostIds: string[],
+): HomeFeedPostViewModel[] {
+  if (!Array.isArray(rows) || rows.length === 0 || orderedPostIds.length === 0) {
+    return [];
+  }
+
+  const itemByPostId: Record<string, HomeFeedPostViewModel> = {};
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const mappedItem = mapPostRowToHomeFeedItemViewModel(rows[index]);
+
+    if (mappedItem !== null) {
+      itemByPostId[mappedItem.id] = mappedItem;
+    }
+  }
+
+  const orderedItems: HomeFeedPostViewModel[] = [];
+  const seenPostIds = new Set<string>();
+
+  for (let index = 0; index < orderedPostIds.length; index += 1) {
+    const postId = orderedPostIds[index];
+
+    if (seenPostIds.has(postId)) {
+      continue;
+    }
+
+    const item = itemByPostId[postId];
+
+    if (item) {
+      orderedItems.push(item);
+      seenPostIds.add(postId);
+    }
+  }
+
+  return orderedItems;
+}
+
 export function mapPostRowsToCursorPage(
   data: Models.RowList<RawPostListRow>,
   pageSize: number,

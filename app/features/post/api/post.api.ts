@@ -11,6 +11,7 @@ import type {
   DeletePostResult,
   ListPostRowsParams,
   PostDeleteSnapshot,
+  ProfilePostPageParams,
   RawPostEditorRow,
   RawPostHomeFeedRow,
   RawPostListRow,
@@ -22,6 +23,7 @@ import type {
 } from '../types/post.type';
 
 export const DEFAULT_HOME_FEED_PAGE_SIZE = 20;
+export const DEFAULT_PROFILE_FEED_PAGE_SIZE = 20;
 const DEFAULT_EXPLORE_POSTS_LIMIT = 9;
 const DEFAULT_SEARCH_POSTS_LIMIT = 20;
 const APPWRITE_MAX_LIST_LIMIT = 100;
@@ -113,6 +115,12 @@ function createEmptyRowList<Row extends Models.Row>(): Models.RowList<Row> {
   };
 }
 
+function normalizePostIds(postIds: string[]): string[] {
+  return Array.from(
+    new Set(postIds.map((postId) => postId.trim()).filter((postId) => postId.length > 0)),
+  );
+}
+
 export async function getRecentPosts(): Promise<Models.RowList<RawPostRow>> {
   try {
     const posts = await tablesDB.listRows<RawPostRow>({
@@ -165,6 +173,111 @@ export async function listHomeFeedPostRows({
     return posts;
   } catch (error) {
     console.error('[PostApi.listHomeFeedPostRows] Failed to list home feed posts.', error);
+    throw error;
+  }
+}
+
+export async function listProfilePublishedPostRows({
+  profileId,
+  cursor = null,
+  limit = DEFAULT_PROFILE_FEED_PAGE_SIZE,
+}: ProfilePostPageParams): Promise<Models.RowList<RawPostHomeFeedRow>> {
+  if (!profileId) {
+    throw new Error('Profile ID is required to list profile posts.');
+  }
+
+  const normalizedLimit = clampListLimit(limit, DEFAULT_PROFILE_FEED_PAGE_SIZE);
+  const queries = [
+    Query.select(POST_HOME_FEED_SELECT),
+    Query.equal('creator', profileId),
+    Query.equal('status', PUBLISHED_POST_STATUS),
+    Query.orderDesc('$createdAt'),
+    Query.limit(normalizedLimit),
+  ];
+
+  if (cursor) {
+    queries.push(Query.cursorAfter(cursor));
+  }
+
+  try {
+    const posts = await tablesDB.listRows<RawPostHomeFeedRow>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      queries,
+      total: false,
+    });
+
+    if (!posts) {
+      throw new Error('Failed to load profile posts.');
+    }
+
+    return posts;
+  } catch (error) {
+    console.error('[PostApi.listProfilePublishedPostRows] Failed to list profile posts.', error);
+    throw error;
+  }
+}
+
+export async function countProfilePublishedPosts(profileId: string): Promise<number> {
+  if (!profileId) {
+    throw new Error('Profile ID is required to count profile posts.');
+  }
+
+  try {
+    const posts = await tablesDB.listRows<Models.Row>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      queries: [
+        Query.select(['$id']),
+        Query.equal('creator', profileId),
+        Query.equal('status', PUBLISHED_POST_STATUS),
+        Query.limit(1),
+      ],
+    });
+
+    return posts.total;
+  } catch (error) {
+    console.error('[PostApi.countProfilePublishedPosts] Failed to count profile posts.', error);
+    throw error;
+  }
+}
+
+export async function listPublishedFeedPostRowsByIds(
+  postIds: string[],
+): Promise<Models.RowList<RawPostHomeFeedRow>> {
+  const normalizedPostIds = normalizePostIds(postIds);
+
+  if (normalizedPostIds.length === 0) {
+    return createEmptyRowList<RawPostHomeFeedRow>();
+  }
+
+  if (normalizedPostIds.length > APPWRITE_MAX_LIST_LIMIT) {
+    throw new Error('Cannot load more than 100 published feed posts by ID at once.');
+  }
+
+  try {
+    const posts = await tablesDB.listRows<RawPostHomeFeedRow>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postsTableId,
+      queries: [
+        Query.select(POST_HOME_FEED_SELECT),
+        Query.equal('$id', normalizedPostIds),
+        Query.equal('status', PUBLISHED_POST_STATUS),
+        Query.limit(normalizedPostIds.length),
+      ],
+      total: false,
+    });
+
+    if (!posts) {
+      throw new Error('Failed to load published feed posts by IDs.');
+    }
+
+    return posts;
+  } catch (error) {
+    console.error(
+      '[PostApi.listPublishedFeedPostRowsByIds] Failed to list published feed posts by IDs.',
+      error,
+    );
     throw error;
   }
 }

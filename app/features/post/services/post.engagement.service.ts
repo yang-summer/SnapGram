@@ -1,4 +1,6 @@
 import {
+  countProfileLikeRecords,
+  countProfileSaveRecords,
   createViewerLikeRecord,
   createViewerSaveRecord,
   deleteViewerLikeRecord,
@@ -7,9 +9,13 @@ import {
   findViewerSaveRecord,
   listAllViewerLikeRecords,
   listAllViewerSaveRecords,
+  listProfileLikeRecordsPage,
+  listProfileSaveRecordsPage,
   listViewerLikeRecordsByPostIds,
   listViewerSaveRecordsByPostIds,
 } from '../api/post.engagement.api';
+import { DEFAULT_PROFILE_FEED_PAGE_SIZE, listPublishedFeedPostRowsByIds } from '../api/post.api';
+import { mapPostRowsToOrderedHomeFeedItems } from '../mappers/post.mapper';
 import type {
   CreateViewerPostLikeInput,
   CreateViewerPostSaveInput,
@@ -17,6 +23,8 @@ import type {
   DeleteViewerPostLikeResult,
   DeleteViewerPostSaveInput,
   DeleteViewerPostSaveResult,
+  ProfileEngagementPageParams,
+  ProfileFeedPage,
   RawViewerLikeRecord,
   RawViewerSaveRecord,
   ViewerLikedPostResult,
@@ -30,6 +38,67 @@ import type {
   ViewerSavedPostRecord,
   ViewerSavedPostsResult,
 } from '../types/post.type';
+
+const APPWRITE_MAX_LIST_LIMIT = 100;
+
+function clampListLimit(limit: number | undefined, fallback: number): number {
+  if (typeof limit !== 'number' || Number.isNaN(limit)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(Math.trunc(limit), 1), APPWRITE_MAX_LIST_LIMIT);
+}
+
+function getNextCursorFromEngagementRows(
+  rows: Array<RawViewerLikeRecord | RawViewerSaveRecord>,
+  pageSize: number,
+): string | null {
+  if (rows.length !== pageSize || rows.length === 0) {
+    return null;
+  }
+
+  return rows[rows.length - 1].$id;
+}
+
+function getOrderedPostIdsFromEngagementRows(
+  rows: Array<RawViewerLikeRecord | RawViewerSaveRecord>,
+): string[] {
+  return rows
+    .map((row) => row.postId.trim())
+    .filter((postId) => postId.length > 0);
+}
+
+async function getProfileEngagementFeedPage(
+  params: ProfileEngagementPageParams,
+  listRecordsPage: (
+    params: ProfileEngagementPageParams,
+  ) => Promise<{
+    rows: Array<RawViewerLikeRecord | RawViewerSaveRecord>;
+  }>,
+): Promise<ProfileFeedPage> {
+  const normalizedLimit = clampListLimit(params.limit, DEFAULT_PROFILE_FEED_PAGE_SIZE);
+  const recordsPage = await listRecordsPage({
+    profileId: params.profileId,
+    cursor: params.cursor ?? null,
+    limit: normalizedLimit,
+  });
+  const nextCursor = getNextCursorFromEngagementRows(recordsPage.rows, normalizedLimit);
+  const orderedPostIds = getOrderedPostIdsFromEngagementRows(recordsPage.rows);
+
+  if (orderedPostIds.length === 0) {
+    return {
+      items: [],
+      nextCursor,
+    };
+  }
+
+  const postsPage = await listPublishedFeedPostRowsByIds(orderedPostIds);
+
+  return {
+    items: mapPostRowsToOrderedHomeFeedItems(postsPage.rows, orderedPostIds),
+    nextCursor,
+  };
+}
 
 function mapViewerLikeRecord(record: RawViewerLikeRecord): ViewerLikedPostRecord {
   return {
@@ -206,6 +275,46 @@ export async function getViewerSavedPostsByPostIds(
     return mapViewerSaveRecords(records);
   } catch (error) {
     console.error('[PostEngagementService.getViewerSavedPostsByPostIds] Error:', error);
+    throw error;
+  }
+}
+
+export async function getProfileLikedFeedPage(
+  params: ProfileEngagementPageParams,
+): Promise<ProfileFeedPage> {
+  try {
+    return await getProfileEngagementFeedPage(params, listProfileLikeRecordsPage);
+  } catch (error) {
+    console.error('[PostEngagementService.getProfileLikedFeedPage] Error:', error);
+    throw error;
+  }
+}
+
+export async function getProfileSavedFeedPage(
+  params: ProfileEngagementPageParams,
+): Promise<ProfileFeedPage> {
+  try {
+    return await getProfileEngagementFeedPage(params, listProfileSaveRecordsPage);
+  } catch (error) {
+    console.error('[PostEngagementService.getProfileSavedFeedPage] Error:', error);
+    throw error;
+  }
+}
+
+export async function getProfileLikedCount(profileId: string): Promise<number> {
+  try {
+    return await countProfileLikeRecords(profileId);
+  } catch (error) {
+    console.error('[PostEngagementService.getProfileLikedCount] Error:', error);
+    throw error;
+  }
+}
+
+export async function getProfileSavedCount(profileId: string): Promise<number> {
+  try {
+    return await countProfileSaveRecords(profileId);
+  } catch (error) {
+    console.error('[PostEngagementService.getProfileSavedCount] Error:', error);
     throw error;
   }
 }

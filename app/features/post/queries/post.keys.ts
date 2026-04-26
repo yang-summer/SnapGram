@@ -15,6 +15,20 @@ export const postKeys = {
   homeFeed: (params: { limit: number }) => [...postKeys.lists(), 'home-feed', params] as const,
   explore: (params: { limit: number }) => [...postKeys.lists(), 'explore', params] as const,
   search: (params: { term: string; limit: number }) => [...postKeys.lists(), 'search', params] as const,
+  profileRoot: () => [...postKeys.all, 'profile'] as const,
+  profileScope: (profileId: string) => [...postKeys.profileRoot(), profileId] as const,
+  profilePosts: (profileId: string, params: { limit: number }) =>
+    [...postKeys.profileScope(profileId), 'posts', params] as const,
+  profilePostCount: (profileId: string) =>
+    [...postKeys.profileScope(profileId), 'posts-count'] as const,
+  profileLikedFeed: (profileId: string, params: { limit: number }) =>
+    [...postKeys.profileScope(profileId), 'liked-feed', params] as const,
+  profileLikedCount: (profileId: string) =>
+    [...postKeys.profileScope(profileId), 'liked-count'] as const,
+  profileSavedFeed: (profileId: string, params: { limit: number }) =>
+    [...postKeys.profileScope(profileId), 'saved-feed', params] as const,
+  profileSavedCount: (profileId: string) =>
+    [...postKeys.profileScope(profileId), 'saved-count'] as const,
   details: () => [...postKeys.all, 'detail'] as const,
   detail: (id: string) => [...postKeys.details(), id] as const,
   editor: (id: string) => [...postKeys.all, 'editor', id] as const,

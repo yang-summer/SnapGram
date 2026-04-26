@@ -1,11 +1,13 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { postKeys } from './post.keys';
-import { DEFAULT_HOME_FEED_PAGE_SIZE } from '../api/post.api';
+import { DEFAULT_HOME_FEED_PAGE_SIZE, DEFAULT_PROFILE_FEED_PAGE_SIZE } from '../api/post.api';
 import {
   getExplorePostPage,
   getHomeFeedPage,
   getPostDetail,
   getPostEditorInitialData,
+  getProfilePostCount,
+  getProfilePostPage,
   getRecentPostCards,
   searchExplorePosts,
 } from '../services/post.service';
@@ -60,6 +62,42 @@ export function useHomeFeedInfiniteQuery(limit = DEFAULT_HOME_FEED_PAGE_SIZE) {
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+    staleTime: 30_000,
+  });
+}
+
+export function useProfilePostsInfiniteQuery(
+  profileId: string,
+  limit = DEFAULT_PROFILE_FEED_PAGE_SIZE,
+) {
+  const normalizedProfileId = profileId.trim();
+
+  return useInfiniteQuery({
+    queryKey: postKeys.profilePosts(normalizedProfileId, { limit }),
+    queryFn: ({ pageParam }) =>
+      getProfilePostPage({
+        profileId: normalizedProfileId,
+        cursor: pageParam,
+        limit,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    enabled: normalizedProfileId.length > 0,
+    staleTime: 30_000,
+  });
+}
+
+export function useProfilePostCountQuery(
+  profileId: string,
+  options?: { enabled?: boolean },
+) {
+  const normalizedProfileId = profileId.trim();
+  const enabled = normalizedProfileId.length > 0 && (options?.enabled ?? true);
+
+  return useQuery({
+    queryKey: postKeys.profilePostCount(normalizedProfileId),
+    queryFn: () => getProfilePostCount(normalizedProfileId),
+    enabled,
     staleTime: 30_000,
   });
 }
