@@ -2,6 +2,7 @@ import { PiUser } from 'react-icons/pi';
 import { Link, NavLink } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { Compass, House, Menu, SquarePlus } from 'lucide-react';
+import MoreMenu from '~/components/shared/MoreMenu';
 
 const sidebarLinks = [
   {
@@ -58,10 +59,20 @@ export default function LeftSidebar() {
           <span className="truncate text-xs">@{currentUser?.username ?? ''}</span>
         </div>
       </Link>
-      <button className="flex gap-4 items-center rounded-full p-4 text-base text-ink-strong font-semibold transition-colors hover:bg-surface-soft mt-auto cursor-pointer">
-        <Menu className="w-6 h-6" />
-        <span>More</span>
-      </button>
+      <MoreMenu
+        side="top"
+        align="start"
+        trigger={
+          <button
+            type="button"
+            aria-label="More"
+            className="mt-auto flex cursor-pointer items-center gap-4 rounded-full p-4 text-base font-semibold text-ink-strong transition-colors hover:bg-surface-soft"
+          >
+            <Menu className="h-6 w-6" />
+            <span>More</span>
+          </button>
+        }
+      />
     </div>
   );
 }
