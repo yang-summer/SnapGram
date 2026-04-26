@@ -1,15 +1,9 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from '../ui/input-group';
-import { LogOut, Menu, SearchIcon } from 'lucide-react';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '../ui/input-group';
+import { Menu, SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { ThemeToggle } from './ThemeToggle';
-import { useSignOutMutation } from '~/features/auth/queries/auth.mutations';
+import MoreMenu from '~/components/shared/MoreMenu';
 
 const SEARCH_RESULT_ROUTE = '/search-result';
 const SEARCH_KEYWORD_MIN_LENGTH = 3;
@@ -18,10 +12,10 @@ export default function Topbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
   const isSearchResultRoute = location.pathname === SEARCH_RESULT_ROUTE;
   const routeKeyword = isSearchResultRoute ? (searchParams.get('keyword') ?? '').trim() : null;
   const [searchValue, setSearchValue] = useState(routeKeyword ?? '');
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!isSearchResultRoute) {
@@ -54,11 +48,11 @@ export default function Topbar() {
     void navigate(`${SEARCH_RESULT_ROUTE}?${nextSearchParams.toString()}`);
   }
 
-  return (
-    <div className="flex items-center justify-between h-full bg-surface-raised">
-      <Link to="/">
-        <div className="flex gap-1 items-center">
-          <div className="bg-blue-600 w-12 h-12 rounded-full flex justify-center items-center">
+  function renderLogo() {
+    return (
+      <Link to="/" className="min-w-0 justify-self-start">
+        <div className="flex items-center gap-1">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="36"
@@ -79,11 +73,42 @@ export default function Topbar() {
           <span className="text-[1.75rem] font-black text-blue-700">小蓝书</span>
         </div>
       </Link>
-      <form onSubmit={handleSearchSubmit} className="w-[min(35vw,600px)]">
+    );
+  }
+
+  function renderMoreMenu() {
+    return (
+      <MoreMenu
+        side="bottom"
+        align="end"
+        trigger={
+          <button
+            type="button"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-ink-subtle transition-colors hover:bg-surface-soft"
+            aria-label="More"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        }
+      />
+    );
+  }
+
+  function renderSearchForm({
+    className,
+    autoFocus = false,
+  }: {
+    className: string;
+    autoFocus?: boolean;
+  }) {
+    return (
+      <form onSubmit={handleSearchSubmit} className={className} autoComplete="off">
         <InputGroup className="h-12 w-full rounded-full bg-surface-soft border-0 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-transparent has-[[data-slot=input-group-control]:focus-visible]:ring-0 has-[[data-slot=input-group-control]:focus-visible]:shadow-none">
           <InputGroupInput
             name="keyword"
             value={searchValue}
+            autoFocus={autoFocus}
+            autoComplete="off"
             onChange={(event) => {
               setSearchValue(event.target.value);
             }}
@@ -96,7 +121,7 @@ export default function Topbar() {
               type="submit"
               variant="ghost"
               size="icon-sm"
-              className="rounded-full text-ink-subtle hover:bg-transparent"
+              className="cursor-pointer rounded-full text-ink-subtle hover:bg-transparent"
               aria-label="Search posts"
               title="Search posts"
             >
@@ -105,25 +130,57 @@ export default function Topbar() {
           </InputGroupAddon>
         </InputGroup>
       </form>
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-        <button
-          type="button"
-          onClick={() => signOut()}
-          disabled={isSigningOut}
-          aria-label="登出"
-          title="登出"
-          className="flex items-center justify-center h-10 w-10 text-ink-subtle rounded-full hover:bg-surface-soft cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <LogOut className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          className="lg:hidden flex items-center justify-center h-10 w-10 text-ink-subtle rounded-full hover:bg-surface-soft cursor-pointer"
-          aria-label="更多"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
+    );
+  }
+
+  return (
+    <div className="h-full bg-surface-raised">
+      <div className="flex h-full items-center sm:hidden">
+        {isMobileSearchOpen ? (
+          <>
+            {renderSearchForm({
+              className: 'min-w-0 flex-1',
+              autoFocus: true,
+            })}
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileSearchOpen(false);
+              }}
+              className="ml-2 shrink-0 rounded-full px-3 py-2 text-base font-medium text-ink-subtle transition-colors hover:bg-surface-soft"
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            {renderLogo()}
+            <div className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileSearchOpen(true);
+                }}
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-ink-subtle transition-colors hover:bg-surface-soft"
+                aria-label="Search posts"
+                title="Search posts"
+              >
+                <SearchIcon className="h-5 w-5" />
+              </button>
+              {renderMoreMenu()}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="hidden h-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 sm:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        {renderLogo()}
+        {renderSearchForm({
+          className:
+            'w-full min-w-0 justify-self-center sm:max-w-[34rem] lg:w-[min(35vw,600px)] lg:max-w-none',
+        })}
+        <div className="justify-self-end">
+          <div className="lg:hidden">{renderMoreMenu()}</div>
+        </div>
       </div>
     </div>
   );
