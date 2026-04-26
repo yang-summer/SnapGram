@@ -53,12 +53,12 @@ export default function ThemeSubmenu() {
 
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger className="rounded-lg px-3 py-2.5 text-base font-medium text-ink-strong">
+      <DropdownMenuSubTrigger className="cursor-pointer rounded-lg px-3 py-2.5 text-base font-medium text-ink-strong">
         <SunMoon data-icon="inline-start" />
         Theme
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
-        <DropdownMenuSubContent className="min-w-44 rounded-lg bg-popover/95 p-2 shadow-[0px_20px_40px_rgba(27,28,28,0.06)] backdrop-blur-xl">
+        <DropdownMenuSubContent className="min-w-44 rounded-lg bg-popover/95 p-2 ring-0 shadow-[0_2px_24px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:shadow-[0_0_0_1px_var(--border),0_2px_24px_rgba(0,0,0,0.08)]">
           {mounted ? (
             <DropdownMenuRadioGroup
               value={selectedTheme}
@@ -73,7 +73,7 @@ export default function ThemeSubmenu() {
                   <DropdownMenuRadioItem
                     key={value}
                     value={value}
-                    className="rounded-lg px-3 py-2.5 text-base font-medium text-ink-strong"
+                    className="cursor-pointer rounded-lg px-3 py-2.5 text-base font-medium text-ink-strong"
                   >
                     <Icon data-icon="inline-start" />
                     {label}

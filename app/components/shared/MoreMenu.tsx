@@ -39,7 +39,7 @@ export default function MoreMenu({
         sideOffset={sideOffset}
         alignOffset={alignOffset}
         className={cn(
-          'w-56 min-w-56 rounded-lg bg-popover/95 p-2 shadow-[0px_20px_40px_rgba(27,28,28,0.06)] backdrop-blur-xl',
+          'w-56 min-w-56 rounded-lg bg-popover/95 p-2 ring-0 shadow-[0_2px_24px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:shadow-[0_0_0_1px_var(--border),0_2px_24px_rgba(0,0,0,0.08)]',
           contentClassName,
         )}
       >
@@ -51,7 +51,7 @@ export default function MoreMenu({
           onSelect={() => {
             signOut();
           }}
-          className="rounded-lg px-3 py-2.5 text-base font-medium"
+          className="cursor-pointer rounded-lg px-3 py-2.5 text-base font-medium"
         >
           <LogOut data-icon="inline-start" />
           {isSigningOut ? 'Signing out...' : 'Sign out'}
