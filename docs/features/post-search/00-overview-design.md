@@ -107,6 +107,7 @@
 - 搜索结果页使用首页同款瀑布流卡片。
 - 搜索结果页支持无限滚动分页。
 - 当 URL 中已有 `keyword` 时，`Topbar` 搜索框自动回填。
+- 当当前路由不是 `/search-result` 时，`Topbar` 搜索框清空当前关键词状态。
 - 输入为空或纯空白时：
   - 不触发搜索
   - 使用 `toast` 提示
@@ -173,6 +174,8 @@
 - 使用 `useLocation()` 或 `useSearchParams()` 读取当前 URL 中的 `keyword`。
 - 当当前路由是 `/search-result` 且 URL 中存在 `keyword` 时：
   - 自动回填输入框
+- 当当前路由不是 `/search-result` 时：
+  - 清空输入框当前状态
 - 将搜索 icon 改为可提交按钮，而不是纯展示图标。
 - 输入框与 icon 使用统一的 `<form>` 提交语义。
 
@@ -194,6 +197,16 @@ URL 处理要求：
 - 通过 `URLSearchParams` 或 React Router 的标准 search params 能力完成 query string 序列化。
 - 不先手动执行 `encodeURIComponent(keyword)` 再塞进 `keyword` 参数。
 - 不采用 `%25E7...` 这类双重编码后的 query param 形式。
+
+输入框状态同步要求：
+
+- `Topbar` 作为布局级常驻组件，不会因页面切换自动卸载。
+- 因此输入框的本地 state 不能只在首次挂载时初始化。
+- 当当前路由是 `/search-result` 时：
+  - 用 URL 中的 `keyword` 同步输入框值
+- 当当前路由不是 `/search-result` 时：
+  - 直接清空输入框值
+- 第一版不保留“离开搜索结果页后的未提交草稿”。
 
 这里建议由 `Topbar` 负责提交校验与跳转，但不直接负责拉取搜索结果数据。
 
