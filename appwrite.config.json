@@ -1,6 +1,75 @@
 {
     "projectId": "69b0eea500209e8b84b4",
     "endpoint": "https://sgp.cloud.appwrite.io/v1",
+    "functions": [
+        {
+            "$id": "69ef1f33001a31c31dc3",
+            "name": "content-actions",
+            "runtime": "node-22",
+            "path": "functions/content-actions",
+            "entrypoint": "dist/main.js",
+            "execute": [
+                "users"
+            ],
+            "enabled": true,
+            "logging": true,
+            "events": [],
+            "schedule": "",
+            "timeout": 15,
+            "commands": "npm install && npm run build",
+            "scopes": [
+                "databases.read",
+                "databases.write",
+                "policies.read",
+                "policies.write",
+                "archives.read",
+                "archives.write",
+                "restorations.read",
+                "restorations.write",
+                "tables.read",
+                "tables.write",
+                "columns.read",
+                "columns.write",
+                "indexes.read",
+                "indexes.write",
+                "rows.read",
+                "rows.write",
+                "files.read",
+                "files.write",
+                "buckets.read",
+                "buckets.write"
+            ],
+            "vars": [
+                {
+                    "key": "APPWRITE_DATABASE_ID",
+                    "value": "69b7a69e000a10b87c40"
+                },
+                {
+                    "key": "APPWRITE_STORAGE_ID",
+                    "value": "69b7a64e0016b8f4babe"
+                },
+                {
+                    "key": "APPWRITE_USERS_TABLE_ID",
+                    "value": "users"
+                },
+                {
+                    "key": "APPWRITE_POSTS_TABLE_ID",
+                    "value": "posts"
+                },
+                {
+                    "key": "APPWRITE_SAVES_TABLE_ID",
+                    "value": "saves"
+                },
+                {
+                    "key": "APPWRITE_LIKES_TABLE_ID",
+                    "value": "likes"
+                }
+            ],
+            "buildSpecification": "s-0.5vcpu-512mb",
+            "runtimeSpecification": "s-0.5vcpu-512mb",
+            "deploymentRetention": 0
+        }
+    ],
     "tablesDB": [
         {
             "$id": "69b7a69e000a10b87c40",
