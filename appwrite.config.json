@@ -41,6 +41,14 @@
             ],
             "vars": [
                 {
+                    "key": "APPWRITE_ENDPOINT",
+                    "value": "https://sgp.cloud.appwrite.io/v1"
+                },
+                {
+                    "key": "APPWRITE_PROJECT_ID",
+                    "value": "69b0eea500209e8b84b4"
+                },
+                {
                     "key": "APPWRITE_DATABASE_ID",
                     "value": "69b7a69e000a10b87c40"
                 },
