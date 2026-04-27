@@ -50,7 +50,7 @@ export default function PostStats({
   async function handleLikePost(e: React.MouseEvent) {
     e.stopPropagation();
 
-    if (!viewerProfileId || !viewerAccountId) {
+    if (!viewerProfileId) {
       return;
     }
 
@@ -63,7 +63,6 @@ export default function PostStats({
         setLikeCount((currentCount) => Math.max(0, currentCount - 1));
 
         await deleteViewerPostLike({
-          viewerProfileId,
           postId: post.id,
         });
 
@@ -74,8 +73,6 @@ export default function PostStats({
       setLikeCount((currentCount) => currentCount + 1);
 
       await createViewerPostLike({
-        viewerProfileId,
-        viewerAccountId,
         postId: post.id,
       });
     } catch {

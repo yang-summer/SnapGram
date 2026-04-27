@@ -1,9 +1,7 @@
 import {
   countProfileLikeRecords,
   countProfileSaveRecords,
-  createViewerLikeRecord,
   createViewerSaveRecord,
-  deleteViewerLikeRecord,
   deleteViewerSaveRecord,
   findViewerLikeRecord,
   findViewerSaveRecord,
@@ -14,6 +12,7 @@ import {
   listViewerLikeRecordsByPostIds,
   listViewerSaveRecordsByPostIds,
 } from '../api/post.engagement.api';
+import { likePostWithContentAction, unlikePostWithContentAction } from '../api/post.actions.api';
 import { DEFAULT_PROFILE_FEED_PAGE_SIZE, listPublishedFeedPostRowsByIds } from '../api/post.api';
 import { mapPostRowsToOrderedHomeFeedItems } from '../mappers/post.mapper';
 import type {
@@ -323,7 +322,7 @@ export async function likePostForViewer(
   input: CreateViewerPostLikeInput,
 ): Promise<ViewerPostLikeMutationResult> {
   try {
-    return await createViewerLikeRecord(input);
+    return await likePostWithContentAction(input.postId);
   } catch (error) {
     console.error('[PostEngagementService.likePostForViewer] Error:', error);
     throw error;
@@ -334,7 +333,7 @@ export async function deleteViewerPostLike(
   input: DeleteViewerPostLikeInput,
 ): Promise<DeleteViewerPostLikeResult> {
   try {
-    return await deleteViewerLikeRecord(input);
+    return await unlikePostWithContentAction(input.postId);
   } catch (error) {
     console.error('[PostEngagementService.deleteViewerPostLike] Error:', error);
     throw error;

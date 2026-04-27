@@ -3,16 +3,12 @@ import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, tablesDB } from '~/lib/appwrite/config';
 import { buildPrivateOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
-  CreateViewerPostLikeInput,
   CreateViewerPostSaveInput,
-  DeleteViewerPostLikeInput,
-  DeleteViewerPostLikeResult,
   DeleteViewerPostSaveInput,
   DeleteViewerPostSaveResult,
   ProfileEngagementPageParams,
   RawViewerLikeRecord,
   RawViewerSaveRecord,
-  ViewerPostLikeMutationResult,
 } from '../types/post.type';
 
 const VIEWER_ENGAGEMENT_RECORD_SELECT = ['$id', 'postId', 'userId'];
@@ -334,19 +330,6 @@ export async function listViewerSaveRecordsByPostIds(
   }
 }
 
-async function getRequiredViewerLikeRecord(
-  viewerProfileId: string,
-  postId: string,
-): Promise<RawViewerLikeRecord> {
-  const existingRecord = await findViewerLikeRecord(viewerProfileId, postId);
-
-  if (!existingRecord) {
-    throw new Error('The like record already exists, but it could not be loaded.');
-  }
-
-  return existingRecord;
-}
-
 async function getRequiredViewerSaveRecord(
   viewerProfileId: string,
   postId: string,
@@ -358,62 +341,6 @@ async function getRequiredViewerSaveRecord(
   }
 
   return existingRecord;
-}
-
-export async function createViewerLikeRecord(
-  input: CreateViewerPostLikeInput,
-): Promise<ViewerPostLikeMutationResult> {
-  if (!input.viewerProfileId) {
-    throw new Error('Viewer profile ID is required to like a post.');
-  }
-
-  if (!input.viewerAccountId) {
-    throw new Error('Viewer account ID is required to like a post.');
-  }
-
-  if (!input.postId) {
-    throw new Error('Post ID is required to like a post.');
-  }
-
-  try {
-    const createdRecord = await tablesDB.createRow<RawViewerLikeRecord>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.likesTableId,
-      rowId: ID.unique(),
-      data: {
-        userId: input.viewerProfileId,
-        postId: input.postId,
-      },
-      permissions: buildPrivateOwnerPermissions(input.viewerAccountId),
-    });
-
-    await tablesDB.incrementRowColumn({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: input.postId,
-      column: POST_LIKE_COUNT_COLUMN,
-      value: POST_LIKE_COUNT_STEP,
-    });
-
-    return {
-      likeRecordId: createdRecord.$id,
-      postId: createdRecord.postId,
-      viewerProfileId: input.viewerProfileId,
-    };
-  } catch (error) {
-    if (error instanceof AppwriteException && error.code === 409) {
-      const existingRecord = await getRequiredViewerLikeRecord(input.viewerProfileId, input.postId);
-
-      return {
-        likeRecordId: existingRecord.$id,
-        postId: existingRecord.postId,
-        viewerProfileId: input.viewerProfileId,
-      };
-    }
-
-    console.error('[PostEngagementApi.createViewerLikeRecord] Failed to create a like record.', error);
-    throw error;
-  }
 }
 
 export async function createViewerSaveRecord(
@@ -461,60 +388,6 @@ export async function createViewerSaveRecord(
       '[PostEngagementApi.createViewerSaveRecord] Failed to create a viewer save record.',
       error,
     );
-    throw error;
-  }
-}
-
-export async function deleteViewerLikeRecord(
-  input: DeleteViewerPostLikeInput,
-): Promise<DeleteViewerPostLikeResult> {
-  if (!input.viewerProfileId) {
-    throw new Error('Viewer profile ID is required to delete a liked post.');
-  }
-
-  if (!input.postId) {
-    throw new Error('Post ID is required to delete a liked post.');
-  }
-
-  try {
-    const existingRecord = await findViewerLikeRecord(input.viewerProfileId, input.postId);
-    const resolvedLikeRecordId = existingRecord?.$id ?? null;
-
-    if (!existingRecord) {
-      return {
-        likeRecordId: resolvedLikeRecordId,
-        deleted: false,
-      };
-    }
-
-    await tablesDB.deleteRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.likesTableId,
-      rowId: existingRecord.$id,
-    });
-
-    await tablesDB.decrementRowColumn({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: input.postId,
-      column: POST_LIKE_COUNT_COLUMN,
-      value: POST_LIKE_COUNT_STEP,
-      min: 0,
-    });
-
-    return {
-      likeRecordId: resolvedLikeRecordId,
-      deleted: true,
-    };
-  } catch (error) {
-    if (error instanceof AppwriteException && error.code === 404) {
-      return {
-        likeRecordId: null,
-        deleted: false,
-      };
-    }
-
-    console.error('[PostEngagementApi.deleteViewerLikeRecord] Failed to delete a like record.', error);
     throw error;
   }
 }

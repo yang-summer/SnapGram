@@ -5,4 +5,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  server: {
+    watch: {
+      ignored: [
+        // Backend function changes should not trigger frontend HMR/full reload.
+        '**/functions/**',
+      ],
+    },
+  },
 });
