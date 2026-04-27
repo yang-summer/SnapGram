@@ -11,7 +11,6 @@ export default function PostCard({ post }: PostCardProps) {
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   const currentUserProfileId = currentUser?.profileId ?? '';
-  const currentUserAccountId = currentUser?.accountId ?? '';
 
   if (!post.creator) return null;
 
@@ -58,7 +57,6 @@ export default function PostCard({ post }: PostCardProps) {
       <PostStats
         post={post}
         viewerProfileId={currentUserProfileId}
-        viewerAccountId={currentUserAccountId}
       />
     </div>
   );

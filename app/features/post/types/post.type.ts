@@ -344,12 +344,9 @@ export type DeleteViewerPostLikeResult = {
 
 export type CreateViewerPostSaveInput = {
   postId: string;
-  viewerProfileId: string;
-  viewerAccountId: string;
 };
 
 export type DeleteViewerPostSaveInput = {
-  viewerProfileId: string;
   postId: string;
 };
 
@@ -377,5 +374,7 @@ export type ViewerPostSaveMutationResult = {
 
 export type DeleteViewerPostSaveResult = {
   saveRecordId: string | null;
+  postId: string;
+  viewerProfileId: string;
   deleted: boolean;
 };

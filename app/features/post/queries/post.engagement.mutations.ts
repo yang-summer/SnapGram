@@ -60,9 +60,9 @@ export function useCreateViewerPostSaveMutation() {
 
   return useMutation({
     mutationFn: (input: CreateViewerPostSaveInput) => savePostForViewer(input),
-    onSuccess: (_, variables) => {
-      invalidatePostViews(queryClient, variables.postId);
-      invalidateViewerSaves(queryClient, variables.viewerProfileId);
+    onSuccess: (result) => {
+      invalidatePostViews(queryClient, result.postId);
+      invalidateViewerSaves(queryClient, result.viewerProfileId);
     },
   });
 }
@@ -72,9 +72,9 @@ export function useDeleteViewerPostSaveMutation() {
 
   return useMutation({
     mutationFn: (input: DeleteViewerPostSaveInput) => deleteViewerPostSave(input),
-    onSuccess: (_, variables) => {
-      invalidatePostViews(queryClient, variables.postId);
-      invalidateViewerSaves(queryClient, variables.viewerProfileId);
+    onSuccess: (result) => {
+      invalidatePostViews(queryClient, result.postId);
+      invalidateViewerSaves(queryClient, result.viewerProfileId);
     },
   });
 }

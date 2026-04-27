@@ -3,7 +3,12 @@ import { createAppwriteClients } from './appwrite.js';
 import { parseContentActionRequest } from './action.js';
 import { ConfigError, getMissingConfigKeys, readConfig } from './config.js';
 import { getCurrentUserProfile, ProfileMissingError } from './auth.js';
-import { likePostForCurrentUser, unlikePostForCurrentUser } from './engagement.js';
+import {
+  likePostForCurrentUser,
+  savePostForCurrentUser,
+  unlikePostForCurrentUser,
+  unsavePostForCurrentUser,
+} from './engagement.js';
 import { ContentActionError } from './errors.js';
 import type { FunctionContext } from './request.js';
 import { getHeader } from './request.js';
@@ -99,6 +104,29 @@ export default async function main({ req, res, log, error }: FunctionContext) {
       }
       case 'post.unlike': {
         const result = await unlikePostForCurrentUser(
+          tablesDB,
+          config,
+          profile,
+          actionRequest.postId,
+        );
+
+        return res.json({
+          ok: true,
+          action: actionRequest.action,
+          data: result,
+        });
+      }
+      case 'post.save': {
+        const result = await savePostForCurrentUser(tablesDB, config, profile, actionRequest.postId);
+
+        return res.json({
+          ok: true,
+          action: actionRequest.action,
+          data: result,
+        });
+      }
+      case 'post.unsave': {
+        const result = await unsavePostForCurrentUser(
           tablesDB,
           config,
           profile,

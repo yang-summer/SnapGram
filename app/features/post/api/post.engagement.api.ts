@@ -1,11 +1,7 @@
 import type { Models } from 'appwrite';
-import { AppwriteException, ID, Query } from 'appwrite';
+import { Query } from 'appwrite';
 import { appwriteConfig, tablesDB } from '~/lib/appwrite/config';
-import { buildPrivateOwnerPermissions } from '~/lib/appwrite/permissions';
 import type {
-  CreateViewerPostSaveInput,
-  DeleteViewerPostSaveInput,
-  DeleteViewerPostSaveResult,
   ProfileEngagementPageParams,
   RawViewerLikeRecord,
   RawViewerSaveRecord,
@@ -16,10 +12,6 @@ const PROFILE_ENGAGEMENT_RECORD_SELECT = ['$id', '$createdAt', '$sequence', 'pos
 const VIEWER_RECORD_LIMIT = 100;
 const DEFAULT_PROFILE_ENGAGEMENT_PAGE_SIZE = 20;
 const APPWRITE_MAX_LIST_LIMIT = 100;
-const POST_LIKE_COUNT_COLUMN = 'likeCount';
-const POST_LIKE_COUNT_STEP = 1;
-const POST_SAVE_COUNT_COLUMN = 'saveCount';
-const POST_SAVE_COUNT_STEP = 1;
 
 function normalizePostIds(postIds: string[]): string[] {
   return Array.from(
@@ -324,125 +316,6 @@ export async function listViewerSaveRecordsByPostIds(
   } catch (error) {
     console.error(
       '[PostEngagementApi.listViewerSaveRecordsByPostIds] Failed to load viewer save records.',
-      error,
-    );
-    throw error;
-  }
-}
-
-async function getRequiredViewerSaveRecord(
-  viewerProfileId: string,
-  postId: string,
-): Promise<RawViewerSaveRecord> {
-  const existingRecord = await findViewerSaveRecord(viewerProfileId, postId);
-
-  if (!existingRecord) {
-    throw new Error('The save record already exists, but it could not be loaded.');
-  }
-
-  return existingRecord;
-}
-
-export async function createViewerSaveRecord(
-  input: CreateViewerPostSaveInput,
-): Promise<RawViewerSaveRecord> {
-  if (!input.viewerProfileId) {
-    throw new Error('Viewer profile ID is required to save a post.');
-  }
-
-  if (!input.viewerAccountId) {
-    throw new Error('Viewer account ID is required to save a post.');
-  }
-
-  if (!input.postId) {
-    throw new Error('Post ID is required to save a post.');
-  }
-
-  try {
-    const createdRecord = await tablesDB.createRow<RawViewerSaveRecord>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.saveTableId,
-      rowId: ID.unique(),
-      data: {
-        userId: input.viewerProfileId,
-        postId: input.postId,
-      },
-      permissions: buildPrivateOwnerPermissions(input.viewerAccountId),
-    });
-
-    await tablesDB.incrementRowColumn({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: input.postId,
-      column: POST_SAVE_COUNT_COLUMN,
-      value: POST_SAVE_COUNT_STEP,
-    });
-
-    return createdRecord;
-  } catch (error) {
-    if (error instanceof AppwriteException && error.code === 409) {
-      return await getRequiredViewerSaveRecord(input.viewerProfileId, input.postId);
-    }
-
-    console.error(
-      '[PostEngagementApi.createViewerSaveRecord] Failed to create a viewer save record.',
-      error,
-    );
-    throw error;
-  }
-}
-
-export async function deleteViewerSaveRecord(
-  input: DeleteViewerPostSaveInput,
-): Promise<DeleteViewerPostSaveResult> {
-  if (!input.viewerProfileId) {
-    throw new Error('Viewer profile ID is required to delete a saved post.');
-  }
-
-  if (!input.postId) {
-    throw new Error('Post ID is required to delete a saved post.');
-  }
-
-  try {
-    const existingRecord = await findViewerSaveRecord(input.viewerProfileId, input.postId);
-    const resolvedSaveRecordId = existingRecord?.$id ?? null;
-
-    if (!existingRecord) {
-      return {
-        saveRecordId: resolvedSaveRecordId,
-        deleted: false,
-      };
-    }
-
-    await tablesDB.deleteRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.saveTableId,
-      rowId: existingRecord.$id,
-    });
-
-    await tablesDB.decrementRowColumn({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: input.postId,
-      column: POST_SAVE_COUNT_COLUMN,
-      value: POST_SAVE_COUNT_STEP,
-      min: 0,
-    });
-
-    return {
-      saveRecordId: resolvedSaveRecordId,
-      deleted: true,
-    };
-  } catch (error) {
-    if (error instanceof AppwriteException && error.code === 404) {
-      return {
-        saveRecordId: null,
-        deleted: false,
-      };
-    }
-
-    console.error(
-      '[PostEngagementApi.deleteViewerSaveRecord] Failed to delete a viewer save record.',
       error,
     );
     throw error;

@@ -3,7 +3,9 @@ import type { Models } from 'appwrite';
 import { appwriteConfig, functions } from '~/lib/appwrite/config';
 import type {
   DeleteViewerPostLikeResult,
+  DeleteViewerPostSaveResult,
   ViewerPostLikeMutationResult,
+  ViewerPostSaveMutationResult,
 } from '../types/post.type';
 
 type ContentActionHealthcheckRequest = {
@@ -20,10 +22,22 @@ type ContentActionPostUnlikeRequest = {
   postId: string;
 };
 
+type ContentActionPostSaveRequest = {
+  action: 'post.save';
+  postId: string;
+};
+
+type ContentActionPostUnsaveRequest = {
+  action: 'post.unsave';
+  postId: string;
+};
+
 type ContentActionRequest =
   | ContentActionHealthcheckRequest
   | ContentActionPostLikeRequest
-  | ContentActionPostUnlikeRequest;
+  | ContentActionPostUnlikeRequest
+  | ContentActionPostSaveRequest
+  | ContentActionPostUnsaveRequest;
 
 export type ContentActionExecutionResult = {
   executionId: string;
@@ -164,4 +178,26 @@ export async function unlikePostWithContentAction(
   });
 
   return readExecutionData(result, 'post.unlike');
+}
+
+export async function savePostWithContentAction(
+  postId: string,
+): Promise<ViewerPostSaveMutationResult> {
+  const result = await executeContentAction({
+    action: 'post.save',
+    postId,
+  });
+
+  return readExecutionData(result, 'post.save');
+}
+
+export async function unsavePostWithContentAction(
+  postId: string,
+): Promise<DeleteViewerPostSaveResult> {
+  const result = await executeContentAction({
+    action: 'post.unsave',
+    postId,
+  });
+
+  return readExecutionData(result, 'post.unsave');
 }

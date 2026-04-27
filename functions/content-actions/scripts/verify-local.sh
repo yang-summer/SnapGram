@@ -34,3 +34,15 @@ echo "== unlike =="
 curl -fsS -X POST "$BASE_URL/" \
   -H 'content-type: application/json' \
   -d "{\"action\":\"post.unlike\",\"postId\":\"$POST_ID\"}" | print_json
+
+echo
+echo "== save =="
+curl -fsS -X POST "$BASE_URL/" \
+  -H 'content-type: application/json' \
+  -d "{\"action\":\"post.save\",\"postId\":\"$POST_ID\"}" | print_json
+
+echo
+echo "== unsave =="
+curl -fsS -X POST "$BASE_URL/" \
+  -H 'content-type: application/json' \
+  -d "{\"action\":\"post.unsave\",\"postId\":\"$POST_ID\"}" | print_json
