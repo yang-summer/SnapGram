@@ -1,10 +1,7 @@
 import type { Models } from 'appwrite';
 import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, storage, tablesDB } from '~/lib/appwrite/config';
-import {
-  buildPublicOwnerPermissions,
-  buildTransitionalPostPermissions,
-} from '~/lib/appwrite/permissions';
+import { buildPublicOwnerPermissions } from '~/lib/appwrite/permissions';
 import { buildPostSearchText } from '../lib/post-search';
 import type {
   CreatePostApiInput,
@@ -405,7 +402,7 @@ export async function createPostRow(input: CreatePostApiInput): Promise<RawPostM
         status: PUBLISHED_POST_STATUS,
         searchText: buildPostSearchText(input.caption, input.tags),
       },
-      permissions: buildTransitionalPostPermissions(input.ownerAccountId),
+      permissions: buildPublicOwnerPermissions(input.ownerAccountId),
     });
 
     return {

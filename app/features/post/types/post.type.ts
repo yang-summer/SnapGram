@@ -308,12 +308,9 @@ export type PostMutationResult = {
 
 export type CreateViewerPostLikeInput = {
   postId: string;
-  viewerProfileId: string;
-  viewerAccountId: string;
 };
 
 export type DeleteViewerPostLikeInput = {
-  viewerProfileId: string;
   postId: string;
 };
 
@@ -340,17 +337,16 @@ export type ViewerPostLikeMutationResult = {
 
 export type DeleteViewerPostLikeResult = {
   likeRecordId: string | null;
+  postId: string;
+  viewerProfileId: string;
   deleted: boolean;
 };
 
 export type CreateViewerPostSaveInput = {
   postId: string;
-  viewerProfileId: string;
-  viewerAccountId: string;
 };
 
 export type DeleteViewerPostSaveInput = {
-  viewerProfileId: string;
   postId: string;
 };
 
@@ -378,5 +374,7 @@ export type ViewerPostSaveMutationResult = {
 
 export type DeleteViewerPostSaveResult = {
   saveRecordId: string | null;
+  postId: string;
+  viewerProfileId: string;
   deleted: boolean;
 };

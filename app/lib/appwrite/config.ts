@@ -1,4 +1,4 @@
-import { Account, Avatars, Client, TablesDB, Storage } from 'appwrite';
+import { Account, Avatars, Client, Functions, TablesDB, Storage } from 'appwrite';
 
 export const appwriteConfig = {
   url: import.meta.env.VITE_APPWRITE_URL,
@@ -9,6 +9,7 @@ export const appwriteConfig = {
   postsTableId: import.meta.env.VITE_APPWRITE_POSTS_TABLE_ID,
   saveTableId: import.meta.env.VITE_APPWRITE_SAVES_TABLE_ID,
   likesTableId: import.meta.env.VITE_APPWRITE_LIKES_TABLE_ID,
+  contentActionsFunctionId: import.meta.env.VITE_APPWRITE_CONTENT_ACTIONS_FUNCTION_ID,
 };
 
 export const client = new Client();
@@ -19,3 +20,4 @@ export const account = new Account(client);
 export const tablesDB = new TablesDB(client);
 export const storage = new Storage(client);
 export const avatars = new Avatars(client);
+export const functions = new Functions(client);

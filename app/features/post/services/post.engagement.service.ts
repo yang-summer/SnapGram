@@ -1,10 +1,6 @@
 import {
   countProfileLikeRecords,
   countProfileSaveRecords,
-  createViewerLikeRecord,
-  createViewerSaveRecord,
-  deleteViewerLikeRecord,
-  deleteViewerSaveRecord,
   findViewerLikeRecord,
   findViewerSaveRecord,
   listAllViewerLikeRecords,
@@ -14,6 +10,12 @@ import {
   listViewerLikeRecordsByPostIds,
   listViewerSaveRecordsByPostIds,
 } from '../api/post.engagement.api';
+import {
+  likePostWithContentAction,
+  savePostWithContentAction,
+  unlikePostWithContentAction,
+  unsavePostWithContentAction,
+} from '../api/post.actions.api';
 import { DEFAULT_PROFILE_FEED_PAGE_SIZE, listPublishedFeedPostRowsByIds } from '../api/post.api';
 import { mapPostRowsToOrderedHomeFeedItems } from '../mappers/post.mapper';
 import type {
@@ -323,7 +325,7 @@ export async function likePostForViewer(
   input: CreateViewerPostLikeInput,
 ): Promise<ViewerPostLikeMutationResult> {
   try {
-    return await createViewerLikeRecord(input);
+    return await likePostWithContentAction(input.postId);
   } catch (error) {
     console.error('[PostEngagementService.likePostForViewer] Error:', error);
     throw error;
@@ -334,7 +336,7 @@ export async function deleteViewerPostLike(
   input: DeleteViewerPostLikeInput,
 ): Promise<DeleteViewerPostLikeResult> {
   try {
-    return await deleteViewerLikeRecord(input);
+    return await unlikePostWithContentAction(input.postId);
   } catch (error) {
     console.error('[PostEngagementService.deleteViewerPostLike] Error:', error);
     throw error;
@@ -345,13 +347,7 @@ export async function savePostForViewer(
   input: CreateViewerPostSaveInput,
 ): Promise<ViewerPostSaveMutationResult> {
   try {
-    const createdRecord = await createViewerSaveRecord(input);
-
-    return {
-      saveRecordId: createdRecord.$id,
-      postId: createdRecord.postId,
-      viewerProfileId: input.viewerProfileId,
-    };
+    return await savePostWithContentAction(input.postId);
   } catch (error) {
     console.error('[PostEngagementService.savePostForViewer] Error:', error);
     throw error;
@@ -362,7 +358,7 @@ export async function deleteViewerPostSave(
   input: DeleteViewerPostSaveInput,
 ): Promise<DeleteViewerPostSaveResult> {
   try {
-    return await deleteViewerSaveRecord(input);
+    return await unsavePostWithContentAction(input.postId);
   } catch (error) {
     console.error('[PostEngagementService.deleteViewerPostSave] Error:', error);
     throw error;

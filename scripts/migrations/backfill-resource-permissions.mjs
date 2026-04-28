@@ -20,10 +20,10 @@ const MODE_RUN = 'run';
 const MODE_VERIFY = 'verify';
 const RETRIABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
-const USERS_SELECT = ['$id', '$permissions', 'accountId'];
+const USERS_SELECT = ['$id', '$permissions', 'accountId', 'imageId'];
 const POSTS_SELECT = ['$id', '$permissions', 'creator.*', 'imageId'];
 const LIKES_SELECT = ['$id', '$permissions', 'userId'];
-const SAVES_SELECT = ['$id', '$permissions', 'userId', 'user.*'];
+const SAVES_SELECT = ['$id', '$permissions', 'userId'];
 
 function printHelp() {
   console.log(`Resource permission backfill for Snapgram.
@@ -56,9 +56,12 @@ Environment:
     APPWRITE_LIKES_TABLE_ID   default: likes
 
 Notes:
-  - Pre-migration only: run this before removing legacy relationship columns that historical rows may still depend on during backfill.
   - This script backfills row/file-level permissions for historical data only.
-  - It assumes posts.creator, likes.userId, and saves.userId refer to profile row IDs.
+  - Target permissions:
+      users/posts/files => public read + owner update/delete
+      likes/saves rows  => owner read-only
+  - It assumes posts.creator and likes.userId / saves.userId refer to profile row IDs.
+  - It uses users.imageId and posts.imageId to resolve media file owners within the configured storage bucket.
   - Verify mode exits with code 1 when permissions are still out of sync or owner mapping is missing.
 `);
 }
@@ -296,16 +299,19 @@ function buildPublicOwnerPermissions(accountId) {
   ];
 }
 
-function buildPrivateOwnerPermissions(accountId) {
-  return [Permission.read(Role.user(accountId)), Permission.delete(Role.user(accountId))];
+function buildPrivateOwnerReadPermissions(accountId) {
+  return [Permission.read(Role.user(accountId))];
 }
 
-function buildTransitionalPostPermissions(accountId) {
-  return [
-    Permission.read(Role.any()),
-    Permission.update(Role.users()),
-    Permission.delete(Role.user(accountId)),
-  ];
+function trackOwnedFileId(fileOwnerAccountIdByFileId, fileId, ownerAccountId) {
+  const existingOwnerAccountId = fileOwnerAccountIdByFileId.get(fileId);
+
+  if (existingOwnerAccountId && existingOwnerAccountId !== ownerAccountId) {
+    return false;
+  }
+
+  fileOwnerAccountIdByFileId.set(fileId, ownerAccountId);
+  return true;
 }
 
 function createStats(initial = {}) {
@@ -448,8 +454,9 @@ async function updateFilePermissionsIfNeeded(
 }
 
 async function scanUsers(tablesDB, config, batchSize, applyWrites) {
-  const stats = createStats({ missingAccountId: 0 });
+  const stats = createStats({ missingAccountId: 0, conflictingImageOwners: 0 });
   const profileToAccountId = new Map();
+  const fileOwnerAccountIdByFileId = new Map();
 
   for await (const rows of listRowsByCursor(
     tablesDB,
@@ -468,6 +475,11 @@ async function scanUsers(tablesDB, config, batchSize, applyWrites) {
       }
 
       profileToAccountId.set(row.$id, accountId);
+
+      const imageId = normalizeNullableText(row.imageId);
+      if (imageId && !trackOwnedFileId(fileOwnerAccountIdByFileId, imageId, accountId)) {
+        stats.conflictingImageOwners += 1;
+      }
 
       const targetPermissions = buildPublicOwnerPermissions(accountId);
       if (hasSamePermissions(row.$permissions, targetPermissions)) {
@@ -497,16 +509,22 @@ async function scanUsers(tablesDB, config, batchSize, applyWrites) {
     }
   }
 
-  return { stats, profileToAccountId };
+  return { stats, profileToAccountId, fileOwnerAccountIdByFileId };
 }
 
-async function scanPosts(tablesDB, config, batchSize, applyWrites, profileToAccountId) {
+async function scanPosts(
+  tablesDB,
+  config,
+  batchSize,
+  applyWrites,
+  profileToAccountId,
+  fileOwnerAccountIdByFileId,
+) {
   const stats = createStats({
     missingCreatorProfileId: 0,
     missingOwnerAccountId: 0,
     conflictingImageOwners: 0,
   });
-  const imageOwnerAccountIdByFileId = new Map();
 
   for await (const rows of listRowsByCursor(
     tablesDB,
@@ -531,16 +549,11 @@ async function scanPosts(tablesDB, config, batchSize, applyWrites, profileToAcco
       }
 
       const imageId = normalizeNullableText(row.imageId);
-      if (imageId) {
-        const existingOwnerAccountId = imageOwnerAccountIdByFileId.get(imageId);
-        if (existingOwnerAccountId && existingOwnerAccountId !== ownerAccountId) {
-          stats.conflictingImageOwners += 1;
-        } else {
-          imageOwnerAccountIdByFileId.set(imageId, ownerAccountId);
-        }
+      if (imageId && !trackOwnedFileId(fileOwnerAccountIdByFileId, imageId, ownerAccountId)) {
+        stats.conflictingImageOwners += 1;
       }
 
-      const targetPermissions = buildTransitionalPostPermissions(ownerAccountId);
+      const targetPermissions = buildPublicOwnerPermissions(ownerAccountId);
       if (hasSamePermissions(row.$permissions, targetPermissions)) {
         stats.skipped += 1;
         continue;
@@ -568,7 +581,7 @@ async function scanPosts(tablesDB, config, batchSize, applyWrites, profileToAcco
     }
   }
 
-  return { stats, imageOwnerAccountIdByFileId };
+  return { stats, fileOwnerAccountIdByFileId };
 }
 
 async function scanLikes(tablesDB, config, batchSize, applyWrites, profileToAccountId) {
@@ -596,7 +609,7 @@ async function scanLikes(tablesDB, config, batchSize, applyWrites, profileToAcco
         continue;
       }
 
-      const targetPermissions = buildPrivateOwnerPermissions(ownerAccountId);
+      const targetPermissions = buildPrivateOwnerReadPermissions(ownerAccountId);
       if (hasSamePermissions(row.$permissions, targetPermissions)) {
         stats.skipped += 1;
         continue;
@@ -640,7 +653,7 @@ async function scanSaves(tablesDB, config, batchSize, applyWrites, profileToAcco
     for (const row of rows) {
       stats.scanned += 1;
 
-      const viewerProfileId = normalizeNullableText(row.userId) ?? toRelationId(row.user);
+      const viewerProfileId = normalizeNullableText(row.userId);
       if (!viewerProfileId) {
         stats.missingViewerProfileId += 1;
         continue;
@@ -652,7 +665,7 @@ async function scanSaves(tablesDB, config, batchSize, applyWrites, profileToAcco
         continue;
       }
 
-      const targetPermissions = buildPrivateOwnerPermissions(ownerAccountId);
+      const targetPermissions = buildPrivateOwnerReadPermissions(ownerAccountId);
       if (hasSamePermissions(row.$permissions, targetPermissions)) {
         stats.skipped += 1;
         continue;
@@ -683,14 +696,14 @@ async function scanSaves(tablesDB, config, batchSize, applyWrites, profileToAcco
   return { stats };
 }
 
-async function scanFiles(storage, config, batchSize, applyWrites, imageOwnerAccountIdByFileId) {
+async function scanFiles(storage, config, batchSize, applyWrites, fileOwnerAccountIdByFileId) {
   const stats = createStats({ missingOwnerAccountId: 0 });
 
   for await (const files of listFilesByCursor(storage, config, batchSize)) {
     for (const file of files) {
       stats.scanned += 1;
 
-      const ownerAccountId = imageOwnerAccountIdByFileId.get(file.$id) ?? null;
+      const ownerAccountId = fileOwnerAccountIdByFileId.get(file.$id) ?? null;
       if (!ownerAccountId) {
         stats.missingOwnerAccountId += 1;
         continue;
@@ -784,6 +797,7 @@ async function main() {
     args.batchSize,
     applyWrites,
     usersResult.profileToAccountId,
+    usersResult.fileOwnerAccountIdByFileId,
   );
   logStats('Post rows', postsResult.stats);
 
@@ -824,7 +838,7 @@ async function main() {
         config,
         args.batchSize,
         applyWrites,
-        postsResult.imageOwnerAccountIdByFileId,
+        postsResult.fileOwnerAccountIdByFileId,
       );
       logStats('Media files', filesResult.stats);
     } catch (error) {

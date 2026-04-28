@@ -4,7 +4,6 @@ import {
   DEFAULT_PROFILE_FEED_PAGE_SIZE,
   DEFAULT_SEARCH_POST_PAGE_SIZE,
   countProfilePublishedPosts,
-  deletePost,
   deletePostImage,
   getPostImageView,
   getPostEditorRow,
@@ -18,6 +17,7 @@ import {
   updatePostRow,
   uploadPostImage,
 } from '../api/post.api';
+import { deletePostWithContentAction } from '../api/post.actions.api';
 import { getImageMetadata } from '../lib/image-metadata';
 import {
   mapHomeFeedRowsToCursorPage,
@@ -276,7 +276,7 @@ export async function updatePost(input: UpdatePostInput): Promise<PostMutationRe
 
 export async function deletePostById(postId: string): Promise<DeletePostResult> {
   try {
-    return await deletePost(postId);
+    return await deletePostWithContentAction(postId);
   } catch (error) {
     console.error(`[PostService.deletePostById] Error:`, error);
     throw error;

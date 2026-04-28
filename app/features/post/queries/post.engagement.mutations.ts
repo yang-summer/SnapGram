@@ -36,9 +36,9 @@ export function useCreateViewerPostLikeMutation() {
 
   return useMutation({
     mutationFn: (input: CreateViewerPostLikeInput) => likePostForViewer(input),
-    onSuccess: (_, variables) => {
-      invalidatePostViews(queryClient, variables.postId);
-      invalidateViewerLikes(queryClient, variables.viewerProfileId);
+    onSuccess: (result) => {
+      invalidatePostViews(queryClient, result.postId);
+      invalidateViewerLikes(queryClient, result.viewerProfileId);
     },
   });
 }
@@ -48,9 +48,9 @@ export function useDeleteViewerPostLikeMutation() {
 
   return useMutation({
     mutationFn: (input: DeleteViewerPostLikeInput) => deleteViewerPostLike(input),
-    onSuccess: (_, variables) => {
-      invalidatePostViews(queryClient, variables.postId);
-      invalidateViewerLikes(queryClient, variables.viewerProfileId);
+    onSuccess: (result) => {
+      invalidatePostViews(queryClient, result.postId);
+      invalidateViewerLikes(queryClient, result.viewerProfileId);
     },
   });
 }
@@ -60,9 +60,9 @@ export function useCreateViewerPostSaveMutation() {
 
   return useMutation({
     mutationFn: (input: CreateViewerPostSaveInput) => savePostForViewer(input),
-    onSuccess: (_, variables) => {
-      invalidatePostViews(queryClient, variables.postId);
-      invalidateViewerSaves(queryClient, variables.viewerProfileId);
+    onSuccess: (result) => {
+      invalidatePostViews(queryClient, result.postId);
+      invalidateViewerSaves(queryClient, result.viewerProfileId);
     },
   });
 }
@@ -72,9 +72,9 @@ export function useDeleteViewerPostSaveMutation() {
 
   return useMutation({
     mutationFn: (input: DeleteViewerPostSaveInput) => deleteViewerPostSave(input),
-    onSuccess: (_, variables) => {
-      invalidatePostViews(queryClient, variables.postId);
-      invalidateViewerSaves(queryClient, variables.viewerProfileId);
+    onSuccess: (result) => {
+      invalidatePostViews(queryClient, result.postId);
+      invalidateViewerSaves(queryClient, result.viewerProfileId);
     },
   });
 }
