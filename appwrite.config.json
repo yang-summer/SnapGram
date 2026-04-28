@@ -389,9 +389,7 @@
         },
         {
             "$id": "saves",
-            "$permissions": [
-                "create(\"users\")"
-            ],
+            "$permissions": [],
             "databaseId": "69b7a69e000a10b87c40",
             "name": "Saves",
             "enabled": true,
@@ -456,9 +454,7 @@
         },
         {
             "$id": "likes",
-            "$permissions": [
-                "create(\"users\")"
-            ],
+            "$permissions": [],
             "databaseId": "69b7a69e000a10b87c40",
             "name": "Likes",
             "enabled": true,
