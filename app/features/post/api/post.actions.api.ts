@@ -2,6 +2,7 @@ import { ExecutionMethod } from 'appwrite';
 import type { Models } from 'appwrite';
 import { appwriteConfig, functions } from '~/lib/appwrite/config';
 import type {
+  DeletePostResult,
   DeleteViewerPostLikeResult,
   DeleteViewerPostSaveResult,
   ViewerPostLikeMutationResult,
@@ -32,12 +33,18 @@ type ContentActionPostUnsaveRequest = {
   postId: string;
 };
 
+type ContentActionPostDeleteRequest = {
+  action: 'post.delete';
+  postId: string;
+};
+
 type ContentActionRequest =
   | ContentActionHealthcheckRequest
   | ContentActionPostLikeRequest
   | ContentActionPostUnlikeRequest
   | ContentActionPostSaveRequest
-  | ContentActionPostUnsaveRequest;
+  | ContentActionPostUnsaveRequest
+  | ContentActionPostDeleteRequest;
 
 export type ContentActionExecutionResult = {
   executionId: string;
@@ -200,4 +207,13 @@ export async function unsavePostWithContentAction(
   });
 
   return readExecutionData(result, 'post.unsave');
+}
+
+export async function deletePostWithContentAction(postId: string): Promise<DeletePostResult> {
+  const result = await executeContentAction({
+    action: 'post.delete',
+    postId,
+  });
+
+  return readExecutionData(result, 'post.delete');
 }

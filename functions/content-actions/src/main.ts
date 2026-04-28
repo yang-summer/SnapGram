@@ -3,6 +3,7 @@ import { createAppwriteClients } from './appwrite.js';
 import { parseContentActionRequest } from './action.js';
 import { ConfigError, getMissingConfigKeys, readConfig } from './config.js';
 import { getCurrentUserProfile, ProfileMissingError } from './auth.js';
+import { deletePostForCurrentUser } from './delete-post.js';
 import {
   likePostForCurrentUser,
   savePostForCurrentUser,
@@ -62,7 +63,7 @@ export default async function main({ req, res, log, error }: FunctionContext) {
   try {
     const actionRequest = parseContentActionRequest(req);
     const config = readConfig();
-    const { tablesDB } = createAppwriteClients(config, resolvedApiKey);
+    const { tablesDB, storage } = createAppwriteClients(config, resolvedApiKey);
     const profile = await getCurrentUserProfile(tablesDB, config, accountId);
 
     log(
@@ -139,14 +140,28 @@ export default async function main({ req, res, log, error }: FunctionContext) {
           data: result,
         });
       }
+      case 'post.delete': {
+        const result = await deletePostForCurrentUser(
+          tablesDB,
+          storage,
+          config,
+          profile,
+          actionRequest.postId,
+          log,
+          error,
+        );
+
+        return res.json({
+          ok: true,
+          action: actionRequest.action,
+          data: result,
+        });
+      }
       default:
         throw new ContentActionError(
           'ACTION_NOT_IMPLEMENTED',
           501,
           'This action is not implemented yet.',
-          {
-            action: actionRequest.action,
-          },
         );
     }
   } catch (caughtError) {
@@ -186,7 +201,7 @@ export default async function main({ req, res, log, error }: FunctionContext) {
       );
 
       return res.json(
-        createErrorBody('APPWRITE_ERROR', 'Failed to resolve current user identity.'),
+        createErrorBody('APPWRITE_ERROR', 'Failed to process content action.'),
         502,
       );
     }
