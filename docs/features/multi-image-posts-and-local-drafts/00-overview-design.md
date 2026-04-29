@@ -143,10 +143,9 @@
 
 建议字段：
 
-- `post`
-  - relationship
-  - `manyToOne`
-  - 指向 `posts`
+- `postId`
+  - `varchar`
+  - 必填
 - `fileId`
   - `varchar`
   - 必填
@@ -170,19 +169,19 @@
 建议索引：
 
 - `post_media_post_sort_idx`
-  - `post + sortOrder`
+  - `postId + sortOrder`
   - 用于详情和编辑页按顺序加载
 - `post_media_post_idx`
-  - `post`
+  - `postId`
 - `post_media_post_file_unique`
-  - `post + fileId`
+  - `postId + fileId`
   - 防止同一帖子重复挂同一文件
 
 读取约定：
 
 - `posts` 是列表摘要源。
 - `postMedia` 是详情页和编辑页的真实图片源。
-- 详情页和编辑页不直接依赖 `posts` 反向 relationship 自动展开，而是显式按 `postId` 列出 `postMedia` rows 并按 `sortOrder` 排序，避免关系选择过宽和排序不透明。
+- 详情页和编辑页显式按 `postId` 列出 `postMedia` rows 并按 `sortOrder` 排序，不依赖 relationship 自动展开。
 
 ### 3. 调整 Storage 权限模型，支持“私有上传，发布后公开”
 
@@ -201,6 +200,13 @@
 - 保持 `fileSecurity = true`
 - bucket 级权限只保留 `create("users")`
 - 移除 bucket 级 `read("any")`
+
+`postMedia` 读写模型建议：
+
+- table-level `read("any")`
+- 浏览器端不拥有 `create / update / delete`
+- 未发布中间态安全性由 Storage staged file 权限负责
+- 已发布媒体元数据公开由 `postMedia` table read 保证
 
 上传阶段：
 
@@ -912,7 +918,7 @@ Function 职责：
 应对：
 
 - 迁移脚本设计为幂等。
-- 通过 `post + fileId` 唯一约束或迁移前查重避免重复写入。
+- 通过 `postId + fileId` 唯一约束或迁移前查重避免重复写入。
 - 先 dry-run，再 run，再 verify。
 
 ### 风险九：详情页一次性读取全量媒体，后续扩展受限

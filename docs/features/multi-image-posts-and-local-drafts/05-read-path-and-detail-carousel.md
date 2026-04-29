@@ -454,7 +454,7 @@
 - 在 `post.api.ts` 中新增：
   - `listPostMediaRowsByPostId(postId)`
 - 查询规则：
-  - `Query.equal('post', postId)`
+  - `Query.equal('postId', postId)`
   - `Query.orderAsc('sortOrder')`
   - 显式 `select` 需要字段
 

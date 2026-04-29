@@ -357,7 +357,7 @@
 
 原因：
 
-- `postMedia.post` 是 `manyToOne` 指向 `posts`
+- `postMedia.postId` 需要引用新帖子 ID
 - `postMedia` rows 需要依赖新帖子 ID
 
 注意：

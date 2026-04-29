@@ -39,7 +39,7 @@
 本步骤完成后，应满足以下验收标准：
 
 - `posts` 表已补齐 `mediaCount` 字段，并明确其在迁移完成前的兼容策略。
-- 远端 Appwrite 已定义 `postMedia` 表结构、索引与关系方向。
+- 远端 Appwrite 已定义 `postMedia` 表结构与索引。
 - 仓库内的 `appwrite.config.json` 已同步记录新的 `postMedia` 表和 `posts.mediaCount` 字段。
 - 前端环境变量契约已新增 `VITE_APPWRITE_POST_MEDIA_TABLE_ID`。
 - Function 环境变量契约已新增 `APPWRITE_POST_MEDIA_TABLE_ID`。
@@ -49,6 +49,10 @@
   - 文件级权限决定是否公开
   - 已发布帖子图片最终公开读
   - 未发布上传文件保持当前用户私有
+- `postMedia` 的读写权限模型已被明确为：
+  - table-level `read("any")`
+  - 浏览器端不拥有 `create / update / delete`
+  - 未发布中间态安全性由 Storage staged file 权限保证
 - 本步骤结束后，后续代码步骤可以直接开始引用：
   - `appwriteConfig.postMediaTableId`
   - `readConfig().postMediaTableId`
@@ -105,28 +109,25 @@
 
 - 表 ID：`postMedia`
 - 显示名：`Post Media`
-- `rowSecurity`：`true`
+- `rowSecurity`：`false`
 
 建议表级权限：
 
+- 授予浏览器端 `read("any")`
 - 不授予浏览器端 `create / update / delete`
-- 不依赖 table-level `read("any")`
 
 原因：
 
 - `postMedia` 的最终写入来自 `content-actions` Function，而不是浏览器直写。
-- 读取权限交给 row-level 权限控制更稳，避免未来如果误产生中间态 row，被 table-level 公共读直接暴露。
+- 详情页和编辑页后续会显式 `listRows(postMedia)`，使用 table-level `read("any")` 更符合运行时读路径。
+- `postMedia` 不承载未发布中间态；未发布安全性由 staged private file 权限负责。
 
 建议字段：
 
-- `post`
-  - 类型：`relationship`
+- `postId`
+  - 类型：`varchar`
   - 必填：是
-  - 关系：`manyToOne`
-  - 指向：`posts`
-  - 建议双向关系：是
-  - 建议反向 key：`mediaItems`
-  - 建议 `onDelete`：`restrict`
+  - 长度：`128`
 - `fileId`
   - 类型：`varchar`
   - 必填：是
@@ -160,22 +161,22 @@
 
 - `post_media_post_sort_idx`
   - 类型：`key`
-  - 列：`post`, `sortOrder`
+  - 列：`postId`, `sortOrder`
   - 排序：`asc`, `asc`
 - `post_media_post_idx`
   - 类型：`key`
-  - 列：`post`
+  - 列：`postId`
   - 排序：`asc`
 - `post_media_post_file_unique`
   - 类型：`unique`
-  - 列：`post`, `fileId`
+  - 列：`postId`, `fileId`
   - 排序：`asc`, `asc`
 
-关系约定：
+读取与外键约定：
 
 - 后续详情页和编辑页显式按 `postId` 查询 `postMedia` 并按 `sortOrder` 排序。
-- 不依赖自动展开反向关系渲染详情，避免关系选择过宽。
-- 即使关系定义为双向，也只把它作为 schema 约束和调试辅助，不把它当作读路径主入口。
+- 不依赖 Appwrite relationship 自动展开渲染详情，避免关系选择过宽。
+- `postMedia` 通过标量 `postId` 与 `posts.$id` 建立应用层外键语义，由 `content-actions` Function 保证最终一致性。
 
 ### 三、补齐客户端的 `postMedia` 环境变量契约
 
@@ -307,6 +308,14 @@
 
 也就是说，**共享 bucket 不变，文件权限模型分流**。
 
+与 `postMedia` 的分工：
+
+- 未发布中间态安全性：
+  - 由 Storage staged file 私有权限保证
+- 已发布媒体元数据公开：
+  - 由 `postMedia` table-level `read("any")` 保证
+- 浏览器端仍然不拥有 `postMedia` 的 `create / update / delete`
+
 ## 为什么选择这个方案
 
 ### 为什么 `posts` 只新增 `mediaCount`，而不是一步到位重命名所有封面字段
@@ -365,22 +374,24 @@
 
 用独立 `postMedia` rows 表达图片组，是这个项目当前复杂度下最稳妥的结构。
 
-### 为什么 `postMedia` 要用关系表，但读路径仍然显式查询
+### 为什么 `postMedia` 使用标量 `postId`，而不是 relationship 字段
 
 原因：
 
-- 关系字段能提供数据库级约束和更清晰的控制台可读性。
-- 但 Appwrite 关系读取默认不是按需排序展开的，直接依赖自动展开容易导致 payload 失控。
-- 详情页和编辑页需要稳定顺序，显式按 `postId + sortOrder` 读取更可控。
+- 当前 Appwrite 的 relationship 列无法满足本方案最需要的两个约束：
+  - 不能可靠地作为必填外键
+  - 不能用于我们需要的索引组合
+- 详情页和编辑页需要稳定按 `postId + sortOrder` 查询，标量字段更直接。
+- update/delete/create 的一致性本来就由 `content-actions` Function 负责，没必要把关键约束压在 relationship 能力上。
 
 因此本步骤选择：
 
-- schema 层保留关系
-- 运行时读路径仍然显式查询 `postMedia`
+- schema 层使用标量 `postId`
+- 运行时显式查询 `postMedia`
 
-这样既保留结构约束，也不把运行时查询交给隐式行为。
+这样可以保留可索引、可必填、可显式查询的结构，同时避免 relationship 能力限制反向影响后续实现。
 
-### 为什么 `postMedia` 建议使用 `restrict`，而不是依赖关系级联删除
+### 为什么 `postMedia` 不依赖 relationship 级联删除
 
 原因：
 
@@ -391,7 +402,7 @@
   - 再删哪些 files
   - 哪些失败需要重试或告警
 
-因此关系层的删除语义应该以“阻止误删、保留显式控制”为主，而不是把真正的清理逻辑托管给关系级联。
+因此删除语义应完全由显式业务逻辑控制，而不是依赖 schema 关系能力。
 
 ### 为什么不新建第二个私有暂存 bucket，而是继续复用当前 `media` bucket
 
@@ -433,10 +444,9 @@
 - 确定：
   - `posts.mediaCount`
   - `postMedia`
-  - `postMedia.post`
+  - `postMedia.postId`
   - `postMedia.fileId`
   - `postMedia.sortOrder`
-  - `posts.mediaItems` 反向关系 key
 - 确定新增环境变量命名：
   - `VITE_APPWRITE_POST_MEDIA_TABLE_ID`
   - `APPWRITE_POST_MEDIA_TABLE_ID`
@@ -538,6 +548,7 @@
 - 验证 Function `readConfig()` 能读取 `postMediaTableId`
 - 验证迁移环境文件已经具备新变量
 - 验证 bucket 级 `read("any")` 移除后，现有头像和已发布图片仍可访问
+- 验证 `postMedia` 在 table-level `read("any")` 下，浏览器端可以稳定执行 `listRows()` 读取指定 `postId` 的媒体列表
 
 依赖：
 
@@ -608,18 +619,19 @@
   2. 再部署依赖该变量的新代码
 - 本地 `.env` 也同步补齐，避免本地验证与线上行为不一致
 
-### 风险五：`postMedia` 行权限过宽，重新把写入边界暴露回浏览器
+### 风险五：`postMedia` 表公开可读后，误写入中间态 row 会被直接暴露
 
 问题：
 
-- 如果 `postMedia` 表级继续保留 `create("users")` 或行级给了 owner update/delete，后续浏览器仍可能绕开 `content-actions` 直接篡改媒体数据。
+- 如果实现时绕过既定流程，先创建了 `postMedia` row 再决定是否发布，那么 table-level `read("any")` 会直接暴露这条元数据。
 
 应对：
 
 - 本步骤明确：
-  - 浏览器端不拥有 `postMedia` create/update/delete 权限
-  - 发布后的 `postMedia` rows 只需要可读
-  - 最终写入和删除都由 Function 负责
+  - 浏览器端不拥有 `postMedia` `create / update / delete` 权限
+  - `postMedia` 只承载已发布媒体元数据
+  - 浏览器端先上传 staged private files
+  - 最终 row 写入和删除都由 Function 负责
 
 ### 风险六：共享 bucket 中混用头像与帖子图片，导致权限模型理解混乱
 
@@ -637,33 +649,16 @@
 - 所有公开/私有差异都下沉到 file-level permissions。
 - 后续实现时，头像上传链路与帖子上传链路分别维护自己的目标权限集合。
 
-### 风险七：关系与索引命名在代码、Console、文档之间不一致
+### 风险七：字段与索引命名在代码、Console、文档之间不一致
 
 问题：
 
-- `mediaItems`、`post_media_post_sort_idx`、`post_media_post_file_unique` 等命名一旦漂移，后续排查会非常低效。
+- `postId`、`post_media_post_sort_idx`、`post_media_post_file_unique` 等命名一旦漂移，后续排查会非常低效。
 
 应对：
 
 - 本步骤就冻结这些名字。
 - 后续无论是 `appwrite.config.json`、Console 手工创建还是迁移脚本，都必须复用同一命名。
-
-### 风险八：浏览器端后续读取 `postMedia` 时，当前 Appwrite 行为对 table-level `read` 的要求与预期不一致
-
-问题：
-
-- 本方案优先希望把公开读取控制在 row-level `read("any")` 上。
-- 但如果后续验证发现当前 Appwrite Cloud + Web SDK 组合在 `listRows()` 场景里实际要求 table-level `read`，则单靠 row-level 公共读可能不足以支持详情页媒体列表查询。
-
-应对：
-
-- 在本步骤的验证阶段，尽早做一次最小浏览器侧 `postMedia` 读取验证。
-- 如果验证结果显示必须提供 table-level `read`，则 fallback 为：
-  - `postMedia` 表只增加 `read("any")`
-  - 仍然不授予 `create / update / delete`
-- 即使采用 fallback，也保持写入边界不变：
-  - 浏览器端只读
-  - Function 负责最终写入和删除
 
 ## 预期结果
 
@@ -673,6 +668,7 @@
 - `postMedia` 成为真实图片组的承载表。
 - 客户端、Function 和迁移脚本都具备一致的 `postMedia` 表 ID 读取入口。
 - `media` bucket 的访问模型从“bucket 公共读”切换为“file 级显式公开或私有”。
+- `postMedia` 的访问模型明确为“table-level public read + Function-only write”，而未发布安全性由 Storage staged file 权限承担。
 - 后续步骤可以在这个契约之上直接推进：
   - 多图压缩与表单模型
   - `content-actions.post.create / post.update`

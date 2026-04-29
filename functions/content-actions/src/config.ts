@@ -5,6 +5,7 @@ const REQUIRED_RESOURCE_ENV_KEYS = [
   'APPWRITE_POSTS_TABLE_ID',
   'APPWRITE_SAVES_TABLE_ID',
   'APPWRITE_LIKES_TABLE_ID',
+  'APPWRITE_POST_MEDIA_TABLE_ID',
 ] as const;
 
 export type AppwriteResourceConfig = {
@@ -16,6 +17,7 @@ export type AppwriteResourceConfig = {
   postsTableId: string;
   savesTableId: string;
   likesTableId: string;
+  postMediaTableId: string;
 };
 
 export class ConfigError extends Error {
@@ -67,5 +69,6 @@ export function readConfig(): AppwriteResourceConfig {
     postsTableId: readEnv('APPWRITE_POSTS_TABLE_ID'),
     savesTableId: readEnv('APPWRITE_SAVES_TABLE_ID'),
     likesTableId: readEnv('APPWRITE_LIKES_TABLE_ID'),
+    postMediaTableId: readEnv('APPWRITE_POST_MEDIA_TABLE_ID'),
   };
 }
