@@ -207,6 +207,37 @@ export type ImageMetadataResult = {
   placeholder: string | null;
 };
 
+export type PostMediaProcessStatus = 'processing' | 'ready' | 'failed';
+
+export type PreparedPostImageAsset = {
+  file: File;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type PostImagePreparationErrorCode =
+  | 'unsupported_type'
+  | 'empty_file'
+  | 'decode_failed'
+  | 'compress_failed';
+
+export type PostImagePreparationSuccessResult = {
+  status: 'ready';
+  asset: PreparedPostImageAsset;
+};
+
+export type PostImagePreparationFailureResult = {
+  status: 'failed';
+  code: PostImagePreparationErrorCode;
+  message: string;
+};
+
+export type PostImagePreparationResult =
+  | PostImagePreparationSuccessResult
+  | PostImagePreparationFailureResult;
+
 export type PreparedImageMetadataStatus = 'idle' | 'pending' | 'ready' | 'failed';
 
 export type PreparedImageDraft = {
@@ -227,11 +258,72 @@ export type ProfileTabCountResult = {
   count: number;
 };
 
-export type PostFormValues = {
+export type PostTextFormValues = {
   caption: string;
-  file: File[];
   location: string;
   tags: string;
+};
+
+export type ExistingPostMediaEditorItem = {
+  kind: 'existing';
+  clientMediaId: string;
+  mediaId?: string;
+  fileId?: string;
+  imageUrl: string;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+  status: 'ready';
+};
+
+export type LocalProcessingPostMediaEditorItem = {
+  kind: 'local';
+  clientMediaId: string;
+  status: 'processing';
+  file: File;
+  previewUrl: null;
+  width: null;
+  height: null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: null;
+};
+
+export type LocalReadyPostMediaEditorItem = {
+  kind: 'local';
+  clientMediaId: string;
+  status: 'ready';
+  file: File;
+  previewUrl: string;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type LocalFailedPostMediaEditorItem = {
+  kind: 'local';
+  clientMediaId: string;
+  status: 'failed';
+  file: File;
+  previewUrl: null;
+  width: null;
+  height: null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: null;
+  errorCode: PostImagePreparationErrorCode;
+  errorMessage: string;
+};
+
+export type LocalPostMediaEditorItem =
+  | LocalProcessingPostMediaEditorItem
+  | LocalReadyPostMediaEditorItem
+  | LocalFailedPostMediaEditorItem;
+
+export type PostMediaEditorItem = ExistingPostMediaEditorItem | LocalPostMediaEditorItem;
+
+export type PostFormValues = PostTextFormValues & {
+  file: File[];
 };
 
 export type PostEditorInitialData = {
