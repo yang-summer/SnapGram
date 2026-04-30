@@ -6,11 +6,7 @@ import {
 } from '../types/post.type';
 import { getImageMetadataFromLoadedImage, loadImageFromFile } from './image-metadata';
 
-export const POST_IMAGE_ACCEPTED_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-] as const;
+export const POST_IMAGE_ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 export type PostImageAcceptedMimeType = (typeof POST_IMAGE_ACCEPTED_MIME_TYPES)[number];
 
@@ -188,20 +184,20 @@ function renderImageToCanvas(
 }
 
 // 使用浏览器原生 toBlob 将 canvas 导出为指定格式的二进制结果。
-function canvasToBlob(
-  canvas: HTMLCanvasElement,
-  mimeType: string,
-  quality: number,
-): Promise<Blob> {
+function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error('Failed to export compressed image blob.'));
-        return;
-      }
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to export compressed image blob.'));
+          return;
+        }
 
-      resolve(blob);
-    }, mimeType, quality);
+        resolve(blob);
+      },
+      mimeType,
+      quality,
+    );
   });
 }
 
@@ -274,14 +270,20 @@ async function createPreparedAsset(
 ): Promise<PreparedPostImageAsset> {
   const { compressionPasses, maxFileSizeBytes, outputMimeType } = normalizeOptions(options);
   const resolvedOutputMimeType = resolveOutputMimeType(outputMimeType);
+  console.log(
+    `resolvedOutputMimeType: ${resolvedOutputMimeType}; now begin compressImageUntilWithinLimit`,
+  );
   const preparedFile = await compressImageUntilWithinLimit(
     file,
     resolvedOutputMimeType,
     compressionPasses,
     maxFileSizeBytes,
   );
+  console.log(`preparedFile is ready, begin loadImageFromFile`);
   const loadedPreparedImage = await loadImageFromFile(preparedFile);
+  console.log(`loadedPreparedImage is ready, begin getImageMetadataFromLoadedImage`);
   const metadata = getImageMetadataFromLoadedImage(loadedPreparedImage);
+  console.log(`metadata is ready, metadata.width is ${metadata.width}`);
 
   return {
     file: preparedFile,
@@ -306,10 +308,7 @@ export async function preparePostImage(
   }
 
   if (!isSupportedPostImageMimeType(file.type)) {
-    return createFailureResult(
-      'unsupported_type',
-      'Only JPG, PNG, and WebP images are supported.',
-    );
+    return createFailureResult('unsupported_type', 'Only JPG, PNG, and WebP images are supported.');
   }
 
   try {
@@ -319,8 +318,9 @@ export async function preparePostImage(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to prepare image.';
-    const code: PostImagePreparationErrorCode =
-      message.toLowerCase().includes('decode') ? 'decode_failed' : 'compress_failed';
+    const code: PostImagePreparationErrorCode = message.toLowerCase().includes('decode')
+      ? 'decode_failed'
+      : 'compress_failed';
 
     return createFailureResult(code, message);
   }
