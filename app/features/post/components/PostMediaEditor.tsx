@@ -1,3 +1,5 @@
+import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
+import { isSortable, useSortable } from '@dnd-kit/react/sortable';
 import { ImagePlusIcon, LoaderCircleIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import InlineErrorAlert from '~/components/feedback/inline-error-alert';
@@ -101,8 +103,152 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+function reorderItems<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length
+  ) {
+    return items;
+  }
+
+  const nextItems = items.slice();
+  const [movedItem] = nextItems.splice(fromIndex, 1);
+
+  if (!movedItem) {
+    return items;
+  }
+
+  nextItems.splice(toIndex, 0, movedItem);
+  return nextItems;
+}
+
+type SortableMediaCardProps = {
+  item: LocalPostMediaEditorItem;
+  index: number;
+  retryDisabled: boolean;
+  onRetryItem: (clientMediaId: string) => Promise<void>;
+  onRemoveItem: (clientMediaId: string) => void;
+};
+
+function SortableMediaCard({
+  item,
+  index,
+  retryDisabled,
+  onRetryItem,
+  onRemoveItem,
+}: SortableMediaCardProps) {
+  const { ref, isDragging, isDropTarget } = useSortable({
+    id: item.clientMediaId,
+    index,
+  });
+
+  return (
+    <article
+      ref={ref}
+      tabIndex={0}
+      aria-label={`${item.file.name}, position ${index + 1}`}
+      className={cn(
+        'overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm transition-[box-shadow,opacity,transform]',
+        'cursor-grab select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+        isDragging && 'cursor-grabbing opacity-80 shadow-lg ring-2 ring-primary/35',
+        isDropTarget && !isDragging && 'ring-2 ring-primary/30 shadow-md',
+      )}
+    >
+      <div
+        className={cn(
+          'relative aspect-square w-full overflow-hidden border-b border-border/60',
+          item.status === 'processing' ? 'bg-muted/40' : 'bg-muted/20',
+        )}
+      >
+        {item.status === 'ready' ? (
+          <img
+            src={item.previewUrl}
+            alt={`Prepared media ${index + 1}`}
+            className="size-full object-cover"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center">
+            <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
+              {item.status === 'processing' ? (
+                <>
+                  <LoaderCircleIcon className="size-8 animate-spin text-primary" />
+                  <p>Preparing image...</p>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-full bg-destructive/10 p-3 text-destructive">
+                    <ImagePlusIcon className="size-6" />
+                  </div>
+                  <p>Image processing failed</p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-sm font-medium">{item.file.name}</p>
+            <span
+              className={cn(
+                'shrink-0 rounded-full px-2 py-1 text-xs font-medium',
+                item.status === 'ready' && 'bg-primary/10 text-primary',
+                item.status === 'processing' && 'bg-muted text-muted-foreground',
+                item.status === 'failed' && 'bg-destructive/10 text-destructive',
+              )}
+            >
+              {item.status}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            #{index + 1} • {formatFileSize(item.file.size)}
+            {item.status === 'ready' && item.width && item.height
+              ? ` • ${item.width} × ${item.height}`
+              : ''}
+          </p>
+        </div>
+
+        {item.status === 'failed' ? (
+          <p className="rounded-xl bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {item.errorMessage}
+          </p>
+        ) : null}
+
+        <div className="flex items-center gap-2">
+          {item.status === 'failed' ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void onRetryItem(item.clientMediaId)}
+              disabled={retryDisabled}
+            >
+              <RotateCcwIcon className="size-4" />
+              Retry
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onRemoveItem(item.clientMediaId)}
+            disabled={item.status === 'processing'}
+          >
+            <Trash2Icon className="size-4" />
+            Delete
+          </Button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function PostMediaEditor() {
-  console.log('if you see this twice, you are in development mode');
   const inputRef = useRef<HTMLInputElement | null>(null);
   const itemsRef = useRef<LocalPostMediaEditorItem[]>([]);
   const isMountedRef = useRef(true);
@@ -123,7 +269,6 @@ export default function PostMediaEditor() {
     isMountedRef.current = true;
 
     return () => {
-      console.log(`you see this because useEffect return`);
       isMountedRef.current = false;
 
       for (const item of itemsRef.current) {
@@ -138,13 +283,10 @@ export default function PostMediaEditor() {
 
   async function prepareLocalItem(clientMediaId: string, file: File) {
     const result = await preparePostImage(file);
-    console.log(`result is ready, result.status is ${result.status}`);
-    console.log(`isMountedRef.current is ${isMountedRef.current}`);
 
     if (!isMountedRef.current) {
       return;
     }
-    console.log(`you see this because isMountedRef.current is true`);
 
     if (result.status === 'ready') {
       const previewUrl = URL.createObjectURL(result.asset.file);
@@ -164,7 +306,6 @@ export default function PostMediaEditor() {
             : item,
         ),
       );
-      console.log(`setItems successfully`);
       return;
     }
 
@@ -180,17 +321,20 @@ export default function PostMediaEditor() {
   async function handleSelectedFiles(fileList: FileList | null) {
     const selectedFiles = fileList ? Array.from(fileList) : [];
 
+    // 用户取消文件选择时，直接结束，避免触发后续校验和状态更新。
     if (selectedFiles.length === 0) {
       return;
     }
 
     setEditorError(null);
 
+    // 当前仍有图片在处理中时，不允许继续追加，避免串行处理队列和界面状态混在一起。
     if (hasProcessingItems) {
       setEditorError('Please wait for the current images to finish processing before adding more.');
       return;
     }
 
+    // 选择后总数不能超过 6 张；这里在进入处理流程前做数量拦截，给出明确错误提示。
     if (selectedFiles.length > remainingSlots) {
       setEditorError(
         `You can keep at most ${POST_MEDIA_EDITOR_MAX_ITEMS} images. Remove some items before adding more.`,
@@ -200,6 +344,7 @@ export default function PostMediaEditor() {
 
     const emptyFile = selectedFiles.find((file) => file.size <= 0);
 
+    // 空文件无法解码和压缩，提前拦截可以避免后面进入无意义的 processing 状态。
     if (emptyFile) {
       setEditorError(`${emptyFile.name} is empty. Please choose a different image.`);
       return;
@@ -207,6 +352,7 @@ export default function PostMediaEditor() {
 
     const unsupportedFile = selectedFiles.find((file) => !isSupportedPostImageMimeType(file.type));
 
+    // 只允许帖子媒体白名单里的 MIME 类型；像 SVG 这类不支持格式要在选择阶段直接拒绝。
     if (unsupportedFile) {
       setEditorError(
         `${unsupportedFile.name} is not supported. Only JPG, PNG, and WebP images are allowed.`,
@@ -257,6 +403,27 @@ export default function PostMediaEditor() {
     setItems((currentItems) => currentItems.filter((item) => item.clientMediaId !== clientMediaId));
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    if (event.canceled) {
+      return;
+    }
+
+    const { source, target } = event.operation;
+
+    if (!isSortable(source) || !isSortable(target)) {
+      return;
+    }
+
+    const fromIndex = source.initialIndex;
+    const toIndex = target.index;
+
+    if (fromIndex === toIndex) {
+      return;
+    }
+
+    setItems((currentItems) => reorderItems(currentItems, fromIndex, toIndex));
+  }
+
   return (
     <section className="w-full max-w-5xl rounded-3xl border border-border/60 bg-card/50 p-6 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -297,8 +464,8 @@ export default function PostMediaEditor() {
               <div className="space-y-1">
                 <p className="font-medium">Select local images</p>
                 <p className="text-sm text-muted-foreground">
-                  Images are prepared in sequence. While processing is running, adding more files is
-                  temporarily disabled.
+                  Images are prepared in sequence. Drag the cards to reorder them. While
+                  processing is running, adding more files is temporarily disabled.
                 </p>
               </div>
             </div>
@@ -319,102 +486,20 @@ export default function PostMediaEditor() {
             No images selected yet.
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {items.map((item, index) => (
-              <article
-                key={item.clientMediaId}
-                className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm"
-              >
-                <div
-                  className={cn(
-                    'relative aspect-square w-full overflow-hidden border-b border-border/60',
-                    item.status === 'processing' ? 'bg-muted/40' : 'bg-muted/20',
-                  )}
-                >
-                  {item.status === 'ready' ? (
-                    <img
-                      src={item.previewUrl}
-                      alt={`Prepared media ${index + 1}`}
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center">
-                      <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
-                        {item.status === 'processing' ? (
-                          <>
-                            <LoaderCircleIcon className="size-8 animate-spin text-primary" />
-                            <p>Preparing image...</p>
-                          </>
-                        ) : (
-                          <>
-                            <div className="rounded-full bg-destructive/10 p-3 text-destructive">
-                              <ImagePlusIcon className="size-6" />
-                            </div>
-                            <p>Image processing failed</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3 p-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="min-w-0 truncate text-sm font-medium">{item.file.name}</p>
-                      <span
-                        className={cn(
-                          'shrink-0 rounded-full px-2 py-1 text-xs font-medium',
-                          item.status === 'ready' && 'bg-primary/10 text-primary',
-                          item.status === 'processing' && 'bg-muted text-muted-foreground',
-                          item.status === 'failed' && 'bg-destructive/10 text-destructive',
-                        )}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(item.file.size)}
-                      {item.status === 'ready' && item.width && item.height
-                        ? ` • ${item.width} × ${item.height}`
-                        : ''}
-                    </p>
-                  </div>
-
-                  {item.status === 'failed' ? (
-                    <p className="rounded-xl bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                      {item.errorMessage}
-                    </p>
-                  ) : null}
-
-                  <div className="flex items-center gap-2">
-                    {item.status === 'failed' ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleRetryItem(item.clientMediaId)}
-                        disabled={hasProcessingItems}
-                      >
-                        <RotateCcwIcon className="size-4" />
-                        Retry
-                      </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveItem(item.clientMediaId)}
-                      disabled={item.status === 'processing'}
-                    >
-                      <Trash2Icon className="size-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          <DragDropProvider onDragEnd={handleDragEnd}>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {items.map((item, index) => (
+                <SortableMediaCard
+                  key={item.clientMediaId}
+                  item={item}
+                  index={index}
+                  retryDisabled={hasProcessingItems}
+                  onRetryItem={handleRetryItem}
+                  onRemoveItem={handleRemoveItem}
+                />
+              ))}
+            </div>
+          </DragDropProvider>
         )}
       </div>
     </section>

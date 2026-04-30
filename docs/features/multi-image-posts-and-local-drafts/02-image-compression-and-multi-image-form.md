@@ -340,7 +340,7 @@
 
 都可以复用同一份媒体编辑状态。
 
-### 五、为排序交互新增依赖，并使用 `@dnd-kit/sortable`
+### 五、为排序交互统一到最新版 `dnd-kit React` API
 
 改动位置：
 
@@ -348,11 +348,9 @@
 - `package-lock.json`
 - `app/features/post/components/PostMediaSortableList.tsx`
 
-建议新增依赖：
+建议依赖：
 
-- `@dnd-kit/core`
-- `@dnd-kit/sortable`
-- `@dnd-kit/utilities`
+- `@dnd-kit/react`
 
 当前项目保留：
 
@@ -361,20 +359,31 @@
 但它继续只服务于头像上传这类“支持拖放选取”的场景。帖子多图编辑器本步骤明确改为：
 
 - 原生文件选择器
-- 排序交给 `dnd-kit`
+- 排序交给 `DragDropProvider + useSortable`
 
 建议交互：
 
-- 用 `DndContext + SortableContext + useSortable`
+- 用 `DragDropProvider`
+- `DragDropProvider` 与 `DragOverlay` 从 `@dnd-kit/react` 导入
+- `useSortable` 与 `isSortable / isSortableOperation` 从 `@dnd-kit/react/sortable` 导入
+- 单个媒体卡片通过 `useSortable({ id, index })` 注册为 sortable
 - 列表顺序与渲染顺序保持一致
-- 使用 `closestCenter`
-- 启用：
-  - `PointerSensor`
-  - `KeyboardSensor + sortableKeyboardCoordinates`
-- 排序策略使用适合单容器列表的策略
+- 单容器排序优先采用最新版文档推荐的“手动状态管理”方式：
+  - 只在 `onDragEnd` 更新数组顺序
+  - 从 `event.operation.source.initialIndex` 与 `event.operation.target.index` 读取拖拽前后位置
+  - 或使用 `isSortableOperation(operation)` / `isSortable(source)` 做类型收窄
+- 不再基于旧版 mental model 使用：
+  - `DndContext`
+  - `SortableContext`
+  - `closestCenter`
+  - `sortableKeyboardCoordinates`
+  - `active.id / over.id` 这套排序判断方式
+- 默认沿用 `DragDropProvider` 内置的 `PointerSensor` 与 `KeyboardSensor`
+- 如果后续需要调节整卡拖拽的激活阈值，再通过 `sensors` 配置自定义 `PointerSensor.configure(...)`
+- 整张媒体卡片本身就是 draggable / droppable 元素，不额外引入拖拽把手
 - 只对 `ready / failed / existing` 项开放拖拽
-- `processing` 项不参与排序
-- 上传卡片不进入 `SortableContext`
+- `processing` 项不注册 sortable，或在 `useSortable` 上显式 `disabled: true`
+- 上传卡片不调用 `useSortable`
 
 如果列表是横向卡片流，推荐：
 
@@ -544,20 +553,24 @@
 - UI 内只维护数组顺序
 - 需要落库或持久化时，再按下标生成 `sortOrder`
 
-### 为什么排序选择 `@dnd-kit/sortable`
+### 为什么排序选择最新版 `dnd-kit React` 的 sortable 能力
 
 原因：
 
 - 当前需求是单容器、多项卡片排序，不需要更重的拖拽系统。
-- `@dnd-kit/sortable` 官方就把自己定义为建立 sortable 接口的轻量层。
-- 它同时提供：
+- 最新 React 文档已经把排序能力统一到：
+  - `DragDropProvider`
+  - `useSortable`
+  - `DragOverlay`
+  - `isSortable / isSortableOperation`
+- 默认已经带有：
   - 指针输入
   - 键盘输入
   - 可访问性
-  - `SortableContext`
-  - `useSortable`
+  - optimistic sorting
+- 单列表场景下，官方推荐直接在 `onDragEnd` 基于 sortable 的 `initialIndex / index` 回写数组顺序。
 
-这比手写 pointer drag 更稳，也比引入更重的库更贴合当前项目规模。
+这比手写 pointer drag 更稳，也比继续沿用旧版 `active / over + SortableContext` 思维更贴近当前官方 API。
 
 ### 为什么步骤二不建议立即改写 `post.service.ts`
 
@@ -629,7 +642,7 @@
   - `selectFiles(files)`
   - `removeItem(clientMediaId)`
   - `retryItem(clientMediaId)`
-  - `moveItem(activeId, overId)`
+  - `moveItem(fromIndex, toIndex)`
   - `openPreview(clientMediaId)`
   - `closePreview()`
   - `dispose()`
@@ -855,4 +868,3 @@
   - `content-actions.post.create / post.update`
   - 编辑页 `postMedia` 回显
   - 本地草稿箱持久化
-
