@@ -6,17 +6,20 @@ import { toast } from 'sonner';
 import InlineErrorAlert from '~/components/feedback/inline-error-alert';
 import FileUploader from '~/components/shared/FileUploader';
 import { Button } from '~/components/ui/button';
-import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { PostValidation } from '~/lib/validation';
+import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
 import type {
+  ImageMetadataResult,
+  LocalPostMediaEditorItem,
   PostEditorInitialData,
   PostFormValues,
   PreparedImageDraft,
 } from '../types/post.type';
-import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
+import PostMediaEditor from './PostMediaEditor';
 
 type PostFormProps = {
   action: 'Create' | 'Update';
@@ -26,7 +29,6 @@ type PostFormProps = {
 function getDefaultValues(post?: PostEditorInitialData): PostFormValues {
   return {
     caption: post?.caption ?? '',
-    file: [],
     location: post?.location ?? '',
     tags: post?.tags ?? '',
   };
@@ -43,6 +45,21 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Failed to save post. Please try again.';
 }
 
+function isReadyLocalMediaItem(
+  item: LocalPostMediaEditorItem,
+): item is Extract<LocalPostMediaEditorItem, { status: 'ready' }> {
+  return item.status === 'ready';
+}
+
+function mapReadyMediaItemToMetadata(item: Extract<LocalPostMediaEditorItem, { status: 'ready' }>): ImageMetadataResult {
+  return {
+    width: item.width,
+    height: item.height,
+    aspectRatioBucket: item.aspectRatioBucket,
+    placeholder: item.placeholder,
+  };
+}
+
 export default function PostForm({ action, post }: PostFormProps) {
   const navigate = useNavigate();
   const { data } = useCurrentUserQuery();
@@ -50,8 +67,14 @@ export default function PostForm({ action, post }: PostFormProps) {
   const { mutateAsync: createPost, isPending: isLoadingCreate } = useCreatePostMutation();
   const { mutateAsync: updatePost, isPending: isLoadingUpdate } = useUpdatePostMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [preparedImageDraft, setPreparedImageDraft] = useState<PreparedImageDraft | null>(null);
+  const [mediaItems, setMediaItems] = useState<LocalPostMediaEditorItem[]>([]);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [updateSelectedFiles, setUpdateSelectedFiles] = useState<File[]>([]);
+  const [updatePreparedImageDraft, setUpdatePreparedImageDraft] = useState<PreparedImageDraft | null>(
+    null,
+  );
   const isEditMode = action === 'Update';
+  const hasProcessingMediaItems = mediaItems.some((item) => item.status === 'processing');
 
   const form = useForm<PostFormValues>({
     resolver: zodResolver(PostValidation),
@@ -62,13 +85,14 @@ export default function PostForm({ action, post }: PostFormProps) {
     setSubmitError(null);
 
     const normalizedTags = normalizeTags(values.tags);
-    const nextFile = values.file[0] ?? null;
-    const nextPreparedImageMetadata =
-      preparedImageDraft && nextFile && preparedImageDraft.file === nextFile
-        ? preparedImageDraft.metadata
-        : null;
 
     if (isEditMode) {
+      const nextFile = updateSelectedFiles[0] ?? null;
+      const nextPreparedImageMetadata =
+        updatePreparedImageDraft && nextFile && updatePreparedImageDraft.file === nextFile
+          ? updatePreparedImageDraft.metadata
+          : null;
+
       if (!post) {
         setSubmitError('Unable to load the post data for editing.');
         return;
@@ -105,8 +129,20 @@ export default function PostForm({ action, post }: PostFormProps) {
       }
     }
 
-    if (!nextFile) {
-      setSubmitError('Please select an image before creating a post.');
+    if (mediaItems.length === 0) {
+      setMediaError('Please add at least one image before creating a post.');
+      return;
+    }
+
+    if (hasProcessingMediaItems) {
+      setMediaError('Please wait for image processing to finish before submitting the post.');
+      return;
+    }
+
+    const coverItem = mediaItems.find(isReadyLocalMediaItem);
+
+    if (!coverItem) {
+      setMediaError('Keep at least one successfully prepared image before creating a post.');
       return;
     }
 
@@ -116,12 +152,14 @@ export default function PostForm({ action, post }: PostFormProps) {
         return;
       }
 
+      setMediaError(null);
+
       const newPost = await createPost({
         creatorProfileId: currentUser.profileId,
         ownerAccountId: currentUser.accountId,
         caption: values.caption,
-        file: nextFile,
-        preparedImageMetadata: nextPreparedImageMetadata,
+        file: coverItem.file,
+        preparedImageMetadata: mapReadyMediaItemToMetadata(coverItem),
         location: values.location,
         tags: normalizedTags,
       });
@@ -143,13 +181,14 @@ export default function PostForm({ action, post }: PostFormProps) {
 
   return (
     <form id="form-createPost" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-5xl">
-      <FieldGroup className="flex flex-col w-full max-w-5xl gap-9">
+      <FieldGroup className="flex w-full max-w-5xl flex-col gap-9">
         {submitError ? (
           <InlineErrorAlert
             title={isEditMode ? 'Unable to update post' : 'Unable to create post'}
             message={submitError}
           />
         ) : null}
+
         <Controller
           name="caption"
           control={form.control}
@@ -162,33 +201,46 @@ export default function PostForm({ action, post }: PostFormProps) {
                 aria-invalid={fieldState.invalid}
                 placeholder=""
                 autoComplete="off"
-                className="h-36 rounded-xl border-none focus-visible:ring-1 focus-visible:ring-offset-1 ring-offset-light-3"
+                className="h-36 rounded-xl border-none ring-offset-light-3 focus-visible:ring-1 focus-visible:ring-offset-1"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
-        <Controller
-          name="file"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid} className="w-full">
-              <FieldLabel htmlFor="form-createPost-file">Add Photos</FieldLabel>
-              <FileUploader
-                fieldChange={(files) => {
-                  field.onChange(files);
 
-                  if (files.length === 0) {
-                    setPreparedImageDraft(null);
-                  }
-                }}
-                mediaUrl={post?.imageUrl ?? ''}
-                onPreparedChange={setPreparedImageDraft}
-              />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
-        />
+        {isEditMode ? (
+          <Field className="w-full">
+            <FieldLabel htmlFor="form-createPost-file">Replace Photo</FieldLabel>
+            <FieldDescription>
+              Editing still uses the current single-image replacement flow.
+            </FieldDescription>
+            <FileUploader
+              fieldChange={(files) => {
+                setUpdateSelectedFiles(files);
+
+                if (files.length === 0) {
+                  setUpdatePreparedImageDraft(null);
+                }
+              }}
+              mediaUrl={post?.imageUrl ?? ''}
+              onPreparedChange={setUpdatePreparedImageDraft}
+            />
+          </Field>
+        ) : (
+          <Field className="w-full">
+            <FieldLabel>Add Photos</FieldLabel>
+            <FieldDescription>
+              The current submit path still uses the first ready image as the temporary cover.
+            </FieldDescription>
+            <PostMediaEditor
+              items={mediaItems}
+              error={mediaError}
+              onItemsChange={setMediaItems}
+              onErrorChange={setMediaError}
+            />
+          </Field>
+        )}
+
         <Controller
           name="location"
           control={form.control}
@@ -202,12 +254,13 @@ export default function PostForm({ action, post }: PostFormProps) {
                 aria-invalid={fieldState.invalid}
                 placeholder=""
                 autoComplete="off"
-                className="h-12 border-none placeholder:text-light-4 focus-visible:ring-1 focus-visible:ring-offset-1 ring-offset-light-3"
+                className="h-12 border-none placeholder:text-light-4 ring-offset-light-3 focus-visible:ring-1 focus-visible:ring-offset-1"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
+
         <Controller
           name="tags"
           control={form.control}
@@ -221,18 +274,22 @@ export default function PostForm({ action, post }: PostFormProps) {
                 aria-invalid={fieldState.invalid}
                 placeholder=""
                 autoComplete="off"
-                className="h-12 border-none placeholder:text-light-4 focus-visible:ring-1 focus-visible:ring-offset-1 ring-offset-light-3"
+                className="h-12 border-none placeholder:text-light-4 ring-offset-light-3 focus-visible:ring-1 focus-visible:ring-offset-1"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
       </FieldGroup>
-      <div className="flex gap-4 items-center justify-end">
+
+      <div className="flex items-center justify-end gap-4">
         <Button type="button" variant="outline" onClick={() => navigate(-1)}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoadingCreate || isLoadingUpdate}>
+        <Button
+          type="submit"
+          disabled={isLoadingCreate || isLoadingUpdate || (!isEditMode && hasProcessingMediaItems)}
+        >
           {isLoadingCreate || isLoadingUpdate ? 'Loading...' : action} Post
         </Button>
       </div>

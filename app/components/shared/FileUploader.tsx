@@ -83,7 +83,9 @@ export default function FileUploader({ fieldChange, mediaUrl, onPreparedChange }
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.png', '.jpeg', 'jpg', 'svg'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
     },
     multiple: false,
   });
@@ -107,7 +109,7 @@ export default function FileUploader({ fieldChange, mediaUrl, onPreparedChange }
           <img src="/assets/icons/file-upload.svg" width={96} height={77} alt="file upload" />
 
           <h3 className="mb-2 mt-6">Drag photo here</h3>
-          <p className="mb-6">SVG, PNG, JPG</p>
+          <p className="mb-6">WEBP, PNG, JPG</p>
 
           <Button type="button" className="cursor-pointer">
             Select from computer

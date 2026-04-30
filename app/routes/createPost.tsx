@@ -1,4 +1,3 @@
-import PostMediaEditor from '~/features/post/components/PostMediaEditor';
 import PostForm from '~/features/post/components/PostForm';
 
 export default function CreatePost() {
@@ -11,7 +10,6 @@ export default function CreatePost() {
             Create Post
           </h2>
         </div>
-        <PostMediaEditor />
         <PostForm action="Create" />
       </div>
     </div>

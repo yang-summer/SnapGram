@@ -322,9 +322,7 @@ export type LocalPostMediaEditorItem =
 
 export type PostMediaEditorItem = ExistingPostMediaEditorItem | LocalPostMediaEditorItem;
 
-export type PostFormValues = PostTextFormValues & {
-  file: File[];
-};
+export type PostFormValues = PostTextFormValues;
 
 export type PostEditorInitialData = {
   id: string;

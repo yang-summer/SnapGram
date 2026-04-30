@@ -1,7 +1,7 @@
 import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
 import { isSortable, useSortable } from '@dnd-kit/react/sortable';
 import { ImagePlusIcon, LoaderCircleIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import InlineErrorAlert from '~/components/feedback/inline-error-alert';
 import { Button } from '~/components/ui/button';
 import { cn } from '~/lib/utils';
@@ -16,6 +16,21 @@ import {
 } from '../lib/post-image-compression';
 
 const POST_MEDIA_EDITOR_MAX_ITEMS = 6;
+
+type PostMediaEditorProps = {
+  items: LocalPostMediaEditorItem[];
+  error: string | null;
+  onItemsChange: Dispatch<SetStateAction<LocalPostMediaEditorItem[]>>;
+  onErrorChange: Dispatch<SetStateAction<string | null>>;
+};
+
+type SortableMediaCardProps = {
+  item: LocalPostMediaEditorItem;
+  index: number;
+  retryDisabled: boolean;
+  onRetryItem: (clientMediaId: string) => Promise<void>;
+  onRemoveItem: (clientMediaId: string) => void;
+};
 
 function createClientMediaId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -125,14 +140,6 @@ function reorderItems<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   return nextItems;
 }
 
-type SortableMediaCardProps = {
-  item: LocalPostMediaEditorItem;
-  index: number;
-  retryDisabled: boolean;
-  onRetryItem: (clientMediaId: string) => Promise<void>;
-  onRemoveItem: (clientMediaId: string) => void;
-};
-
 function SortableMediaCard({
   item,
   index,
@@ -140,19 +147,23 @@ function SortableMediaCard({
   onRetryItem,
   onRemoveItem,
 }: SortableMediaCardProps) {
+  const sortableDisabled = item.status === 'processing';
   const { ref, isDragging, isDropTarget } = useSortable({
     id: item.clientMediaId,
     index,
+    disabled: sortableDisabled,
   });
 
   return (
     <article
       ref={ref}
-      tabIndex={0}
+      tabIndex={sortableDisabled ? -1 : 0}
       aria-label={`${item.file.name}, position ${index + 1}`}
       className={cn(
         'overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm transition-[box-shadow,opacity,transform]',
-        'cursor-grab select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+        sortableDisabled
+          ? 'cursor-default'
+          : 'cursor-grab select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         isDragging && 'cursor-grabbing opacity-80 shadow-lg ring-2 ring-primary/35',
         isDropTarget && !isDragging && 'ring-2 ring-primary/30 shadow-md',
       )}
@@ -248,12 +259,15 @@ function SortableMediaCard({
   );
 }
 
-export default function PostMediaEditor() {
+export default function PostMediaEditor({
+  items,
+  error,
+  onItemsChange,
+  onErrorChange,
+}: PostMediaEditorProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const itemsRef = useRef<LocalPostMediaEditorItem[]>([]);
+  const itemsRef = useRef<LocalPostMediaEditorItem[]>(items);
   const isMountedRef = useRef(true);
-  const [items, setItems] = useState<LocalPostMediaEditorItem[]>([]);
-  const [editorError, setEditorError] = useState<string | null>(null);
 
   const hasProcessingItems = items.some((item) => item.status === 'processing');
   const remainingSlots = POST_MEDIA_EDITOR_MAX_ITEMS - items.length;
@@ -291,7 +305,7 @@ export default function PostMediaEditor() {
     if (result.status === 'ready') {
       const previewUrl = URL.createObjectURL(result.asset.file);
 
-      setItems((currentItems) =>
+      onItemsChange((currentItems) =>
         currentItems.map((item) =>
           item.clientMediaId === clientMediaId
             ? createReadyItem(
@@ -309,7 +323,7 @@ export default function PostMediaEditor() {
       return;
     }
 
-    setItems((currentItems) =>
+    onItemsChange((currentItems) =>
       currentItems.map((item) =>
         item.clientMediaId === clientMediaId
           ? createFailedItem(clientMediaId, file, result.code, result.message)
@@ -326,17 +340,17 @@ export default function PostMediaEditor() {
       return;
     }
 
-    setEditorError(null);
+    onErrorChange(null);
 
     // 当前仍有图片在处理中时，不允许继续追加，避免串行处理队列和界面状态混在一起。
     if (hasProcessingItems) {
-      setEditorError('Please wait for the current images to finish processing before adding more.');
+      onErrorChange('Please wait for the current images to finish processing before adding more.');
       return;
     }
 
     // 选择后总数不能超过 6 张；这里在进入处理流程前做数量拦截，给出明确错误提示。
     if (selectedFiles.length > remainingSlots) {
-      setEditorError(
+      onErrorChange(
         `You can keep at most ${POST_MEDIA_EDITOR_MAX_ITEMS} images. Remove some items before adding more.`,
       );
       return;
@@ -346,7 +360,7 @@ export default function PostMediaEditor() {
 
     // 空文件无法解码和压缩，提前拦截可以避免后面进入无意义的 processing 状态。
     if (emptyFile) {
-      setEditorError(`${emptyFile.name} is empty. Please choose a different image.`);
+      onErrorChange(`${emptyFile.name} is empty. Please choose a different image.`);
       return;
     }
 
@@ -354,7 +368,7 @@ export default function PostMediaEditor() {
 
     // 只允许帖子媒体白名单里的 MIME 类型；像 SVG 这类不支持格式要在选择阶段直接拒绝。
     if (unsupportedFile) {
-      setEditorError(
+      onErrorChange(
         `${unsupportedFile.name} is not supported. Only JPG, PNG, and WebP images are allowed.`,
       );
       return;
@@ -362,7 +376,7 @@ export default function PostMediaEditor() {
 
     const processingItems = selectedFiles.map((file) => createProcessingItem(file));
 
-    setItems((currentItems) => [...currentItems, ...processingItems]);
+    onItemsChange((currentItems) => [...currentItems, ...processingItems]);
 
     for (const item of processingItems) {
       await prepareLocalItem(item.clientMediaId, item.file);
@@ -378,9 +392,9 @@ export default function PostMediaEditor() {
       return;
     }
 
-    setEditorError(null);
+    onErrorChange(null);
 
-    setItems((currentItems) =>
+    onItemsChange((currentItems) =>
       currentItems.map((item) =>
         item.clientMediaId === clientMediaId
           ? createProcessingItem(failedItem.file, clientMediaId)
@@ -399,8 +413,10 @@ export default function PostMediaEditor() {
     }
 
     revokeItemPreviewUrl(itemToRemove);
-    setEditorError(null);
-    setItems((currentItems) => currentItems.filter((item) => item.clientMediaId !== clientMediaId));
+    onErrorChange(null);
+    onItemsChange((currentItems) =>
+      currentItems.filter((item) => item.clientMediaId !== clientMediaId),
+    );
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -421,17 +437,17 @@ export default function PostMediaEditor() {
       return;
     }
 
-    setItems((currentItems) => reorderItems(currentItems, fromIndex, toIndex));
+    onItemsChange((currentItems) => reorderItems(currentItems, fromIndex, toIndex));
   }
 
   return (
-    <section className="w-full max-w-5xl rounded-3xl border border-border/60 bg-card/50 p-6 shadow-sm">
+    <section className="w-full rounded-3xl border border-border/60 bg-card/50 p-6 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
-          <h3 className="text-xl font-semibold tracking-tight">Media Editor Preview</h3>
+          <p className="font-medium">Select local images</p>
           <p className="text-sm text-muted-foreground">
-            Independent from the current post form. Add up to {POST_MEDIA_EDITOR_MAX_ITEMS} images
-            and test the local processing flow.
+            Choose up to {POST_MEDIA_EDITOR_MAX_ITEMS} JPG, PNG, or WebP images. Files are
+            prepared locally before submission.
           </p>
         </div>
         <div className="rounded-2xl border border-border/60 bg-background px-4 py-3 text-sm text-muted-foreground">
@@ -462,10 +478,10 @@ export default function PostMediaEditor() {
                 <ImagePlusIcon className="size-6" />
               </div>
               <div className="space-y-1">
-                <p className="font-medium">Select local images</p>
+                <p className="font-medium">Add images to the post</p>
                 <p className="text-sm text-muted-foreground">
-                  Images are prepared in sequence. Drag the cards to reorder them. While
-                  processing is running, adding more files is temporarily disabled.
+                  Images are prepared in sequence. Drag ready cards to reorder them. Adding more
+                  files is disabled while processing is running.
                 </p>
               </div>
             </div>
@@ -479,7 +495,7 @@ export default function PostMediaEditor() {
           </div>
         </div>
 
-        {editorError ? <InlineErrorAlert title="Media editor error" message={editorError} /> : null}
+        {error ? <InlineErrorAlert title="Media editor error" message={error} /> : null}
 
         {items.length === 0 ? (
           <div className="rounded-2xl border border-border/60 bg-background/70 p-8 text-center text-sm text-muted-foreground">
