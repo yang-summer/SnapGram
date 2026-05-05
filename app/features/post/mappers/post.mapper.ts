@@ -20,6 +20,16 @@ import type {
   RawPostRow,
 } from '../types/post.type';
 
+type PostLegacyMediaSource = {
+  $id: string;
+  imageId: string;
+  imageUrl: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  aspectRatioBucket?: string | null;
+  imagePlaceholder?: string | null;
+};
+
 type PostRowWithCreator = RawPostRow | RawPostListRow | RawPostHomeFeedRow;
 
 function mapPostCreator(row: PostRowWithCreator) {
@@ -141,7 +151,7 @@ export function mapPostMediaRowsToOrderedViewModels(
   return result;
 }
 
-export function buildLegacyFallbackMediaFromPost(row: RawPostEditorRow): PostMediaViewModel | null {
+export function buildLegacyFallbackMediaFromPost(row: PostLegacyMediaSource): PostMediaViewModel | null {
   const fileId = row.imageId?.trim() ?? '';
   const imageUrl = row.imageUrl?.trim() ?? '';
 
@@ -203,8 +213,7 @@ export function mapPostRowsToCardViewModels(data: Models.RowList<RawPostRow>): P
 
 export function mapPostRowToDetailViewModel(
   row: RawPostRow,
-  mediaRows: RawPostMediaRow[] = [],
-  resolveImageUrl?: (fileId: string) => string,
+  media: PostMediaViewModel[],
 ): PostDetailViewModel | null {
   // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
   const creator = row ? mapPostCreator(row) : null;
@@ -213,22 +222,14 @@ export function mapPostRowToDetailViewModel(
     return null;
   }
 
-  const legacyFallbackMedia = buildLegacyFallbackMediaFromPost(row as RawPostEditorRow);
-  const media =
-    Array.isArray(mediaRows) && mediaRows.length > 0 && resolveImageUrl
-      ? mapPostMediaRowsToOrderedViewModels(mediaRows, resolveImageUrl)
-      : [];
-
-  const resolvedMedia = media.length > 0 ? media : legacyFallbackMedia ? [legacyFallbackMedia] : [];
-
   return {
     id: row.$id,
     createdAt: row.$createdAt,
     caption: row.caption ?? '',
     imageId: row.imageId,
     imageUrl: row.imageUrl,
-    media: resolvedMedia,
-    mediaCount: resolvedMedia.length,
+    media,
+    mediaCount: media.length,
     location: row.location ?? null,
     tags: row.tags ?? [],
     creator,

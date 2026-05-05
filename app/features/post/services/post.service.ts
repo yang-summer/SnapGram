@@ -9,7 +9,7 @@ import {
   getRecentPosts,
   listHomeFeedPostRows,
   listExplorePostRows,
-  listPostMediaRowsByPostIdForEditor,
+  listPostMediaRowsByPostId,
   listProfilePublishedPostRows,
   listSearchPostRows,
   searchPostRows,
@@ -29,8 +29,10 @@ import {
   uploadNewMediaItems,
 } from '../lib/post-upload-cleanup';
 import {
+  buildLegacyFallbackMediaFromPost,
   mapHomeFeedRowsToCursorPage,
   mapPostMediaRowsToExistingEditorItems,
+  mapPostMediaRowsToOrderedViewModels,
   mapPostRowsToCardViewModels,
   mapPostRowsToCursorPage,
   mapPostRowsToGridItemViewModels,
@@ -47,9 +49,13 @@ import type {
   PostCardViewModel,
   PostDetailViewModel,
   PostEditorInitialData,
+  PostMediaViewModel,
   ProfileFeedPage,
   ProfilePostPageParams,
   PostGridItemViewModel,
+  RawPostEditorRow,
+  RawPostMediaRow,
+  RawPostRow,
   UploadedPostMediaFile,
   SearchFeedPage,
   SearchPostPageParams,
@@ -68,6 +74,21 @@ function clampListLimit(limit: number | undefined, fallback: number): number {
   }
 
   return Math.min(Math.max(Math.trunc(limit), 1), APPWRITE_MAX_LIST_LIMIT);
+}
+
+function resolvePostMediaViewModels(
+  postRow: RawPostRow | RawPostEditorRow,
+  mediaRows: RawPostMediaRow[],
+): PostMediaViewModel[] {
+  const orderedMedia = mapPostMediaRowsToOrderedViewModels(mediaRows, getPostImageView);
+
+  if (orderedMedia.length > 0) {
+    return orderedMedia;
+  }
+
+  const legacyFallbackMedia = buildLegacyFallbackMediaFromPost(postRow);
+
+  return legacyFallbackMedia ? [legacyFallbackMedia] : [];
 }
 
 export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
@@ -95,16 +116,17 @@ export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
 
 export async function getPostDetail(postId: string): Promise<PostDetailViewModel | null> {
   try {
-    // 1. 调用 API 获取原始数据
-    const response = await getPostById(postId);
+    const [postRow, mediaRows] = await Promise.all([
+      getPostById(postId),
+      listPostMediaRowsByPostId(postId),
+    ]);
 
-    // 2. 业务规则：防御性编程，处理空结果或无效响应
-    if (!response) {
+    if (!postRow) {
       return null;
     }
 
-    // 3. 将 raw row 交给 mapper 进行转换
-    const viewModel = mapPostRowToDetailViewModel(response);
+    const media = resolvePostMediaViewModels(postRow, mediaRows);
+    const viewModel = mapPostRowToDetailViewModel(postRow, media);
 
     return viewModel;
   } catch (error) {
@@ -121,17 +143,14 @@ export async function getPostEditorInitialData(
   try {
     const [postRow, postMediaRows] = await Promise.all([
       getPostEditorRow(postId),
-      listPostMediaRowsByPostIdForEditor(postId),
+      listPostMediaRowsByPostId(postId),
     ]);
 
     if (!postRow) {
       return null;
     }
 
-    const existingMediaItems = mapPostMediaRowsToExistingEditorItems(
-      postMediaRows,
-      getPostImageView,
-    );
+    const existingMediaItems = mapPostMediaRowsToExistingEditorItems(postMediaRows, getPostImageView);
 
     return mapPostEditorRowToInitialData(postRow, existingMediaItems);
   } catch (error) {

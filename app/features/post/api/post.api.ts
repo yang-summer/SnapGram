@@ -88,7 +88,7 @@ const POST_EDITOR_SELECT = [
   'location',
   'tags',
 ];
-const POST_MEDIA_EDITOR_SELECT = [
+const POST_MEDIA_SELECT = [
   '$id',
   'postId',
   'fileId',
@@ -339,9 +339,9 @@ export async function getPostEditorRow(postId: string): Promise<RawPostEditorRow
   }
 }
 
-export async function listPostMediaRowsByPostIdForEditor(postId: string): Promise<RawPostMediaRow[]> {
+export async function listPostMediaRowsByPostId(postId: string): Promise<RawPostMediaRow[]> {
   if (!postId) {
-    throw new Error('Post ID is required to load post media editor data.');
+    throw new Error('Post ID is required to load post media data.');
   }
 
   try {
@@ -349,7 +349,7 @@ export async function listPostMediaRowsByPostIdForEditor(postId: string): Promis
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.postMediaTableId,
       queries: [
-        Query.select(POST_MEDIA_EDITOR_SELECT),
+        Query.select(POST_MEDIA_SELECT),
         Query.equal('postId', postId),
         Query.orderAsc('sortOrder'),
         Query.limit(APPWRITE_MAX_LIST_LIMIT),
@@ -359,12 +359,13 @@ export async function listPostMediaRowsByPostIdForEditor(postId: string): Promis
 
     return response.rows;
   } catch (error) {
-    console.error(
-      '[PostApi.listPostMediaRowsByPostIdForEditor] Failed to load post media editor data.',
-      error,
-    );
+    console.error('[PostApi.listPostMediaRowsByPostId] Failed to load post media data.', error);
     throw error;
   }
+}
+
+export async function listPostMediaRowsByPostIdForEditor(postId: string): Promise<RawPostMediaRow[]> {
+  return listPostMediaRowsByPostId(postId);
 }
 
 export function getPostImageView(fileId: string): string {
