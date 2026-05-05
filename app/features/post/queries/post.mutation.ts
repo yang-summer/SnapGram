@@ -36,6 +36,7 @@ export function useDeletePostMutation() {
 
   return useMutation({
     mutationFn: (postId: string) => deletePostById(postId),
+    retry: false,
     onSuccess: ({ postId }) => {
       queryClient.removeQueries({ queryKey: postKeys.detail(postId), exact: true });
       queryClient.removeQueries({ queryKey: postKeys.editor(postId), exact: true });

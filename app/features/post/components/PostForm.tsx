@@ -184,6 +184,7 @@ export default function PostForm({ action, post }: PostFormProps) {
   const hasProcessingMediaItems = mediaItems.some(
     (item) => item.kind === 'local' && item.status === 'processing',
   );
+  const isSubmitting = isLoadingCreate || isLoadingUpdate;
 
   const form = useForm<PostFormValues>({
     resolver: zodResolver(PostValidation),
@@ -388,11 +389,8 @@ export default function PostForm({ action, post }: PostFormProps) {
         <Button type="button" variant="outline" onClick={() => navigate(-1)}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          disabled={isLoadingCreate || isLoadingUpdate || (!isEditMode && hasProcessingMediaItems)}
-        >
-          {isLoadingCreate || isLoadingUpdate ? 'Loading...' : action} Post
+        <Button type="submit" disabled={isSubmitting || hasProcessingMediaItems}>
+          {isSubmitting ? 'Loading...' : action} Post
         </Button>
       </div>
     </form>
