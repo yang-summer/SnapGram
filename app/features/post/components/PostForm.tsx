@@ -13,8 +13,10 @@ import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { PostValidation } from '~/lib/validation';
 import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
 import type {
-  ImageMetadataResult,
+  CreatePostPublishMediaItem,
+  ExistingUpdatePostPublishMediaItem,
   LocalPostMediaEditorItem,
+  NewUpdatePostPublishMediaItem,
   PostEditorInitialData,
   PostFormValues,
   PreparedImageDraft,
@@ -51,12 +53,55 @@ function isReadyLocalMediaItem(
   return item.status === 'ready';
 }
 
-function mapReadyMediaItemToMetadata(item: Extract<LocalPostMediaEditorItem, { status: 'ready' }>): ImageMetadataResult {
+function mapReadyLocalMediaItemToCreatePublishMediaItem(
+  item: Extract<LocalPostMediaEditorItem, { status: 'ready' }>,
+): CreatePostPublishMediaItem {
   return {
+    clientMediaId: item.clientMediaId,
+    file: item.file,
     width: item.width,
     height: item.height,
     aspectRatioBucket: item.aspectRatioBucket,
     placeholder: item.placeholder,
+  };
+}
+
+function mapPostToLegacyExistingUpdatePublishMediaItem(
+  post: PostEditorInitialData,
+): ExistingUpdatePostPublishMediaItem {
+  return {
+    kind: 'existing',
+    clientMediaId: post.id,
+    fileId: post.imageId,
+    imageUrl: post.imageUrl,
+    width: post.imageWidth,
+    height: post.imageHeight,
+    aspectRatioBucket: post.aspectRatioBucket,
+    placeholder: post.imagePlaceholder,
+  };
+}
+
+function mapPreparedDraftToNewUpdatePublishMediaItem(
+  draft: PreparedImageDraft,
+): NewUpdatePostPublishMediaItem | null {
+  if (draft.metadataStatus !== 'ready' || !draft.metadata) {
+    return null;
+  }
+
+  const { metadata } = draft;
+
+  if (metadata.width === null || metadata.height === null) {
+    return null;
+  }
+
+  return {
+    kind: 'local',
+    clientMediaId: `replacement-${draft.file.name}-${draft.file.lastModified}`,
+    file: draft.file,
+    width: metadata.width,
+    height: metadata.height,
+    aspectRatioBucket: metadata.aspectRatioBucket,
+    placeholder: metadata.placeholder,
   };
 }
 
@@ -87,41 +132,40 @@ export default function PostForm({ action, post }: PostFormProps) {
     const normalizedTags = normalizeTags(values.tags);
 
     if (isEditMode) {
-      const nextFile = updateSelectedFiles[0] ?? null;
-      const nextPreparedImageMetadata =
-        updatePreparedImageDraft && nextFile && updatePreparedImageDraft.file === nextFile
-          ? updatePreparedImageDraft.metadata
-          : null;
-
       if (!post) {
         setSubmitError('Unable to load the post data for editing.');
         return;
       }
 
-      if (nextFile && !currentUser) {
+      if (updateSelectedFiles.length > 0 && !currentUser) {
         setSubmitError('Unable to resolve the current user.');
         return;
       }
 
       try {
+        const mediaItems: Array<
+          ExistingUpdatePostPublishMediaItem | NewUpdatePostPublishMediaItem
+        > = [mapPostToLegacyExistingUpdatePublishMediaItem(post)];
+        const replacementMediaItem =
+          updatePreparedImageDraft && updateSelectedFiles[0]
+            ? mapPreparedDraftToNewUpdatePublishMediaItem(updatePreparedImageDraft)
+            : null;
+
+        if (replacementMediaItem) {
+          mediaItems.unshift(replacementMediaItem);
+        }
+
         const updatedPost = await updatePost({
           postId: post.id,
           ownerAccountId: currentUser?.accountId ?? '',
           caption: values.caption,
           location: values.location,
           tags: normalizedTags,
-          nextFile,
-          nextPreparedImageMetadata,
-          currentImageId: post.imageId,
-          currentImageUrl: post.imageUrl,
-          currentAspectRatioBucket: post.aspectRatioBucket,
-          currentImagePlaceholder: post.imagePlaceholder,
-          currentImageWidth: post.imageWidth,
-          currentImageHeight: post.imageHeight,
+          mediaItems,
         });
 
         toast.success('Post updated successfully.');
-        navigate(`/posts/${updatedPost.id}`);
+        navigate(`/posts/${updatedPost.postId}`);
         return;
       } catch (error) {
         setSubmitError(getErrorMessage(error));
@@ -158,14 +202,13 @@ export default function PostForm({ action, post }: PostFormProps) {
         creatorProfileId: currentUser.profileId,
         ownerAccountId: currentUser.accountId,
         caption: values.caption,
-        file: coverItem.file,
-        preparedImageMetadata: mapReadyMediaItemToMetadata(coverItem),
         location: values.location,
         tags: normalizedTags,
+        mediaItems: [mapReadyLocalMediaItemToCreatePublishMediaItem(coverItem)],
       });
 
       toast.success('Post published successfully.');
-      navigate(`/posts/${newPost.id}`);
+      navigate(`/posts/${newPost.postId}`);
     } catch (error) {
       setSubmitError(getErrorMessage(error));
     }

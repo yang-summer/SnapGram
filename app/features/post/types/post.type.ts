@@ -321,6 +321,7 @@ export type LocalPostMediaEditorItem =
   | LocalFailedPostMediaEditorItem;
 
 export type PostMediaEditorItem = ExistingPostMediaEditorItem | LocalPostMediaEditorItem;
+export type ReadyLocalPostMediaEditorItem = Extract<LocalPostMediaEditorItem, { status: 'ready' }>;
 
 export type PostFormValues = PostTextFormValues;
 
@@ -396,15 +397,61 @@ export type UpdatePostWithContentActionResult = {
   removedFileCleanupFailed: boolean;
 };
 
-export type CreatePostInput = {
+export type CreatePostPublishMediaItem = {
+  clientMediaId: string;
+  file: File;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type CreatePostPublishInput = {
   creatorProfileId: string;
   ownerAccountId: string;
   caption: string;
-  file: File;
-  preparedImageMetadata?: ImageMetadataResult | null;
   location: string;
   tags: string[];
+  mediaItems: CreatePostPublishMediaItem[];
 };
+
+export type ExistingUpdatePostPublishMediaItem = {
+  kind: 'existing';
+  clientMediaId: string;
+  mediaId?: string;
+  fileId?: string;
+  imageUrl: string;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type NewUpdatePostPublishMediaItem = {
+  kind: 'local';
+  clientMediaId: string;
+  file: File;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type UpdatePostPublishMediaItem =
+  | ExistingUpdatePostPublishMediaItem
+  | NewUpdatePostPublishMediaItem;
+
+export type UpdatePostPublishInput = {
+  postId: string;
+  ownerAccountId: string;
+  caption: string;
+  location: string;
+  tags: string[];
+  mediaItems: UpdatePostPublishMediaItem[];
+};
+
+export type CreatePostPublishResult = CreatePostWithContentActionResult;
+export type UpdatePostPublishResult = UpdatePostWithContentActionResult;
 
 export type CreatePostApiInput = {
   creatorProfileId: string;
@@ -420,22 +467,6 @@ export type CreatePostApiInput = {
   tags: string[];
 };
 
-export type UpdatePostInput = {
-  postId: string;
-  ownerAccountId: string;
-  caption: string;
-  location: string;
-  tags: string[];
-  nextFile?: File | null;
-  nextPreparedImageMetadata?: ImageMetadataResult | null;
-  currentImageId: string;
-  currentImageUrl: string;
-  currentAspectRatioBucket: PostAspectRatioBucket;
-  currentImagePlaceholder: string | null;
-  currentImageWidth: number | null;
-  currentImageHeight: number | null;
-};
-
 export type UpdatePostApiInput = {
   postId: string;
   caption: string;
@@ -447,12 +478,6 @@ export type UpdatePostApiInput = {
   imageHeight?: number | null;
   location: string;
   tags: string[];
-};
-
-export type PostMutationResult = {
-  id: string;
-  imageId: string;
-  imageUrl: string;
 };
 
 export type CreateViewerPostLikeInput = {
