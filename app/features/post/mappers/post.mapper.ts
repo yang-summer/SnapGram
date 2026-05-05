@@ -12,6 +12,7 @@ import type {
   PostDetailViewModel,
   PostEditorInitialData,
   PostGridItemViewModel,
+  PostMediaViewModel,
   RawPostEditorRow,
   RawPostMediaRow,
   RawPostHomeFeedRow,
@@ -82,6 +83,84 @@ function normalizeOptionalImageDimension(value: number | null | undefined): numb
   return normalizedValue > 0 ? normalizedValue : null;
 }
 
+function normalizeMediaSortOrder(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.trunc(value));
+}
+
+export function mapPostMediaRowToViewModel(
+  row: RawPostMediaRow,
+  resolveImageUrl: (fileId: string) => string,
+): PostMediaViewModel | null {
+  const fileId = row.fileId?.trim() ?? '';
+
+  if (!fileId) {
+    return null;
+  }
+
+  const imageUrl = resolveImageUrl(fileId)?.trim() ?? '';
+
+  if (!imageUrl) {
+    return null;
+  }
+
+  return {
+    id: row.$id,
+    fileId,
+    imageUrl,
+    sortOrder: normalizeMediaSortOrder(row.sortOrder),
+    width: normalizeOptionalImageDimension(row.width),
+    height: normalizeOptionalImageDimension(row.height),
+    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
+    placeholder: normalizeOptionalImagePlaceholder(row.placeholder),
+  };
+}
+
+export function mapPostMediaRowsToOrderedViewModels(
+  rows: RawPostMediaRow[],
+  resolveImageUrl: (fileId: string) => string,
+): PostMediaViewModel[] {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
+
+  const result: PostMediaViewModel[] = [];
+  const sortedRows = [...rows].sort((left, right) => left.sortOrder - right.sortOrder);
+
+  for (let index = 0; index < sortedRows.length; index += 1) {
+    const mappedItem = mapPostMediaRowToViewModel(sortedRows[index], resolveImageUrl);
+
+    if (mappedItem !== null) {
+      result.push(mappedItem);
+    }
+  }
+
+  return result;
+}
+
+export function buildLegacyFallbackMediaFromPost(row: RawPostEditorRow): PostMediaViewModel | null {
+  const fileId = row.imageId?.trim() ?? '';
+  const imageUrl = row.imageUrl?.trim() ?? '';
+
+  if (!fileId || !imageUrl) {
+    return null;
+  }
+
+  return {
+    id: `legacy-cover-${row.$id}`,
+    fileId,
+    imageUrl,
+    sortOrder: 0,
+    width: normalizeOptionalImageDimension(row.imageWidth),
+    height: normalizeOptionalImageDimension(row.imageHeight),
+    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
+    placeholder: normalizeOptionalImagePlaceholder(row.imagePlaceholder),
+  };
+}
+
 export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | null {
   // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
   const creator = row ? mapPostCreator(row) : null;
@@ -122,7 +201,11 @@ export function mapPostRowsToCardViewModels(data: Models.RowList<RawPostRow>): P
   return result;
 }
 
-export function mapPostRowToDetailViewModel(row: RawPostRow): PostDetailViewModel | null {
+export function mapPostRowToDetailViewModel(
+  row: RawPostRow,
+  mediaRows: RawPostMediaRow[] = [],
+  resolveImageUrl?: (fileId: string) => string,
+): PostDetailViewModel | null {
   // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
   const creator = row ? mapPostCreator(row) : null;
 
@@ -130,12 +213,22 @@ export function mapPostRowToDetailViewModel(row: RawPostRow): PostDetailViewMode
     return null;
   }
 
+  const legacyFallbackMedia = buildLegacyFallbackMediaFromPost(row as RawPostEditorRow);
+  const media =
+    Array.isArray(mediaRows) && mediaRows.length > 0 && resolveImageUrl
+      ? mapPostMediaRowsToOrderedViewModels(mediaRows, resolveImageUrl)
+      : [];
+
+  const resolvedMedia = media.length > 0 ? media : legacyFallbackMedia ? [legacyFallbackMedia] : [];
+
   return {
     id: row.$id,
     createdAt: row.$createdAt,
     caption: row.caption ?? '',
     imageId: row.imageId,
     imageUrl: row.imageUrl,
+    media: resolvedMedia,
+    mediaCount: resolvedMedia.length,
     location: row.location ?? null,
     tags: row.tags ?? [],
     creator,
@@ -186,23 +279,22 @@ export function mapPostRowToHomeFeedItemViewModel(
 function mapLegacyPostEditorCoverToExistingMediaItem(
   row: RawPostEditorRow,
 ): ExistingPostMediaEditorItem | null {
-  const fileId = row.imageId?.trim() ?? '';
-  const imageUrl = row.imageUrl?.trim() ?? '';
+  const legacyMedia = buildLegacyFallbackMediaFromPost(row);
 
-  if (!fileId || !imageUrl) {
+  if (!legacyMedia) {
     return null;
   }
 
   return {
     kind: 'existing',
-    clientMediaId: `legacy-cover-${row.$id}`,
+    clientMediaId: legacyMedia.id,
     isLegacyFallback: true,
-    fileId,
-    imageUrl,
-    width: normalizeOptionalImageDimension(row.imageWidth),
-    height: normalizeOptionalImageDimension(row.imageHeight),
-    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
-    placeholder: normalizeOptionalImagePlaceholder(row.imagePlaceholder),
+    fileId: legacyMedia.fileId,
+    imageUrl: legacyMedia.imageUrl,
+    width: legacyMedia.width,
+    height: legacyMedia.height,
+    aspectRatioBucket: legacyMedia.aspectRatioBucket,
+    placeholder: legacyMedia.placeholder,
     status: 'ready',
   };
 }
@@ -272,6 +364,7 @@ export function mapPostEditorRowToInitialData(
     location: row.location ?? '',
     tags: (row.tags ?? []).join(', '),
     existingMediaItems: resolvedExistingMediaItems,
+    isLegacyMediaFallback: resolvedExistingMediaItems.some((item) => item.isLegacyFallback),
     hasLegacyMediaFallback: resolvedExistingMediaItems.some((item) => item.isLegacyFallback),
   };
 }
