@@ -453,6 +453,18 @@ export type UpdatePostPublishInput = {
 export type CreatePostPublishResult = CreatePostWithContentActionResult;
 export type UpdatePostPublishResult = UpdatePostWithContentActionResult;
 
+export type UploadablePostMediaItem = {
+  clientMediaId: string;
+  file: File;
+};
+
+export type UploadedPostMediaFile = {
+  clientMediaId: string;
+  fileId: string;
+};
+
+export type UploadedFileIdByClientMediaId = Record<string, string>;
+
 export type CreatePostApiInput = {
   creatorProfileId: string;
   ownerAccountId: string;

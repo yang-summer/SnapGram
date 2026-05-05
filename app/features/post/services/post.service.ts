@@ -4,7 +4,6 @@ import {
   DEFAULT_PROFILE_FEED_PAGE_SIZE,
   DEFAULT_SEARCH_POST_PAGE_SIZE,
   countProfilePublishedPosts,
-  deletePostMediaFile,
   getPostImageView,
   getPostEditorRow,
   getPostById,
@@ -15,10 +14,14 @@ import {
   listSearchPostRows,
   searchPostRows,
   updatePostRow,
-  uploadPostMediaFile,
 } from '../api/post.api';
 import { deletePostWithContentAction } from '../api/post.actions.api';
 import { getImageMetadata } from '../lib/image-metadata';
+import {
+  buildUploadedFileIdMap,
+  cleanupUploadedMediaFiles,
+  uploadNewMediaItems,
+} from '../lib/post-upload-cleanup';
 import {
   mapHomeFeedRowsToCursorPage,
   mapPostRowsToCardViewModels,
@@ -43,6 +46,7 @@ import type {
   ProfilePostPageParams,
   PostGridItemViewModel,
   RawPostMutationRow,
+  UploadedPostMediaFile,
   SearchFeedPage,
   SearchPostPageParams,
   SearchPostRowsParams,
@@ -132,18 +136,6 @@ function getFirstReadyLocalMediaItem(
   return firstMediaItem;
 }
 
-async function cleanupUploadedImage(fileId: string | null, context: string): Promise<void> {
-  if (!fileId) {
-    return;
-  }
-
-  try {
-    await deletePostMediaFile(fileId);
-  } catch (error) {
-    console.error(`[PostService.${context}] Failed to clean up uploaded post image.`, error);
-  }
-}
-
 export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
   try {
     // 1. 调用 API 获取原始数据
@@ -209,7 +201,7 @@ export async function getPostEditorInitialData(
 export async function createPost(
   input: CreatePostPublishInput,
 ): Promise<CreatePostPublishResult> {
-  let uploadedFileId: string | null = null;
+  let uploadedFiles: UploadedPostMediaFile[] = [];
 
   try {
     const coverItem = getFirstReadyLocalMediaItem(input.mediaItems);
@@ -219,8 +211,16 @@ export async function createPost(
       aspectRatioBucket: coverItem.aspectRatioBucket,
       placeholder: coverItem.placeholder,
     });
-    const uploadedFile = await uploadPostMediaFile(coverItem.file, input.ownerAccountId);
-    uploadedFileId = uploadedFile.$id;
+    uploadedFiles = await uploadNewMediaItems(
+      [{ clientMediaId: coverItem.clientMediaId, file: coverItem.file }],
+      input.ownerAccountId,
+    );
+    const uploadedFileIdByClientMediaId = buildUploadedFileIdMap(uploadedFiles);
+    const uploadedFileId = uploadedFileIdByClientMediaId[coverItem.clientMediaId];
+
+    if (!uploadedFileId) {
+      throw new Error(`Uploaded file ID is missing for media item ${coverItem.clientMediaId}.`);
+    }
 
     const createdPost = await createPostRow({
       creatorProfileId: input.creatorProfileId,
@@ -238,7 +238,7 @@ export async function createPost(
 
     return mapLegacyCreateResult(createdPost);
   } catch (error) {
-    await cleanupUploadedImage(uploadedFileId, 'createPost');
+    await cleanupUploadedMediaFiles(uploadedFiles, 'createPost');
     console.error(`[PostService.createPost] Error:`, error);
     throw error;
   }
@@ -282,6 +282,7 @@ export async function updatePost(
   }
 
   let uploadedFileId: string | null = null;
+  let uploadedFiles: UploadedPostMediaFile[] = [];
 
   try {
     const imageMetadata = await resolveImageMetadata(nextFile, {
@@ -290,8 +291,22 @@ export async function updatePost(
       aspectRatioBucket: nextLocalMediaItem?.aspectRatioBucket ?? DEFAULT_POST_ASPECT_RATIO_BUCKET,
       placeholder: nextLocalMediaItem?.placeholder ?? null,
     });
-    const uploadedFile = await uploadPostMediaFile(nextFile, input.ownerAccountId);
-    uploadedFileId = uploadedFile.$id;
+    uploadedFiles = await uploadNewMediaItems(
+      nextLocalMediaItem
+        ? [{ clientMediaId: nextLocalMediaItem.clientMediaId, file: nextLocalMediaItem.file }]
+        : [],
+      input.ownerAccountId,
+    );
+    const uploadedFileIdByClientMediaId = buildUploadedFileIdMap(uploadedFiles);
+    uploadedFileId = nextLocalMediaItem
+      ? uploadedFileIdByClientMediaId[nextLocalMediaItem.clientMediaId] ?? null
+      : null;
+
+    if (!uploadedFileId) {
+      throw new Error(
+        `Uploaded file ID is missing for media item ${nextLocalMediaItem?.clientMediaId ?? 'unknown'}.`,
+      );
+    }
 
     const updatedPost = await updatePostRow({
       postId: input.postId,
@@ -313,7 +328,10 @@ export async function updatePost(
 
     if (existingCoverItem?.fileId && existingCoverItem.fileId !== uploadedFileId) {
       try {
-        await deletePostMediaFile(existingCoverItem.fileId);
+        await cleanupUploadedMediaFiles(
+          [{ clientMediaId: existingCoverItem.clientMediaId, fileId: existingCoverItem.fileId }],
+          'updatePost.removeLegacyCover',
+        );
       } catch (error) {
         console.error('[PostService.updatePost] Failed to delete previous post image.', error);
       }
@@ -321,7 +339,7 @@ export async function updatePost(
 
     return mapLegacyUpdateResult(updatedPost);
   } catch (error) {
-    await cleanupUploadedImage(uploadedFileId, 'updatePost');
+    await cleanupUploadedMediaFiles(uploadedFiles, 'updatePost');
     console.error(`[PostService.updatePost] Error:`, error);
     throw error;
   }
