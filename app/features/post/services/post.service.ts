@@ -1,5 +1,4 @@
 import {
-  createPostRow,
   DEFAULT_HOME_FEED_PAGE_SIZE,
   DEFAULT_PROFILE_FEED_PAGE_SIZE,
   DEFAULT_SEARCH_POST_PAGE_SIZE,
@@ -15,8 +14,12 @@ import {
   searchPostRows,
   updatePostRow,
 } from '../api/post.api';
-import { deletePostWithContentAction } from '../api/post.actions.api';
+import {
+  createPostWithContentAction,
+  deletePostWithContentAction,
+} from '../api/post.actions.api';
 import { getImageMetadata } from '../lib/image-metadata';
+import { buildCreatePostActionPayload } from '../lib/post-publish-payload';
 import {
   buildUploadedFileIdMap,
   cleanupUploadedMediaFiles,
@@ -31,7 +34,6 @@ import {
   mapPostRowToDetailViewModel,
 } from '../mappers/post.mapper';
 import type {
-  CreatePostPublishMediaItem,
   CreatePostPublishInput,
   CreatePostPublishResult,
   CursorPage,
@@ -65,14 +67,6 @@ function clampListLimit(limit: number | undefined, fallback: number): number {
   }
 
   return Math.min(Math.max(Math.trunc(limit), 1), APPWRITE_MAX_LIST_LIMIT);
-}
-
-function mapLegacyCreateResult(row: RawPostMutationRow): CreatePostPublishResult {
-  return {
-    postId: row.$id,
-    mediaCount: 1,
-    filePublicationFailed: false,
-  };
 }
 
 function mapLegacyUpdateResult(row: RawPostMutationRow): UpdatePostPublishResult {
@@ -122,18 +116,6 @@ async function resolveImageMetadata(
   }
 
   return createFallbackImageMetadata();
-}
-
-function getFirstReadyLocalMediaItem(
-  mediaItems: CreatePostPublishMediaItem[],
-): CreatePostPublishMediaItem {
-  const firstMediaItem = mediaItems[0];
-
-  if (!firstMediaItem) {
-    throw new Error('At least one ready media item is required to publish a post.');
-  }
-
-  return firstMediaItem;
 }
 
 export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
@@ -204,39 +186,17 @@ export async function createPost(
   let uploadedFiles: UploadedPostMediaFile[] = [];
 
   try {
-    const coverItem = getFirstReadyLocalMediaItem(input.mediaItems);
-    const imageMetadata = await resolveImageMetadata(coverItem.file, {
-      width: coverItem.width,
-      height: coverItem.height,
-      aspectRatioBucket: coverItem.aspectRatioBucket,
-      placeholder: coverItem.placeholder,
-    });
     uploadedFiles = await uploadNewMediaItems(
-      [{ clientMediaId: coverItem.clientMediaId, file: coverItem.file }],
+      input.mediaItems.map((mediaItem) => ({
+        clientMediaId: mediaItem.clientMediaId,
+        file: mediaItem.file,
+      })),
       input.ownerAccountId,
     );
     const uploadedFileIdByClientMediaId = buildUploadedFileIdMap(uploadedFiles);
-    const uploadedFileId = uploadedFileIdByClientMediaId[coverItem.clientMediaId];
+    const payload = buildCreatePostActionPayload(input, uploadedFileIdByClientMediaId);
 
-    if (!uploadedFileId) {
-      throw new Error(`Uploaded file ID is missing for media item ${coverItem.clientMediaId}.`);
-    }
-
-    const createdPost = await createPostRow({
-      creatorProfileId: input.creatorProfileId,
-      ownerAccountId: input.ownerAccountId,
-      caption: input.caption,
-      imageId: uploadedFileId,
-      imageUrl: getPostImageView(uploadedFileId),
-      aspectRatioBucket: imageMetadata.aspectRatioBucket,
-      imagePlaceholder: imageMetadata.placeholder,
-      imageWidth: imageMetadata.width,
-      imageHeight: imageMetadata.height,
-      location: input.location,
-      tags: input.tags,
-    });
-
-    return mapLegacyCreateResult(createdPost);
+    return await createPostWithContentAction(payload);
   } catch (error) {
     await cleanupUploadedMediaFiles(uploadedFiles, 'createPost');
     console.error(`[PostService.createPost] Error:`, error);

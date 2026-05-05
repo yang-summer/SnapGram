@@ -66,6 +66,12 @@ function mapReadyLocalMediaItemToCreatePublishMediaItem(
   };
 }
 
+function getOrderedReadyCreatePublishMediaItems(
+  items: LocalPostMediaEditorItem[],
+): CreatePostPublishMediaItem[] {
+  return items.filter(isReadyLocalMediaItem).map(mapReadyLocalMediaItemToCreatePublishMediaItem);
+}
+
 function mapPostToLegacyExistingUpdatePublishMediaItem(
   post: PostEditorInitialData,
 ): ExistingUpdatePostPublishMediaItem {
@@ -183,9 +189,9 @@ export default function PostForm({ action, post }: PostFormProps) {
       return;
     }
 
-    const coverItem = mediaItems.find(isReadyLocalMediaItem);
+    const readyMediaItems = getOrderedReadyCreatePublishMediaItems(mediaItems);
 
-    if (!coverItem) {
+    if (readyMediaItems.length === 0) {
       setMediaError('Keep at least one successfully prepared image before creating a post.');
       return;
     }
@@ -204,10 +210,15 @@ export default function PostForm({ action, post }: PostFormProps) {
         caption: values.caption,
         location: values.location,
         tags: normalizedTags,
-        mediaItems: [mapReadyLocalMediaItemToCreatePublishMediaItem(coverItem)],
+        mediaItems: readyMediaItems,
       });
 
-      toast.success('Post published successfully.');
+      if (newPost.filePublicationFailed) {
+        toast.warning('Post was published, but media publication is still incomplete.');
+      } else {
+        toast.success('Post published successfully.');
+      }
+
       navigate(`/posts/${newPost.postId}`);
     } catch (error) {
       setSubmitError(getErrorMessage(error));

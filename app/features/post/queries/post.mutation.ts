@@ -8,8 +8,10 @@ export function useCreatePostMutation() {
 
   return useMutation({
     mutationFn: (input: CreatePostPublishInput) => createPost(input),
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: postKeys.profileRoot() });
     },
   });
 }
@@ -19,10 +21,12 @@ export function useUpdatePostMutation() {
 
   return useMutation({
     mutationFn: (input: UpdatePostPublishInput) => updatePost(input),
+    retry: false,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: postKeys.detail(variables.postId) });
       queryClient.invalidateQueries({ queryKey: postKeys.editor(variables.postId) });
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: postKeys.profileRoot() });
     },
   });
 }
