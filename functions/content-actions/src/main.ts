@@ -14,6 +14,7 @@ import {
 import { ContentActionError } from './errors.js';
 import type { FunctionContext } from './request.js';
 import { getHeader } from './request.js';
+import { updatePostForCurrentUser } from './update-post.js';
 
 function createErrorBody(code: string, message: string, extra?: Record<string, unknown>) {
   return {
@@ -160,6 +161,23 @@ export default async function main({ req, res, log, error }: FunctionContext) {
       }
       case 'post.create': {
         const result = await createPostForCurrentUser(
+          tablesDB,
+          storage,
+          config,
+          profile,
+          actionRequest,
+          log,
+          error,
+        );
+
+        return res.json({
+          ok: true,
+          action: actionRequest.action,
+          data: result,
+        });
+      }
+      case 'post.update': {
+        const result = await updatePostForCurrentUser(
           tablesDB,
           storage,
           config,

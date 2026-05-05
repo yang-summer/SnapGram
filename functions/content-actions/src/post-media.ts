@@ -1,5 +1,9 @@
 import { AppwriteException, Query, Storage, type Models, TablesDB } from 'node-appwrite';
-import type { PostCreateActionMediaItem } from './action.js';
+import type {
+  NewPostUpdateActionMediaItem,
+  PostCreateActionMediaItem,
+  PostUpdateActionMediaItem,
+} from './action.js';
 import type { AppwriteResourceConfig } from './config.js';
 import { ContentActionError } from './errors.js';
 import { buildPublishedPostMediaFilePermissions, buildStagedPostMediaFilePermissions } from './permissions.js';
@@ -8,6 +12,8 @@ export const POST_MEDIA_MIN_ITEMS = 1;
 export const POST_MEDIA_MAX_ITEMS = 6;
 
 const POST_MEDIA_LIST_LIMIT = 100;
+const POST_ASPECT_RATIO_BUCKETS = ['1:1', '3:4', '4:3'] as const;
+const DEFAULT_POST_ASPECT_RATIO_BUCKET = '3:4';
 const POST_MEDIA_SELECT = [
   '$id',
   'postId',
@@ -48,6 +54,21 @@ type PublishMediaFilesOptions = {
 };
 
 export type NormalizedPostCreateMediaItem = PostCreateActionMediaItem;
+export type NormalizedPostUpdateMediaItem = PostUpdateActionMediaItem;
+export type NormalizedNewPostUpdateMediaItem = NewPostUpdateActionMediaItem;
+type PostAspectRatioBucket = PostCreateActionMediaItem['aspectRatioBucket'];
+
+export type RetainedPostMediaUpdate = {
+  row: PostMediaRow;
+  sortOrder: number;
+};
+
+export type PostMediaDiff = {
+  retainedRows: RetainedPostMediaUpdate[];
+  newMedia: NormalizedNewPostUpdateMediaItem[];
+  removedRows: PostMediaRow[];
+  finalMedia: NormalizedPostCreateMediaItem[];
+};
 
 export type PostCoverProjection = {
   imageId: string;
@@ -64,6 +85,10 @@ function sleep(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
+
+type SortableMediaItem = {
+  sortOrder: number;
+};
 
 function normalizeFileIds(fileIds: string[]): string[] {
   return Array.from(
@@ -100,7 +125,7 @@ function buildFileViewUrl(
   return url.toString();
 }
 
-function assertMediaCount(media: PostCreateActionMediaItem[]): void {
+function assertMediaCount(media: readonly unknown[]): void {
   if (media.length < POST_MEDIA_MIN_ITEMS || media.length > POST_MEDIA_MAX_ITEMS) {
     throw new ContentActionError(
       'MEDIA_COUNT_INVALID',
@@ -113,7 +138,7 @@ function assertMediaCount(media: PostCreateActionMediaItem[]): void {
   }
 }
 
-function assertSequentialSortOrders(media: PostCreateActionMediaItem[]): void {
+function assertSequentialSortOrders(media: SortableMediaItem[]): void {
   const sortedMedia = [...media].sort((left, right) => left.sortOrder - right.sortOrder);
 
   for (let index = 0; index < sortedMedia.length; index += 1) {
@@ -150,12 +175,112 @@ function assertUniqueCreateMediaFileIds(media: PostCreateActionMediaItem[]): voi
   }
 }
 
+function assertUniqueExistingMediaIds(media: PostUpdateActionMediaItem[]): void {
+  const seenMediaIds = new Set<string>();
+
+  for (const mediaItem of media) {
+    if (mediaItem.type !== 'existing') {
+      continue;
+    }
+
+    if (seenMediaIds.has(mediaItem.mediaId)) {
+      throw new ContentActionError(
+        'MEDIA_ID_DUPLICATE',
+        400,
+        'Existing mediaId values must be unique.',
+        {
+          mediaId: mediaItem.mediaId,
+        },
+      );
+    }
+
+    seenMediaIds.add(mediaItem.mediaId);
+  }
+}
+
+function assertUniqueNewMediaFileIds(media: PostUpdateActionMediaItem[]): void {
+  const seenFileIds = new Set<string>();
+
+  for (const mediaItem of media) {
+    if (mediaItem.type !== 'new') {
+      continue;
+    }
+
+    if (seenFileIds.has(mediaItem.fileId)) {
+      throw new ContentActionError(
+        'MEDIA_FILE_ID_DUPLICATE',
+        400,
+        'New media fileId values must be unique.',
+        {
+          fileId: mediaItem.fileId,
+        },
+      );
+    }
+
+    seenFileIds.add(mediaItem.fileId);
+  }
+}
+
+function assertUniqueResolvedMediaFileIds(media: NormalizedPostCreateMediaItem[]): void {
+  const seenFileIds = new Set<string>();
+
+  for (const mediaItem of media) {
+    if (seenFileIds.has(mediaItem.fileId)) {
+      throw new ContentActionError(
+        'MEDIA_FILE_ID_DUPLICATE',
+        400,
+        'Final media fileId values must be unique.',
+        {
+          fileId: mediaItem.fileId,
+        },
+      );
+    }
+
+    seenFileIds.add(mediaItem.fileId);
+  }
+}
+
+function normalizePostMediaRowAspectRatioBucket(mediaRow: PostMediaRow): PostAspectRatioBucket {
+  const aspectRatioBucket = mediaRow.aspectRatioBucket?.trim() ?? '';
+
+  if ((POST_ASPECT_RATIO_BUCKETS as readonly string[]).includes(aspectRatioBucket)) {
+    return aspectRatioBucket as PostAspectRatioBucket;
+  }
+
+  return DEFAULT_POST_ASPECT_RATIO_BUCKET;
+}
+
+function mapPostMediaRowToProjectionItem(
+  mediaRow: PostMediaRow,
+  sortOrder: number,
+): NormalizedPostCreateMediaItem {
+  return {
+    fileId: mediaRow.fileId,
+    sortOrder,
+    width: mediaRow.width ?? null,
+    height: mediaRow.height ?? null,
+    aspectRatioBucket: normalizePostMediaRowAspectRatioBucket(mediaRow),
+    placeholder: mediaRow.placeholder ?? null,
+  };
+}
+
 export function normalizeCreateMediaPayload(
   media: PostCreateActionMediaItem[],
 ): NormalizedPostCreateMediaItem[] {
   assertMediaCount(media);
   assertSequentialSortOrders(media);
   assertUniqueCreateMediaFileIds(media);
+
+  return [...media].sort((left, right) => left.sortOrder - right.sortOrder);
+}
+
+export function normalizeUpdateMediaPayload(
+  media: PostUpdateActionMediaItem[],
+): NormalizedPostUpdateMediaItem[] {
+  assertMediaCount(media);
+  assertSequentialSortOrders(media);
+  assertUniqueExistingMediaIds(media);
+  assertUniqueNewMediaFileIds(media);
 
   return [...media].sort((left, right) => left.sortOrder - right.sortOrder);
 }
@@ -199,6 +324,61 @@ export function resolvePostDeleteFileIds(
   const legacyImageId = post?.imageId?.trim() ?? '';
 
   return legacyImageId ? [legacyImageId] : [];
+}
+
+export function resolvePostMediaDiff(
+  existingRows: PostMediaRow[],
+  finalMedia: NormalizedPostUpdateMediaItem[],
+): PostMediaDiff {
+  const existingRowsById = new Map(existingRows.map((row) => [row.$id, row]));
+  const retainedRows: RetainedPostMediaUpdate[] = [];
+  const newMedia: NormalizedNewPostUpdateMediaItem[] = [];
+  const retainedMediaIds = new Set<string>();
+  const resolvedFinalMedia: NormalizedPostCreateMediaItem[] = [];
+
+  for (const mediaItem of finalMedia) {
+    if (mediaItem.type === 'existing') {
+      const existingRow = existingRowsById.get(mediaItem.mediaId);
+
+      if (!existingRow) {
+        throw new ContentActionError(
+          'MEDIA_ID_INVALID',
+          400,
+          'Existing mediaId does not belong to the target post.',
+          {
+            mediaId: mediaItem.mediaId,
+          },
+        );
+      }
+
+      retainedRows.push({
+        row: existingRow,
+        sortOrder: mediaItem.sortOrder,
+      });
+      retainedMediaIds.add(existingRow.$id);
+      resolvedFinalMedia.push(mapPostMediaRowToProjectionItem(existingRow, mediaItem.sortOrder));
+      continue;
+    }
+
+    newMedia.push(mediaItem);
+    resolvedFinalMedia.push({
+      fileId: mediaItem.fileId,
+      sortOrder: mediaItem.sortOrder,
+      width: mediaItem.width,
+      height: mediaItem.height,
+      aspectRatioBucket: mediaItem.aspectRatioBucket,
+      placeholder: mediaItem.placeholder,
+    });
+  }
+
+  assertUniqueResolvedMediaFileIds(resolvedFinalMedia);
+
+  return {
+    retainedRows,
+    newMedia,
+    removedRows: existingRows.filter((row) => !retainedMediaIds.has(row.$id)),
+    finalMedia: resolvedFinalMedia,
+  };
 }
 
 export async function assertOwnedStagedFiles(

@@ -3,6 +3,7 @@ import type { PostCreateActionRequest } from './action.js';
 import type { CurrentUserProfile } from './auth.js';
 import type { AppwriteResourceConfig } from './config.js';
 import { buildPublishedPostMediaRowPermissions, buildPublishedPostPermissions } from './permissions.js';
+import { buildPostSearchText } from './post-search.js';
 import {
   assertOwnedStagedFiles,
   buildPostCoverProjectionFromMedia,
@@ -18,28 +19,6 @@ type CreatePostResult = {
   mediaCount: number;
   filePublicationFailed: boolean;
 };
-
-function normalizeSpace(value: string): string {
-  return value.replace(/\s+/gu, ' ').trim();
-}
-
-function normalizeTags(tags: string[]): string[] {
-  return tags
-    .map((tag) => normalizeSpace(tag.replace(/^#/u, '')))
-    .filter((tag) => tag.length > 0);
-}
-
-function buildPostSearchText(caption: string, tags: string[]): string | null {
-  const normalizedCaption = normalizeSpace(caption);
-  const normalizedTags = normalizeTags(tags);
-  const parts = [normalizedCaption, ...normalizedTags].filter((part) => part.length > 0);
-
-  if (parts.length === 0) {
-    return null;
-  }
-
-  return normalizeSpace(parts.join(' '));
-}
 
 export async function createPostForCurrentUser(
   tablesDB: TablesDB,
