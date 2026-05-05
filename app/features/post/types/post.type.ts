@@ -81,6 +81,16 @@ export type RawPostEditorRow = Models.Row & {
   tags?: string[] | null;
 };
 
+export type RawPostMediaRow = Models.Row & {
+  postId: string;
+  fileId: string;
+  sortOrder: number;
+  width?: number | null;
+  height?: number | null;
+  aspectRatioBucket?: string | null;
+  placeholder?: string | null;
+};
+
 export type RawPostWriteRow = Models.Row & {
   creator?: string | null;
   caption?: string | null;
@@ -267,6 +277,7 @@ export type PostTextFormValues = {
 export type ExistingPostMediaEditorItem = {
   kind: 'existing';
   clientMediaId: string;
+  isLegacyFallback: boolean;
   mediaId?: string;
   fileId?: string;
   imageUrl: string;
@@ -336,6 +347,8 @@ export type PostEditorInitialData = {
   imageHeight: number | null;
   location: string;
   tags: string;
+  existingMediaItems: ExistingPostMediaEditorItem[];
+  hasLegacyMediaFallback: boolean;
 };
 
 export type CreatePostWithContentActionMediaInput = {

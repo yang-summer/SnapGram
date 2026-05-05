@@ -8,6 +8,7 @@ import { cn } from '~/lib/utils';
 import {
   DEFAULT_POST_ASPECT_RATIO_BUCKET,
   type LocalPostMediaEditorItem,
+  type PostMediaEditorItem,
 } from '../types/post.type';
 import {
   POST_IMAGE_ACCEPTED_MIME_TYPES,
@@ -18,14 +19,14 @@ import {
 const POST_MEDIA_EDITOR_MAX_ITEMS = 6;
 
 type PostMediaEditorProps = {
-  items: LocalPostMediaEditorItem[];
+  items: PostMediaEditorItem[];
   error: string | null;
-  onItemsChange: Dispatch<SetStateAction<LocalPostMediaEditorItem[]>>;
+  onItemsChange: Dispatch<SetStateAction<PostMediaEditorItem[]>>;
   onErrorChange: Dispatch<SetStateAction<string | null>>;
 };
 
 type SortableMediaCardProps = {
-  item: LocalPostMediaEditorItem;
+  item: PostMediaEditorItem;
   index: number;
   retryDisabled: boolean;
   onRetryItem: (clientMediaId: string) => Promise<void>;
@@ -100,8 +101,26 @@ function createFailedItem(
   };
 }
 
-function revokeItemPreviewUrl(item: LocalPostMediaEditorItem): void {
-  if (item.status === 'ready') {
+function isLocalProcessingItem(
+  item: PostMediaEditorItem,
+): item is Extract<LocalPostMediaEditorItem, { status: 'processing' }> {
+  return item.kind === 'local' && item.status === 'processing';
+}
+
+function isLocalFailedItem(
+  item: PostMediaEditorItem,
+): item is Extract<LocalPostMediaEditorItem, { status: 'failed' }> {
+  return item.kind === 'local' && item.status === 'failed';
+}
+
+function isReadyLocalItem(
+  item: PostMediaEditorItem,
+): item is Extract<LocalPostMediaEditorItem, { status: 'ready' }> {
+  return item.kind === 'local' && item.status === 'ready';
+}
+
+function revokeItemPreviewUrl(item: PostMediaEditorItem): void {
+  if (item.kind === 'local' && item.status === 'ready') {
     URL.revokeObjectURL(item.previewUrl);
   }
 }
@@ -140,6 +159,30 @@ function reorderItems<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   return nextItems;
 }
 
+function getMediaCardTitle(item: PostMediaEditorItem, index: number): string {
+  if (item.kind === 'existing') {
+    return item.isLegacyFallback ? `Legacy image ${index + 1}` : `Current image ${index + 1}`;
+  }
+
+  return item.file.name;
+}
+
+function getMediaCardSummary(item: PostMediaEditorItem, index: number): string {
+  const parts = [`#${index + 1}`];
+
+  if (item.kind === 'existing') {
+    parts.push(item.isLegacyFallback ? 'legacy media' : 'existing media');
+  } else {
+    parts.push(formatFileSize(item.file.size));
+  }
+
+  if (item.status === 'ready' && item.width && item.height) {
+    parts.push(`${item.width} × ${item.height}`);
+  }
+
+  return parts.join(' • ');
+}
+
 function SortableMediaCard({
   item,
   index,
@@ -147,7 +190,7 @@ function SortableMediaCard({
   onRetryItem,
   onRemoveItem,
 }: SortableMediaCardProps) {
-  const sortableDisabled = item.status === 'processing';
+  const sortableDisabled = isLocalProcessingItem(item);
   const { ref, isDragging, isDropTarget } = useSortable({
     id: item.clientMediaId,
     index,
@@ -158,7 +201,7 @@ function SortableMediaCard({
     <article
       ref={ref}
       tabIndex={sortableDisabled ? -1 : 0}
-      aria-label={`${item.file.name}, position ${index + 1}`}
+      aria-label={`${getMediaCardTitle(item, index)}, position ${index + 1}`}
       className={cn(
         'overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm transition-[box-shadow,opacity,transform]',
         sortableDisabled
@@ -176,8 +219,8 @@ function SortableMediaCard({
       >
         {item.status === 'ready' ? (
           <img
-            src={item.previewUrl}
-            alt={`Prepared media ${index + 1}`}
+            src={item.kind === 'existing' ? item.imageUrl : item.previewUrl}
+            alt={`Post media ${index + 1}`}
             className="size-full object-cover"
           />
         ) : (
@@ -204,7 +247,7 @@ function SortableMediaCard({
       <div className="space-y-3 p-4">
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-sm font-medium">{item.file.name}</p>
+            <p className="min-w-0 truncate text-sm font-medium">{getMediaCardTitle(item, index)}</p>
             <span
               className={cn(
                 'shrink-0 rounded-full px-2 py-1 text-xs font-medium',
@@ -216,22 +259,24 @@ function SortableMediaCard({
               {item.status}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            #{index + 1} • {formatFileSize(item.file.size)}
-            {item.status === 'ready' && item.width && item.height
-              ? ` • ${item.width} × ${item.height}`
-              : ''}
-          </p>
+          <p className="text-xs text-muted-foreground">{getMediaCardSummary(item, index)}</p>
         </div>
 
-        {item.status === 'failed' ? (
+        {item.kind === 'existing' && item.isLegacyFallback ? (
+          <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
+            Legacy media metadata is incomplete. Remove this image and upload a replacement before
+            saving.
+          </p>
+        ) : null}
+
+        {isLocalFailedItem(item) ? (
           <p className="rounded-xl bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {item.errorMessage}
           </p>
         ) : null}
 
         <div className="flex items-center gap-2">
-          {item.status === 'failed' ? (
+          {isLocalFailedItem(item) ? (
             <Button
               type="button"
               variant="outline"
@@ -266,10 +311,10 @@ export default function PostMediaEditor({
   onErrorChange,
 }: PostMediaEditorProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const itemsRef = useRef<LocalPostMediaEditorItem[]>(items);
+  const itemsRef = useRef<PostMediaEditorItem[]>(items);
   const isMountedRef = useRef(true);
 
-  const hasProcessingItems = items.some((item) => item.status === 'processing');
+  const hasProcessingItems = items.some(isLocalProcessingItem);
   const remainingSlots = POST_MEDIA_EDITOR_MAX_ITEMS - items.length;
   const acceptedMimeTypesLabel = POST_IMAGE_ACCEPTED_MIME_TYPES.map((mimeType) =>
     mimeType.replace('image/', '').toUpperCase(),
@@ -385,7 +430,10 @@ export default function PostMediaEditor({
 
   async function handleRetryItem(clientMediaId: string) {
     const failedItem = items.find(
-      (item) => item.clientMediaId === clientMediaId && item.status === 'failed',
+      (
+        item,
+      ): item is Extract<LocalPostMediaEditorItem, { status: 'failed' }> =>
+        item.clientMediaId === clientMediaId && isLocalFailedItem(item),
     );
 
     if (!failedItem || hasProcessingItems) {
@@ -444,10 +492,10 @@ export default function PostMediaEditor({
     <section className="w-full rounded-3xl border border-border/60 bg-card/50 p-6 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
-          <p className="font-medium">Select local images</p>
+          <p className="font-medium">Manage post images</p>
           <p className="text-sm text-muted-foreground">
-            Choose up to {POST_MEDIA_EDITOR_MAX_ITEMS} JPG, PNG, or WebP images. Files are
-            prepared locally before submission.
+            Keep up to {POST_MEDIA_EDITOR_MAX_ITEMS} JPG, PNG, or WebP images. Existing media can
+            be reordered or removed, and new files are prepared locally before submission.
           </p>
         </div>
         <div className="rounded-2xl border border-border/60 bg-background px-4 py-3 text-sm text-muted-foreground">
@@ -480,8 +528,8 @@ export default function PostMediaEditor({
               <div className="space-y-1">
                 <p className="font-medium">Add images to the post</p>
                 <p className="text-sm text-muted-foreground">
-                  Images are prepared in sequence. Drag ready cards to reorder them. Adding more
-                  files is disabled while processing is running.
+                  New images are prepared in sequence. Drag ready cards to reorder them. Adding
+                  more files is disabled while processing is running.
                 </p>
               </div>
             </div>

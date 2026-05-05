@@ -9,17 +9,20 @@ import {
   getRecentPosts,
   listHomeFeedPostRows,
   listExplorePostRows,
+  listPostMediaRowsByPostIdForEditor,
   listProfilePublishedPostRows,
   listSearchPostRows,
   searchPostRows,
-  updatePostRow,
 } from '../api/post.api';
 import {
   createPostWithContentAction,
   deletePostWithContentAction,
+  updatePostWithContentAction,
 } from '../api/post.actions.api';
-import { getImageMetadata } from '../lib/image-metadata';
-import { buildCreatePostActionPayload } from '../lib/post-publish-payload';
+import {
+  buildCreatePostActionPayload,
+  buildUpdatePostActionPayload,
+} from '../lib/post-publish-payload';
 import {
   buildUploadedFileIdMap,
   cleanupUploadedMediaFiles,
@@ -27,6 +30,7 @@ import {
 } from '../lib/post-upload-cleanup';
 import {
   mapHomeFeedRowsToCursorPage,
+  mapPostMediaRowsToExistingEditorItems,
   mapPostRowsToCardViewModels,
   mapPostRowsToCursorPage,
   mapPostRowsToGridItemViewModels,
@@ -39,7 +43,6 @@ import type {
   CursorPage,
   DeletePostResult,
   HomeFeedPostViewModel,
-  ImageMetadataResult,
   ListPostRowsParams,
   PostCardViewModel,
   PostDetailViewModel,
@@ -47,7 +50,6 @@ import type {
   ProfileFeedPage,
   ProfilePostPageParams,
   PostGridItemViewModel,
-  RawPostMutationRow,
   UploadedPostMediaFile,
   SearchFeedPage,
   SearchPostPageParams,
@@ -55,7 +57,6 @@ import type {
   UpdatePostPublishInput,
   UpdatePostPublishResult,
 } from '../types/post.type';
-import { DEFAULT_POST_ASPECT_RATIO_BUCKET } from '../types/post.type';
 
 const DEFAULT_EXPLORE_POST_PAGE_SIZE = 9;
 const DEFAULT_SEARCH_RESULTS_LIMIT = 20;
@@ -67,55 +68,6 @@ function clampListLimit(limit: number | undefined, fallback: number): number {
   }
 
   return Math.min(Math.max(Math.trunc(limit), 1), APPWRITE_MAX_LIST_LIMIT);
-}
-
-function mapLegacyUpdateResult(row: RawPostMutationRow): UpdatePostPublishResult {
-  return {
-    postId: row.$id,
-    mediaCount: 1,
-    filePublicationFailed: false,
-    removedFileCleanupFailed: false,
-  };
-}
-
-function createFallbackImageMetadata(): ImageMetadataResult {
-  return {
-    width: null,
-    height: null,
-    aspectRatioBucket: DEFAULT_POST_ASPECT_RATIO_BUCKET,
-    placeholder: null,
-  };
-}
-
-function hasUsablePreparedImageMetadata(
-  metadata: ImageMetadataResult | null | undefined,
-): metadata is ImageMetadataResult {
-  if (!metadata) {
-    return false;
-  }
-
-  return metadata.width !== null && metadata.height !== null;
-}
-
-async function resolveImageMetadata(
-  file: File,
-  preparedImageMetadata?: ImageMetadataResult | null,
-): Promise<ImageMetadataResult> {
-  if (hasUsablePreparedImageMetadata(preparedImageMetadata)) {
-    return preparedImageMetadata;
-  }
-
-  try {
-    const resolvedMetadata = await getImageMetadata(file);
-
-    if (hasUsablePreparedImageMetadata(resolvedMetadata)) {
-      return resolvedMetadata;
-    }
-  } catch (error) {
-    console.error('[PostService.resolveImageMetadata] Failed to compute image metadata.', error);
-  }
-
-  return createFallbackImageMetadata();
 }
 
 export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
@@ -167,13 +119,21 @@ export async function getPostEditorInitialData(
   postId: string,
 ): Promise<PostEditorInitialData | null> {
   try {
-    const response = await getPostEditorRow(postId);
+    const [postRow, postMediaRows] = await Promise.all([
+      getPostEditorRow(postId),
+      listPostMediaRowsByPostIdForEditor(postId),
+    ]);
 
-    if (!response) {
+    if (!postRow) {
       return null;
     }
 
-    return mapPostEditorRowToInitialData(response);
+    const existingMediaItems = mapPostMediaRowsToExistingEditorItems(
+      postMediaRows,
+      getPostImageView,
+    );
+
+    return mapPostEditorRowToInitialData(postRow, existingMediaItems);
   } catch (error) {
     console.error(`[PostService.getPostEditorInitialData] Error:`, error);
     throw error;
@@ -207,97 +167,25 @@ export async function createPost(
 export async function updatePost(
   input: UpdatePostPublishInput,
 ): Promise<UpdatePostPublishResult> {
-  const nextLocalMediaItem = input.mediaItems.find(
-    (mediaItem): mediaItem is Extract<typeof mediaItem, { kind: 'local' }> =>
-      mediaItem.kind === 'local',
-  );
-  const nextFile = nextLocalMediaItem?.file ?? null;
-
-  if (!nextFile) {
-    try {
-      const existingCoverItem = input.mediaItems[0];
-
-      if (!existingCoverItem || existingCoverItem.kind !== 'existing') {
-        throw new Error('An existing cover media item is required for legacy post updates.');
-      }
-
-      const updatedPost = await updatePostRow({
-        postId: input.postId,
-        caption: input.caption,
-        imageId: existingCoverItem.fileId ?? '',
-        imageUrl: existingCoverItem.imageUrl,
-        aspectRatioBucket: existingCoverItem.aspectRatioBucket,
-        imagePlaceholder: existingCoverItem.placeholder,
-        imageWidth: existingCoverItem.width,
-        imageHeight: existingCoverItem.height,
-        location: input.location,
-        tags: input.tags,
-      });
-
-      return mapLegacyUpdateResult(updatedPost);
-    } catch (error) {
-      console.error(`[PostService.updatePost] Error:`, error);
-      throw error;
-    }
-  }
-
-  let uploadedFileId: string | null = null;
   let uploadedFiles: UploadedPostMediaFile[] = [];
 
   try {
-    const imageMetadata = await resolveImageMetadata(nextFile, {
-      width: nextLocalMediaItem?.width ?? null,
-      height: nextLocalMediaItem?.height ?? null,
-      aspectRatioBucket: nextLocalMediaItem?.aspectRatioBucket ?? DEFAULT_POST_ASPECT_RATIO_BUCKET,
-      placeholder: nextLocalMediaItem?.placeholder ?? null,
-    });
     uploadedFiles = await uploadNewMediaItems(
-      nextLocalMediaItem
-        ? [{ clientMediaId: nextLocalMediaItem.clientMediaId, file: nextLocalMediaItem.file }]
-        : [],
+      input.mediaItems
+        .filter(
+          (mediaItem): mediaItem is Extract<typeof mediaItem, { kind: 'local' }> =>
+            mediaItem.kind === 'local',
+        )
+        .map((mediaItem) => ({
+          clientMediaId: mediaItem.clientMediaId,
+          file: mediaItem.file,
+        })),
       input.ownerAccountId,
     );
     const uploadedFileIdByClientMediaId = buildUploadedFileIdMap(uploadedFiles);
-    uploadedFileId = nextLocalMediaItem
-      ? uploadedFileIdByClientMediaId[nextLocalMediaItem.clientMediaId] ?? null
-      : null;
+    const payload = buildUpdatePostActionPayload(input, uploadedFileIdByClientMediaId);
 
-    if (!uploadedFileId) {
-      throw new Error(
-        `Uploaded file ID is missing for media item ${nextLocalMediaItem?.clientMediaId ?? 'unknown'}.`,
-      );
-    }
-
-    const updatedPost = await updatePostRow({
-      postId: input.postId,
-      caption: input.caption,
-      imageId: uploadedFileId,
-      imageUrl: getPostImageView(uploadedFileId),
-      aspectRatioBucket: imageMetadata.aspectRatioBucket,
-      imagePlaceholder: imageMetadata.placeholder,
-      imageWidth: imageMetadata.width,
-      imageHeight: imageMetadata.height,
-      location: input.location,
-      tags: input.tags,
-    });
-
-    const existingCoverItem = input.mediaItems.find(
-      (mediaItem): mediaItem is Extract<typeof mediaItem, { kind: 'existing' }> =>
-        mediaItem.kind === 'existing',
-    );
-
-    if (existingCoverItem?.fileId && existingCoverItem.fileId !== uploadedFileId) {
-      try {
-        await cleanupUploadedMediaFiles(
-          [{ clientMediaId: existingCoverItem.clientMediaId, fileId: existingCoverItem.fileId }],
-          'updatePost.removeLegacyCover',
-        );
-      } catch (error) {
-        console.error('[PostService.updatePost] Failed to delete previous post image.', error);
-      }
-    }
-
-    return mapLegacyUpdateResult(updatedPost);
+    return await updatePostWithContentAction(payload);
   } catch (error) {
     await cleanupUploadedMediaFiles(uploadedFiles, 'updatePost');
     console.error(`[PostService.updatePost] Error:`, error);

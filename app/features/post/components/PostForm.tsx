@@ -1,10 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import InlineErrorAlert from '~/components/feedback/inline-error-alert';
-import FileUploader from '~/components/shared/FileUploader';
 import { Button } from '~/components/ui/button';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
@@ -14,12 +13,12 @@ import { PostValidation } from '~/lib/validation';
 import { useCreatePostMutation, useUpdatePostMutation } from '../queries/post.mutation';
 import type {
   CreatePostPublishMediaItem,
+  ExistingPostMediaEditorItem,
   ExistingUpdatePostPublishMediaItem,
-  LocalPostMediaEditorItem,
   NewUpdatePostPublishMediaItem,
   PostEditorInitialData,
+  PostMediaEditorItem,
   PostFormValues,
-  PreparedImageDraft,
 } from '../types/post.type';
 import PostMediaEditor from './PostMediaEditor';
 
@@ -36,6 +35,14 @@ function getDefaultValues(post?: PostEditorInitialData): PostFormValues {
   };
 }
 
+function getInitialMediaItems(post?: PostEditorInitialData): PostMediaEditorItem[] {
+  if (!post) {
+    return [];
+  }
+
+  return post.existingMediaItems.map((item) => ({ ...item }));
+}
+
 function normalizeTags(value: string): string[] {
   return value
     .split(',')
@@ -48,13 +55,23 @@ function getErrorMessage(error: unknown): string {
 }
 
 function isReadyLocalMediaItem(
-  item: LocalPostMediaEditorItem,
-): item is Extract<LocalPostMediaEditorItem, { status: 'ready' }> {
-  return item.status === 'ready';
+  item: PostMediaEditorItem,
+): item is Extract<PostMediaEditorItem, { kind: 'local'; status: 'ready' }> {
+  return item.kind === 'local' && item.status === 'ready';
+}
+
+function isFailedLocalMediaItem(
+  item: PostMediaEditorItem,
+): item is Extract<PostMediaEditorItem, { kind: 'local'; status: 'failed' }> {
+  return item.kind === 'local' && item.status === 'failed';
+}
+
+function isExistingMediaItem(item: PostMediaEditorItem): item is ExistingPostMediaEditorItem {
+  return item.kind === 'existing';
 }
 
 function mapReadyLocalMediaItemToCreatePublishMediaItem(
-  item: Extract<LocalPostMediaEditorItem, { status: 'ready' }>,
+  item: Extract<PostMediaEditorItem, { kind: 'local'; status: 'ready' }>,
 ): CreatePostPublishMediaItem {
   return {
     clientMediaId: item.clientMediaId,
@@ -67,48 +84,91 @@ function mapReadyLocalMediaItemToCreatePublishMediaItem(
 }
 
 function getOrderedReadyCreatePublishMediaItems(
-  items: LocalPostMediaEditorItem[],
+  items: PostMediaEditorItem[],
 ): CreatePostPublishMediaItem[] {
   return items.filter(isReadyLocalMediaItem).map(mapReadyLocalMediaItemToCreatePublishMediaItem);
 }
 
-function mapPostToLegacyExistingUpdatePublishMediaItem(
-  post: PostEditorInitialData,
+function mapExistingMediaItemToUpdatePublishMediaItem(
+  item: ExistingPostMediaEditorItem,
 ): ExistingUpdatePostPublishMediaItem {
   return {
     kind: 'existing',
-    clientMediaId: post.id,
-    fileId: post.imageId,
-    imageUrl: post.imageUrl,
-    width: post.imageWidth,
-    height: post.imageHeight,
-    aspectRatioBucket: post.aspectRatioBucket,
-    placeholder: post.imagePlaceholder,
+    clientMediaId: item.clientMediaId,
+    mediaId: item.mediaId,
+    fileId: item.fileId,
+    imageUrl: item.imageUrl,
+    width: item.width,
+    height: item.height,
+    aspectRatioBucket: item.aspectRatioBucket,
+    placeholder: item.placeholder,
   };
 }
 
-function mapPreparedDraftToNewUpdatePublishMediaItem(
-  draft: PreparedImageDraft,
-): NewUpdatePostPublishMediaItem | null {
-  if (draft.metadataStatus !== 'ready' || !draft.metadata) {
-    return null;
-  }
-
-  const { metadata } = draft;
-
-  if (metadata.width === null || metadata.height === null) {
-    return null;
-  }
-
+function mapReadyLocalMediaItemToUpdatePublishMediaItem(
+  item: Extract<PostMediaEditorItem, { kind: 'local'; status: 'ready' }>,
+): NewUpdatePostPublishMediaItem {
   return {
     kind: 'local',
-    clientMediaId: `replacement-${draft.file.name}-${draft.file.lastModified}`,
-    file: draft.file,
-    width: metadata.width,
-    height: metadata.height,
-    aspectRatioBucket: metadata.aspectRatioBucket,
-    placeholder: metadata.placeholder,
+    clientMediaId: item.clientMediaId,
+    file: item.file,
+    width: item.width,
+    height: item.height,
+    aspectRatioBucket: item.aspectRatioBucket,
+    placeholder: item.placeholder,
   };
+}
+
+function getOrderedReadyUpdatePublishMediaItems(
+  items: PostMediaEditorItem[],
+): Array<ExistingUpdatePostPublishMediaItem | NewUpdatePostPublishMediaItem> {
+  return items
+    .filter(
+      (
+        item,
+      ): item is ExistingPostMediaEditorItem | Extract<PostMediaEditorItem, { kind: 'local'; status: 'ready' }> =>
+        isExistingMediaItem(item) || isReadyLocalMediaItem(item),
+    )
+    .map((item) =>
+      item.kind === 'existing'
+        ? mapExistingMediaItemToUpdatePublishMediaItem(item)
+        : mapReadyLocalMediaItemToUpdatePublishMediaItem(item),
+    );
+}
+
+function validatePostMediaItemsForSubmit(
+  items: PostMediaEditorItem[],
+  mode: 'create' | 'update',
+): string | null {
+  if (items.length === 0) {
+    return mode === 'create'
+      ? 'Please add at least one image before creating a post.'
+      : 'Keep at least one image before updating the post.';
+  }
+
+  if (items.some((item) => item.kind === 'local' && item.status === 'processing')) {
+    return 'Please wait for image processing to finish before submitting the post.';
+  }
+
+  if (items.some(isFailedLocalMediaItem)) {
+    return 'Remove or retry failed images before submitting the post.';
+  }
+
+  if (mode === 'update' && items.some((item) => item.kind === 'existing' && !item.mediaId)) {
+    return 'This post still uses legacy media data. Remove the legacy image and upload a replacement before saving.';
+  }
+
+  const readyItemsCount = items.filter(
+    (item) => item.kind === 'existing' || isReadyLocalMediaItem(item),
+  ).length;
+
+  if (readyItemsCount === 0) {
+    return mode === 'create'
+      ? 'Keep at least one successfully prepared image before creating a post.'
+      : 'Keep at least one image before updating the post.';
+  }
+
+  return null;
 }
 
 export default function PostForm({ action, post }: PostFormProps) {
@@ -118,92 +178,83 @@ export default function PostForm({ action, post }: PostFormProps) {
   const { mutateAsync: createPost, isPending: isLoadingCreate } = useCreatePostMutation();
   const { mutateAsync: updatePost, isPending: isLoadingUpdate } = useUpdatePostMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [mediaItems, setMediaItems] = useState<LocalPostMediaEditorItem[]>([]);
+  const [mediaItems, setMediaItems] = useState<PostMediaEditorItem[]>(() => getInitialMediaItems(post));
   const [mediaError, setMediaError] = useState<string | null>(null);
-  const [updateSelectedFiles, setUpdateSelectedFiles] = useState<File[]>([]);
-  const [updatePreparedImageDraft, setUpdatePreparedImageDraft] = useState<PreparedImageDraft | null>(
-    null,
-  );
   const isEditMode = action === 'Update';
-  const hasProcessingMediaItems = mediaItems.some((item) => item.status === 'processing');
+  const hasProcessingMediaItems = mediaItems.some(
+    (item) => item.kind === 'local' && item.status === 'processing',
+  );
 
   const form = useForm<PostFormValues>({
     resolver: zodResolver(PostValidation),
     defaultValues: getDefaultValues(post),
   });
 
+  useEffect(() => {
+    if (!isEditMode || !post) {
+      return;
+    }
+
+    form.reset(getDefaultValues(post));
+    setMediaItems(getInitialMediaItems(post));
+    setMediaError(null);
+    setSubmitError(null);
+  }, [form, isEditMode, post?.id]);
+
   async function onSubmit(values: PostFormValues) {
     setSubmitError(null);
 
     const normalizedTags = normalizeTags(values.tags);
+    const mediaValidationError = validatePostMediaItemsForSubmit(
+      mediaItems,
+      isEditMode ? 'update' : 'create',
+    );
 
-    if (isEditMode) {
-      if (!post) {
-        setSubmitError('Unable to load the post data for editing.');
-        return;
-      }
-
-      if (updateSelectedFiles.length > 0 && !currentUser) {
-        setSubmitError('Unable to resolve the current user.');
-        return;
-      }
-
-      try {
-        const mediaItems: Array<
-          ExistingUpdatePostPublishMediaItem | NewUpdatePostPublishMediaItem
-        > = [mapPostToLegacyExistingUpdatePublishMediaItem(post)];
-        const replacementMediaItem =
-          updatePreparedImageDraft && updateSelectedFiles[0]
-            ? mapPreparedDraftToNewUpdatePublishMediaItem(updatePreparedImageDraft)
-            : null;
-
-        if (replacementMediaItem) {
-          mediaItems.unshift(replacementMediaItem);
-        }
-
-        const updatedPost = await updatePost({
-          postId: post.id,
-          ownerAccountId: currentUser?.accountId ?? '',
-          caption: values.caption,
-          location: values.location,
-          tags: normalizedTags,
-          mediaItems,
-        });
-
-        toast.success('Post updated successfully.');
-        navigate(`/posts/${updatedPost.postId}`);
-        return;
-      } catch (error) {
-        setSubmitError(getErrorMessage(error));
-        return;
-      }
-    }
-
-    if (mediaItems.length === 0) {
-      setMediaError('Please add at least one image before creating a post.');
+    if (mediaValidationError) {
+      setMediaError(mediaValidationError);
       return;
     }
 
-    if (hasProcessingMediaItems) {
-      setMediaError('Please wait for image processing to finish before submitting the post.');
-      return;
-    }
-
-    const readyMediaItems = getOrderedReadyCreatePublishMediaItems(mediaItems);
-
-    if (readyMediaItems.length === 0) {
-      setMediaError('Keep at least one successfully prepared image before creating a post.');
+    if (!currentUser) {
+      setSubmitError('Unable to resolve the current user.');
       return;
     }
 
     try {
-      if (!currentUser) {
-        setSubmitError('Unable to resolve the current user.');
+      setMediaError(null);
+
+      if (isEditMode) {
+        if (!post) {
+          setSubmitError('Unable to load the post data for editing.');
+          return;
+        }
+
+        const updatedPost = await updatePost({
+          postId: post.id,
+          ownerAccountId: currentUser.accountId,
+          caption: values.caption,
+          location: values.location,
+          tags: normalizedTags,
+          mediaItems: getOrderedReadyUpdatePublishMediaItems(mediaItems),
+        });
+
+        toast.success('Post updated successfully.');
+
+        if (updatedPost.filePublicationFailed) {
+          toast.warning('Post was updated, but media publication is still incomplete.');
+        }
+
+        if (updatedPost.removedFileCleanupFailed) {
+          toast.warning(
+            'Post was updated, but some removed media files could not be cleaned up.',
+          );
+        }
+
+        navigate(`/posts/${updatedPost.postId}`);
         return;
       }
 
-      setMediaError(null);
-
+      const readyMediaItems = getOrderedReadyCreatePublishMediaItems(mediaItems);
       const newPost = await createPost({
         creatorProfileId: currentUser.profileId,
         ownerAccountId: currentUser.accountId,
@@ -213,10 +264,10 @@ export default function PostForm({ action, post }: PostFormProps) {
         mediaItems: readyMediaItems,
       });
 
+      toast.success('Post published successfully.');
+
       if (newPost.filePublicationFailed) {
         toast.warning('Post was published, but media publication is still incomplete.');
-      } else {
-        toast.success('Post published successfully.');
       }
 
       navigate(`/posts/${newPost.postId}`);
@@ -264,27 +315,24 @@ export default function PostForm({ action, post }: PostFormProps) {
 
         {isEditMode ? (
           <Field className="w-full">
-            <FieldLabel htmlFor="form-createPost-file">Replace Photo</FieldLabel>
+            <FieldLabel>Edit Photos</FieldLabel>
             <FieldDescription>
-              Editing still uses the current single-image replacement flow.
+              {post?.hasLegacyMediaFallback
+                ? 'Remove the legacy image and upload replacement media before saving this post.'
+                : 'Reorder current media, remove existing items, or add new images before saving.'}
             </FieldDescription>
-            <FileUploader
-              fieldChange={(files) => {
-                setUpdateSelectedFiles(files);
-
-                if (files.length === 0) {
-                  setUpdatePreparedImageDraft(null);
-                }
-              }}
-              mediaUrl={post?.imageUrl ?? ''}
-              onPreparedChange={setUpdatePreparedImageDraft}
+            <PostMediaEditor
+              items={mediaItems}
+              error={mediaError}
+              onItemsChange={setMediaItems}
+              onErrorChange={setMediaError}
             />
           </Field>
         ) : (
           <Field className="w-full">
             <FieldLabel>Add Photos</FieldLabel>
             <FieldDescription>
-              The current submit path still uses the first ready image as the temporary cover.
+              Choose and order up to 6 images before publishing.
             </FieldDescription>
             <PostMediaEditor
               items={mediaItems}

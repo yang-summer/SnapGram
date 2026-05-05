@@ -13,6 +13,7 @@ import type {
   PostDeleteSnapshot,
   ProfilePostPageParams,
   RawPostEditorRow,
+  RawPostMediaRow,
   RawPostHomeFeedRow,
   RawPostListRow,
   RawPostMutationRow,
@@ -86,6 +87,16 @@ const POST_EDITOR_SELECT = [
   'imageHeight',
   'location',
   'tags',
+];
+const POST_MEDIA_EDITOR_SELECT = [
+  '$id',
+  'postId',
+  'fileId',
+  'sortOrder',
+  'width',
+  'height',
+  'aspectRatioBucket',
+  'placeholder',
 ];
 export const POST_HOME_FEED_SELECT = [
   '$id',
@@ -324,6 +335,34 @@ export async function getPostEditorRow(postId: string): Promise<RawPostEditorRow
     return post;
   } catch (error) {
     console.error('[PostApi.getPostEditorRow] Failed to load post editor data.', error);
+    throw error;
+  }
+}
+
+export async function listPostMediaRowsByPostIdForEditor(postId: string): Promise<RawPostMediaRow[]> {
+  if (!postId) {
+    throw new Error('Post ID is required to load post media editor data.');
+  }
+
+  try {
+    const response = await tablesDB.listRows<RawPostMediaRow>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postMediaTableId,
+      queries: [
+        Query.select(POST_MEDIA_EDITOR_SELECT),
+        Query.equal('postId', postId),
+        Query.orderAsc('sortOrder'),
+        Query.limit(APPWRITE_MAX_LIST_LIMIT),
+      ],
+      total: false,
+    });
+
+    return response.rows;
+  } catch (error) {
+    console.error(
+      '[PostApi.listPostMediaRowsByPostIdForEditor] Failed to load post media editor data.',
+      error,
+    );
     throw error;
   }
 }

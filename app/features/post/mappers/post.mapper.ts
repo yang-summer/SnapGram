@@ -5,6 +5,7 @@ import {
 } from '../types/post.type';
 import type {
   CursorPage,
+  ExistingPostMediaEditorItem,
   HomeFeedPostViewModel,
   PostAspectRatioBucket,
   PostCardViewModel,
@@ -12,6 +13,7 @@ import type {
   PostEditorInitialData,
   PostGridItemViewModel,
   RawPostEditorRow,
+  RawPostMediaRow,
   RawPostHomeFeedRow,
   RawPostListRow,
   RawPostRow,
@@ -181,10 +183,82 @@ export function mapPostRowToHomeFeedItemViewModel(
   };
 }
 
-export function mapPostEditorRowToInitialData(row: RawPostEditorRow): PostEditorInitialData | null {
+function mapLegacyPostEditorCoverToExistingMediaItem(
+  row: RawPostEditorRow,
+): ExistingPostMediaEditorItem | null {
+  const fileId = row.imageId?.trim() ?? '';
+  const imageUrl = row.imageUrl?.trim() ?? '';
+
+  if (!fileId || !imageUrl) {
+    return null;
+  }
+
+  return {
+    kind: 'existing',
+    clientMediaId: `legacy-cover-${row.$id}`,
+    isLegacyFallback: true,
+    fileId,
+    imageUrl,
+    width: normalizeOptionalImageDimension(row.imageWidth),
+    height: normalizeOptionalImageDimension(row.imageHeight),
+    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
+    placeholder: normalizeOptionalImagePlaceholder(row.imagePlaceholder),
+    status: 'ready',
+  };
+}
+
+export function mapPostMediaRowsToExistingEditorItems(
+  rows: RawPostMediaRow[],
+  resolveImageUrl: (fileId: string) => string,
+): ExistingPostMediaEditorItem[] {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
+
+  const result: ExistingPostMediaEditorItem[] = [];
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const fileId = row.fileId?.trim() ?? '';
+
+    if (!fileId) {
+      continue;
+    }
+
+    result.push({
+      kind: 'existing',
+      clientMediaId: row.$id,
+      isLegacyFallback: false,
+      mediaId: row.$id,
+      fileId,
+      imageUrl: resolveImageUrl(fileId),
+      width: normalizeOptionalImageDimension(row.width),
+      height: normalizeOptionalImageDimension(row.height),
+      aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
+      placeholder: normalizeOptionalImagePlaceholder(row.placeholder),
+      status: 'ready',
+    });
+  }
+
+  return result;
+}
+
+export function mapPostEditorRowToInitialData(
+  row: RawPostEditorRow,
+  existingMediaItems: ExistingPostMediaEditorItem[],
+): PostEditorInitialData | null {
   if (!row) {
     return null;
   }
+
+  const fallbackMediaItem =
+    existingMediaItems.length === 0 ? mapLegacyPostEditorCoverToExistingMediaItem(row) : null;
+  const resolvedExistingMediaItems =
+    existingMediaItems.length > 0
+      ? existingMediaItems
+      : fallbackMediaItem
+        ? [fallbackMediaItem]
+        : [];
 
   return {
     id: row.$id,
@@ -197,6 +271,8 @@ export function mapPostEditorRowToInitialData(row: RawPostEditorRow): PostEditor
     imageHeight: normalizeOptionalImageDimension(row.imageHeight),
     location: row.location ?? '',
     tags: (row.tags ?? []).join(', '),
+    existingMediaItems: resolvedExistingMediaItems,
+    hasLegacyMediaFallback: resolvedExistingMediaItems.some((item) => item.isLegacyFallback),
   };
 }
 
