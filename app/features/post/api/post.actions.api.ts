@@ -3,10 +3,12 @@ import type { Models } from 'appwrite';
 import { appwriteConfig, functions } from '~/lib/appwrite/config';
 import type {
   CreatePostWithContentActionRequest,
+  CreatePostWithContentActionResult,
   DeletePostResult,
   DeleteViewerPostLikeResult,
   DeleteViewerPostSaveResult,
   UpdatePostWithContentActionRequest,
+  UpdatePostWithContentActionResult,
   ViewerPostLikeMutationResult,
   ViewerPostSaveMutationResult,
 } from '../types/post.type';
@@ -220,4 +222,26 @@ export async function deletePostWithContentAction(postId: string): Promise<Delet
   });
 
   return readExecutionData(result, 'post.delete');
+}
+
+export async function createPostWithContentAction(
+  payload: Omit<CreatePostWithContentActionRequest, 'action'>,
+): Promise<CreatePostWithContentActionResult> {
+  const result = await executeContentAction({
+    action: 'post.create',
+    ...payload,
+  });
+
+  return readExecutionData(result, 'post.create');
+}
+
+export async function updatePostWithContentAction(
+  payload: Omit<UpdatePostWithContentActionRequest, 'action'>,
+): Promise<UpdatePostWithContentActionResult> {
+  const result = await executeContentAction({
+    action: 'post.update',
+    ...payload,
+  });
+
+  return readExecutionData(result, 'post.update');
 }

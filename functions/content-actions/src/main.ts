@@ -92,6 +92,7 @@ export default async function main({ req, res, log, error }: FunctionContext) {
             storageId: config.storageId,
             usersTableId: config.usersTableId,
             postsTableId: config.postsTableId,
+            postMediaTableId: config.postMediaTableId,
             savesTableId: config.savesTableId,
             likesTableId: config.likesTableId,
           },
