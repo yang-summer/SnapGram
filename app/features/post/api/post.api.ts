@@ -1,7 +1,10 @@
 import type { Models } from 'appwrite';
 import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, storage, tablesDB } from '~/lib/appwrite/config';
-import { buildPublicOwnerPermissions } from '~/lib/appwrite/permissions';
+import {
+  buildPrivateStagedFilePermissions,
+  buildPublicOwnerPermissions,
+} from '~/lib/appwrite/permissions';
 import { buildPostSearchText } from '../lib/post-search';
 import type {
   CreatePostApiInput,
@@ -332,13 +335,16 @@ export function getPostImageView(fileId: string): string {
   });
 }
 
-export async function uploadPostImage(file: File, ownerAccountId: string): Promise<Models.File> {
+export async function uploadPostMediaFile(
+  file: File,
+  ownerAccountId: string,
+): Promise<Models.File> {
   if (!file) {
-    throw new Error('A post image file is required.');
+    throw new Error('A post media file is required.');
   }
 
   if (!ownerAccountId) {
-    throw new Error('Owner account ID is required to upload a post image.');
+    throw new Error('Owner account ID is required to upload a post media file.');
   }
 
   try {
@@ -346,17 +352,17 @@ export async function uploadPostImage(file: File, ownerAccountId: string): Promi
       bucketId: appwriteConfig.storageId,
       fileId: ID.unique(),
       file,
-      permissions: buildPublicOwnerPermissions(ownerAccountId),
+      permissions: buildPrivateStagedFilePermissions(ownerAccountId),
     });
   } catch (error) {
-    console.error('[PostApi.uploadPostImage] Failed to upload post image.', error);
+    console.error('[PostApi.uploadPostMediaFile] Failed to upload post media file.', error);
     throw error;
   }
 }
 
-export async function deletePostImage(fileId: string): Promise<void> {
+export async function deletePostMediaFile(fileId: string): Promise<void> {
   if (!fileId) {
-    throw new Error('File ID is required to delete a post image.');
+    throw new Error('File ID is required to delete a post media file.');
   }
 
   try {
@@ -369,7 +375,7 @@ export async function deletePostImage(fileId: string): Promise<void> {
       return;
     }
 
-    console.error('[PostApi.deletePostImage] Failed to delete post image.', error);
+    console.error('[PostApi.deletePostMediaFile] Failed to delete post media file.', error);
     throw error;
   }
 }

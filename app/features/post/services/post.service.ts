@@ -4,7 +4,7 @@ import {
   DEFAULT_PROFILE_FEED_PAGE_SIZE,
   DEFAULT_SEARCH_POST_PAGE_SIZE,
   countProfilePublishedPosts,
-  deletePostImage,
+  deletePostMediaFile,
   getPostImageView,
   getPostEditorRow,
   getPostById,
@@ -15,7 +15,7 @@ import {
   listSearchPostRows,
   searchPostRows,
   updatePostRow,
-  uploadPostImage,
+  uploadPostMediaFile,
 } from '../api/post.api';
 import { deletePostWithContentAction } from '../api/post.actions.api';
 import { getImageMetadata } from '../lib/image-metadata';
@@ -138,7 +138,7 @@ async function cleanupUploadedImage(fileId: string | null, context: string): Pro
   }
 
   try {
-    await deletePostImage(fileId);
+    await deletePostMediaFile(fileId);
   } catch (error) {
     console.error(`[PostService.${context}] Failed to clean up uploaded post image.`, error);
   }
@@ -219,7 +219,7 @@ export async function createPost(
       aspectRatioBucket: coverItem.aspectRatioBucket,
       placeholder: coverItem.placeholder,
     });
-    const uploadedFile = await uploadPostImage(coverItem.file, input.ownerAccountId);
+    const uploadedFile = await uploadPostMediaFile(coverItem.file, input.ownerAccountId);
     uploadedFileId = uploadedFile.$id;
 
     const createdPost = await createPostRow({
@@ -290,7 +290,7 @@ export async function updatePost(
       aspectRatioBucket: nextLocalMediaItem?.aspectRatioBucket ?? DEFAULT_POST_ASPECT_RATIO_BUCKET,
       placeholder: nextLocalMediaItem?.placeholder ?? null,
     });
-    const uploadedFile = await uploadPostImage(nextFile, input.ownerAccountId);
+    const uploadedFile = await uploadPostMediaFile(nextFile, input.ownerAccountId);
     uploadedFileId = uploadedFile.$id;
 
     const updatedPost = await updatePostRow({
@@ -313,7 +313,7 @@ export async function updatePost(
 
     if (existingCoverItem?.fileId && existingCoverItem.fileId !== uploadedFileId) {
       try {
-        await deletePostImage(existingCoverItem.fileId);
+        await deletePostMediaFile(existingCoverItem.fileId);
       } catch (error) {
         console.error('[PostService.updatePost] Failed to delete previous post image.', error);
       }
