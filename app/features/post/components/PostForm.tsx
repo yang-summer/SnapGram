@@ -318,7 +318,7 @@ export default function PostForm({ action, post }: PostFormProps) {
           <Field className="w-full">
             <FieldLabel>Edit Photos</FieldLabel>
             <FieldDescription>
-              {post?.hasLegacyMediaFallback
+              {post?.isLegacyMediaFallback
                 ? 'Remove the legacy image and upload replacement media before saving this post.'
                 : 'Reorder current media, remove existing items, or add new images before saving.'}
             </FieldDescription>

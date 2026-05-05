@@ -352,21 +352,15 @@ export function mapPostEditorRowToInitialData(
       : fallbackMediaItem
         ? [fallbackMediaItem]
         : [];
+  const isLegacyMediaFallback = resolvedExistingMediaItems.some((item) => item.isLegacyFallback);
 
   return {
     id: row.$id,
     caption: row.caption ?? '',
-    imageId: row.imageId,
-    imageUrl: row.imageUrl,
-    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
-    imagePlaceholder: normalizeOptionalImagePlaceholder(row.imagePlaceholder),
-    imageWidth: normalizeOptionalImageDimension(row.imageWidth),
-    imageHeight: normalizeOptionalImageDimension(row.imageHeight),
     location: row.location ?? '',
     tags: (row.tags ?? []).join(', '),
     existingMediaItems: resolvedExistingMediaItems,
-    isLegacyMediaFallback: resolvedExistingMediaItems.some((item) => item.isLegacyFallback),
-    hasLegacyMediaFallback: resolvedExistingMediaItems.some((item) => item.isLegacyFallback),
+    isLegacyMediaFallback,
   };
 }
 

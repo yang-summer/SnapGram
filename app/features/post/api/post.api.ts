@@ -364,10 +364,6 @@ export async function listPostMediaRowsByPostId(postId: string): Promise<RawPost
   }
 }
 
-export async function listPostMediaRowsByPostIdForEditor(postId: string): Promise<RawPostMediaRow[]> {
-  return listPostMediaRowsByPostId(postId);
-}
-
 export function getPostImageView(fileId: string): string {
   return storage.getFileView({
     bucketId: appwriteConfig.storageId,

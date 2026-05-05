@@ -352,17 +352,10 @@ export type PostFormValues = PostTextFormValues;
 export type PostEditorInitialData = {
   id: string;
   caption: string;
-  imageId: string;
-  imageUrl: string;
-  aspectRatioBucket: PostAspectRatioBucket;
-  imagePlaceholder: string | null;
-  imageWidth: number | null;
-  imageHeight: number | null;
   location: string;
   tags: string;
   existingMediaItems: ExistingPostMediaEditorItem[];
   isLegacyMediaFallback: boolean;
-  hasLegacyMediaFallback: boolean;
 };
 
 export type CreatePostWithContentActionMediaInput = {
