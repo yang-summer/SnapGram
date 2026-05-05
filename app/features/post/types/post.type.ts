@@ -168,7 +168,7 @@ export type PostDeleteSnapshot = Models.Row & {
 
 export type DeletePostResult = {
   postId: string;
-  imageCleanupFailed: boolean;
+  mediaCleanupFailed: boolean;
 };
 
 export type PostGridItemViewModel = {
@@ -335,6 +335,65 @@ export type PostEditorInitialData = {
   imageHeight: number | null;
   location: string;
   tags: string;
+};
+
+export type CreatePostWithContentActionMediaInput = {
+  fileId: string;
+  sortOrder: number;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type CreatePostWithContentActionRequest = {
+  action: 'post.create';
+  caption: string;
+  location: string;
+  tags: string[];
+  media: CreatePostWithContentActionMediaInput[];
+};
+
+export type ExistingUpdatePostWithContentActionMediaInput = {
+  type: 'existing';
+  mediaId: string;
+  sortOrder: number;
+};
+
+export type NewUpdatePostWithContentActionMediaInput = {
+  type: 'new';
+  fileId: string;
+  sortOrder: number;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type UpdatePostWithContentActionMediaInput =
+  | ExistingUpdatePostWithContentActionMediaInput
+  | NewUpdatePostWithContentActionMediaInput;
+
+export type UpdatePostWithContentActionRequest = {
+  action: 'post.update';
+  postId: string;
+  caption: string;
+  location: string;
+  tags: string[];
+  media: UpdatePostWithContentActionMediaInput[];
+};
+
+export type CreatePostWithContentActionResult = {
+  postId: string;
+  mediaCount: number;
+  filePublicationFailed: boolean;
+};
+
+export type UpdatePostWithContentActionResult = {
+  postId: string;
+  mediaCount: number;
+  filePublicationFailed: boolean;
+  removedFileCleanupFailed: boolean;
 };
 
 export type CreatePostInput = {

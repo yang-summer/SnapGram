@@ -14,7 +14,7 @@ type PostDeleteSnapshot = Models.Row & {
 
 export type DeletePostResult = {
   postId: string;
-  imageCleanupFailed: boolean;
+  mediaCleanupFailed: boolean;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -210,7 +210,7 @@ export async function deletePostForCurrentUser(
   if (!post) {
     return {
       postId,
-      imageCleanupFailed: false,
+      mediaCleanupFailed: false,
     };
   }
 
@@ -222,17 +222,17 @@ export async function deletePostForCurrentUser(
     if (caughtError instanceof AppwriteException && caughtError.code === 404) {
       return {
         postId,
-        imageCleanupFailed: false,
+        mediaCleanupFailed: false,
       };
     }
 
     throw caughtError;
   }
 
-  const imageCleanupFailed = await cleanupPostMedia(storage, config, post, log, error);
+  const mediaCleanupFailed = await cleanupPostMedia(storage, config, post, log, error);
 
   return {
     postId,
-    imageCleanupFailed,
+    mediaCleanupFailed,
   };
 }

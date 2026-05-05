@@ -593,7 +593,7 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
       rowId: postId,
     });
 
-    let imageCleanupFailed = false;
+    let mediaCleanupFailed = false;
 
     if (post.imageId) {
       try {
@@ -603,7 +603,7 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
         });
       } catch (error) {
         if (!(error instanceof AppwriteException && error.code === 404)) {
-          imageCleanupFailed = true;
+          mediaCleanupFailed = true;
           console.error('[PostApi.deletePost] Failed to delete post image.', error);
         }
       }
@@ -611,7 +611,7 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
 
     return {
       postId,
-      imageCleanupFailed,
+      mediaCleanupFailed,
     };
   } catch (error) {
     console.error('[PostApi.deletePost] Failed to delete post.', error);

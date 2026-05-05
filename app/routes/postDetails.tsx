@@ -30,9 +30,9 @@ export default function PostDetails() {
     try {
       const result = await deletePost(postId);
 
-      if (result.imageCleanupFailed) {
-        console.warn('Post row deleted, but image cleanup failed.');
-        toast.warning('Post deleted, but image cleanup could not be completed.');
+      if (result.mediaCleanupFailed) {
+        console.warn('Post row deleted, but media cleanup failed.');
+        toast.warning('Post deleted, but some media cleanup could not be completed.');
       } else {
         toast.success('Post deleted successfully.');
       }

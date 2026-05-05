@@ -2,9 +2,11 @@ import { ExecutionMethod } from 'appwrite';
 import type { Models } from 'appwrite';
 import { appwriteConfig, functions } from '~/lib/appwrite/config';
 import type {
+  CreatePostWithContentActionRequest,
   DeletePostResult,
   DeleteViewerPostLikeResult,
   DeleteViewerPostSaveResult,
+  UpdatePostWithContentActionRequest,
   ViewerPostLikeMutationResult,
   ViewerPostSaveMutationResult,
 } from '../types/post.type';
@@ -44,7 +46,9 @@ type ContentActionRequest =
   | ContentActionPostUnlikeRequest
   | ContentActionPostSaveRequest
   | ContentActionPostUnsaveRequest
-  | ContentActionPostDeleteRequest;
+  | ContentActionPostDeleteRequest
+  | CreatePostWithContentActionRequest
+  | UpdatePostWithContentActionRequest;
 
 export type ContentActionExecutionResult = {
   executionId: string;
