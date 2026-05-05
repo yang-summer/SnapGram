@@ -4,7 +4,9 @@ import type { AppwriteResourceConfig } from './config.js';
 import { ContentActionError } from './errors.js';
 import {
   cleanupMediaFiles,
+  listPostMediaRowsByPostId,
   resolvePostDeleteFileIds,
+  type PostMediaRow,
   type PostDeleteSourceSnapshot,
 } from './post-media.js';
 import { runTransaction } from './transactions.js';
@@ -76,6 +78,7 @@ async function deletePostData(
   tablesDB: TablesDB,
   config: AppwriteResourceConfig,
   postId: string,
+  mediaRows: PostMediaRow[],
 ): Promise<void> {
   await runTransaction(tablesDB, async (transactionId) => {
     await tablesDB.deleteRows({
@@ -91,6 +94,15 @@ async function deletePostData(
       queries: [Query.equal('postId', postId)],
       transactionId,
     });
+
+    if (mediaRows.length > 0) {
+      await tablesDB.deleteRows({
+        databaseId: config.databaseId,
+        tableId: config.postMediaTableId,
+        queries: [Query.equal('postId', postId)],
+        transactionId,
+      });
+    }
 
     await tablesDB.deleteRow({
       databaseId: config.databaseId,
@@ -120,9 +132,11 @@ export async function deletePostForCurrentUser(
   }
 
   assertCanDeletePost(post, profile);
+  const mediaRows = await listPostMediaRowsByPostId(tablesDB, config, postId);
+  const fileIds = resolvePostDeleteFileIds(post, mediaRows);
 
   try {
-    await deletePostData(tablesDB, config, postId);
+    await deletePostData(tablesDB, config, postId, mediaRows);
   } catch (caughtError) {
     if (caughtError instanceof AppwriteException && caughtError.code === 404) {
       return {
@@ -137,7 +151,7 @@ export async function deletePostForCurrentUser(
   const mediaCleanupFailed = await cleanupMediaFiles(
     storage,
     config,
-    resolvePostDeleteFileIds(post, []),
+    fileIds,
     log,
     error,
     {
