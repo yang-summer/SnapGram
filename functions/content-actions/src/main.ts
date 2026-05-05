@@ -2,6 +2,7 @@ import { AppwriteException } from 'node-appwrite';
 import { createAppwriteClients } from './appwrite.js';
 import { parseContentActionRequest } from './action.js';
 import { ConfigError, getMissingConfigKeys, readConfig } from './config.js';
+import { createPostForCurrentUser } from './create-post.js';
 import { getCurrentUserProfile, ProfileMissingError } from './auth.js';
 import { deletePostForCurrentUser } from './delete-post.js';
 import {
@@ -147,6 +148,23 @@ export default async function main({ req, res, log, error }: FunctionContext) {
           config,
           profile,
           actionRequest.postId,
+          log,
+          error,
+        );
+
+        return res.json({
+          ok: true,
+          action: actionRequest.action,
+          data: result,
+        });
+      }
+      case 'post.create': {
+        const result = await createPostForCurrentUser(
+          tablesDB,
+          storage,
+          config,
+          profile,
+          actionRequest,
           log,
           error,
         );
