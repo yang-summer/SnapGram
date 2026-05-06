@@ -1,15 +1,17 @@
 import type { Models } from 'appwrite';
 import { AppwriteException, ID, Query } from 'appwrite';
 import { appwriteConfig, storage, tablesDB } from '~/lib/appwrite/config';
-import { buildPublicOwnerPermissions } from '~/lib/appwrite/permissions';
+import {
+  buildPrivateStagedFilePermissions,
+  buildPublicOwnerPermissions,
+} from '~/lib/appwrite/permissions';
 import { buildPostSearchText } from '../lib/post-search';
 import type {
   CreatePostApiInput,
-  DeletePostResult,
   ListPostRowsParams,
-  PostDeleteSnapshot,
   ProfilePostPageParams,
   RawPostEditorRow,
+  RawPostMediaRow,
   RawPostHomeFeedRow,
   RawPostListRow,
   RawPostMutationRow,
@@ -75,14 +77,18 @@ const POST_DETAIL_SELECT = [
 const POST_EDITOR_SELECT = [
   '$id',
   'caption',
-  'imageId',
-  'imageUrl',
-  'aspectRatioBucket',
-  'imagePlaceholder',
-  'imageWidth',
-  'imageHeight',
   'location',
   'tags',
+];
+const POST_MEDIA_SELECT = [
+  '$id',
+  'postId',
+  'fileId',
+  'sortOrder',
+  'width',
+  'height',
+  'aspectRatioBucket',
+  'placeholder',
 ];
 export const POST_HOME_FEED_SELECT = [
   '$id',
@@ -325,6 +331,31 @@ export async function getPostEditorRow(postId: string): Promise<RawPostEditorRow
   }
 }
 
+export async function listPostMediaRowsByPostId(postId: string): Promise<RawPostMediaRow[]> {
+  if (!postId) {
+    throw new Error('Post ID is required to load post media data.');
+  }
+
+  try {
+    const response = await tablesDB.listRows<RawPostMediaRow>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.postMediaTableId,
+      queries: [
+        Query.select(POST_MEDIA_SELECT),
+        Query.equal('postId', postId),
+        Query.orderAsc('sortOrder'),
+        Query.limit(APPWRITE_MAX_LIST_LIMIT),
+      ],
+      total: false,
+    });
+
+    return response.rows;
+  } catch (error) {
+    console.error('[PostApi.listPostMediaRowsByPostId] Failed to load post media data.', error);
+    throw error;
+  }
+}
+
 export function getPostImageView(fileId: string): string {
   return storage.getFileView({
     bucketId: appwriteConfig.storageId,
@@ -332,13 +363,16 @@ export function getPostImageView(fileId: string): string {
   });
 }
 
-export async function uploadPostImage(file: File, ownerAccountId: string): Promise<Models.File> {
+export async function uploadPostMediaFile(
+  file: File,
+  ownerAccountId: string,
+): Promise<Models.File> {
   if (!file) {
-    throw new Error('A post image file is required.');
+    throw new Error('A post media file is required.');
   }
 
   if (!ownerAccountId) {
-    throw new Error('Owner account ID is required to upload a post image.');
+    throw new Error('Owner account ID is required to upload a post media file.');
   }
 
   try {
@@ -346,17 +380,17 @@ export async function uploadPostImage(file: File, ownerAccountId: string): Promi
       bucketId: appwriteConfig.storageId,
       fileId: ID.unique(),
       file,
-      permissions: buildPublicOwnerPermissions(ownerAccountId),
+      permissions: buildPrivateStagedFilePermissions(ownerAccountId),
     });
   } catch (error) {
-    console.error('[PostApi.uploadPostImage] Failed to upload post image.', error);
+    console.error('[PostApi.uploadPostMediaFile] Failed to upload post media file.', error);
     throw error;
   }
 }
 
-export async function deletePostImage(fileId: string): Promise<void> {
+export async function deletePostMediaFile(fileId: string): Promise<void> {
   if (!fileId) {
-    throw new Error('File ID is required to delete a post image.');
+    throw new Error('File ID is required to delete a post media file.');
   }
 
   try {
@@ -369,7 +403,7 @@ export async function deletePostImage(fileId: string): Promise<void> {
       return;
     }
 
-    console.error('[PostApi.deletePostImage] Failed to delete post image.', error);
+    console.error('[PostApi.deletePostMediaFile] Failed to delete post media file.', error);
     throw error;
   }
 }
@@ -570,51 +604,6 @@ export async function searchPostRows({
     return posts;
   } catch (error) {
     console.error('[PostApi.searchPostRows] Failed to search posts.', error);
-    throw error;
-  }
-}
-
-export async function deletePost(postId: string): Promise<DeletePostResult> {
-  if (!postId) {
-    throw new Error('Post ID is required to delete a post.');
-  }
-
-  try {
-    const post = await tablesDB.getRow<PostDeleteSnapshot>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: postId,
-      queries: [Query.select(['imageId'])],
-    });
-
-    await tablesDB.deleteRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: postId,
-    });
-
-    let imageCleanupFailed = false;
-
-    if (post.imageId) {
-      try {
-        await storage.deleteFile({
-          bucketId: appwriteConfig.storageId,
-          fileId: post.imageId,
-        });
-      } catch (error) {
-        if (!(error instanceof AppwriteException && error.code === 404)) {
-          imageCleanupFailed = true;
-          console.error('[PostApi.deletePost] Failed to delete post image.', error);
-        }
-      }
-    }
-
-    return {
-      postId,
-      imageCleanupFailed,
-    };
-  } catch (error) {
-    console.error('[PostApi.deletePost] Failed to delete post.', error);
     throw error;
   }
 }

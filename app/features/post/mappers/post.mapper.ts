@@ -5,13 +5,16 @@ import {
 } from '../types/post.type';
 import type {
   CursorPage,
+  ExistingPostMediaEditorItem,
   HomeFeedPostViewModel,
   PostAspectRatioBucket,
   PostCardViewModel,
   PostDetailViewModel,
   PostEditorInitialData,
   PostGridItemViewModel,
+  PostMediaViewModel,
   RawPostEditorRow,
+  RawPostMediaRow,
   RawPostHomeFeedRow,
   RawPostListRow,
   RawPostRow,
@@ -80,6 +83,64 @@ function normalizeOptionalImageDimension(value: number | null | undefined): numb
   return normalizedValue > 0 ? normalizedValue : null;
 }
 
+function normalizeMediaSortOrder(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.trunc(value));
+}
+
+export function mapPostMediaRowToViewModel(
+  row: RawPostMediaRow,
+  resolveImageUrl: (fileId: string) => string,
+): PostMediaViewModel | null {
+  const fileId = row.fileId?.trim() ?? '';
+
+  if (!fileId) {
+    return null;
+  }
+
+  const imageUrl = resolveImageUrl(fileId)?.trim() ?? '';
+
+  if (!imageUrl) {
+    return null;
+  }
+
+  return {
+    id: row.$id,
+    fileId,
+    imageUrl,
+    sortOrder: normalizeMediaSortOrder(row.sortOrder),
+    width: normalizeOptionalImageDimension(row.width),
+    height: normalizeOptionalImageDimension(row.height),
+    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
+    placeholder: normalizeOptionalImagePlaceholder(row.placeholder),
+  };
+}
+
+export function mapPostMediaRowsToOrderedViewModels(
+  rows: RawPostMediaRow[],
+  resolveImageUrl: (fileId: string) => string,
+): PostMediaViewModel[] {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
+
+  const result: PostMediaViewModel[] = [];
+  const sortedRows = [...rows].sort((left, right) => left.sortOrder - right.sortOrder);
+
+  for (let index = 0; index < sortedRows.length; index += 1) {
+    const mappedItem = mapPostMediaRowToViewModel(sortedRows[index], resolveImageUrl);
+
+    if (mappedItem !== null) {
+      result.push(mappedItem);
+    }
+  }
+
+  return result;
+}
+
 export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | null {
   // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
   const creator = row ? mapPostCreator(row) : null;
@@ -120,7 +181,10 @@ export function mapPostRowsToCardViewModels(data: Models.RowList<RawPostRow>): P
   return result;
 }
 
-export function mapPostRowToDetailViewModel(row: RawPostRow): PostDetailViewModel | null {
+export function mapPostRowToDetailViewModel(
+  row: RawPostRow,
+  media: PostMediaViewModel[],
+): PostDetailViewModel | null {
   // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
   const creator = row ? mapPostCreator(row) : null;
 
@@ -134,6 +198,8 @@ export function mapPostRowToDetailViewModel(row: RawPostRow): PostDetailViewMode
     caption: row.caption ?? '',
     imageId: row.imageId,
     imageUrl: row.imageUrl,
+    media,
+    mediaCount: media.length,
     location: row.location ?? null,
     tags: row.tags ?? [],
     creator,
@@ -181,7 +247,45 @@ export function mapPostRowToHomeFeedItemViewModel(
   };
 }
 
-export function mapPostEditorRowToInitialData(row: RawPostEditorRow): PostEditorInitialData | null {
+export function mapPostMediaRowsToExistingEditorItems(
+  rows: RawPostMediaRow[],
+  resolveImageUrl: (fileId: string) => string,
+): ExistingPostMediaEditorItem[] {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
+
+  const result: ExistingPostMediaEditorItem[] = [];
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const fileId = row.fileId?.trim() ?? '';
+
+    if (!fileId) {
+      continue;
+    }
+
+    result.push({
+      kind: 'existing',
+      clientMediaId: row.$id,
+      mediaId: row.$id,
+      fileId,
+      imageUrl: resolveImageUrl(fileId),
+      width: normalizeOptionalImageDimension(row.width),
+      height: normalizeOptionalImageDimension(row.height),
+      aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
+      placeholder: normalizeOptionalImagePlaceholder(row.placeholder),
+      status: 'ready',
+    });
+  }
+
+  return result;
+}
+
+export function mapPostEditorRowToInitialData(
+  row: RawPostEditorRow,
+  existingMediaItems: ExistingPostMediaEditorItem[],
+): PostEditorInitialData | null {
   if (!row) {
     return null;
   }
@@ -189,14 +293,9 @@ export function mapPostEditorRowToInitialData(row: RawPostEditorRow): PostEditor
   return {
     id: row.$id,
     caption: row.caption ?? '',
-    imageId: row.imageId,
-    imageUrl: row.imageUrl,
-    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
-    imagePlaceholder: normalizeOptionalImagePlaceholder(row.imagePlaceholder),
-    imageWidth: normalizeOptionalImageDimension(row.imageWidth),
-    imageHeight: normalizeOptionalImageDimension(row.imageHeight),
     location: row.location ?? '',
     tags: (row.tags ?? []).join(', '),
+    existingMediaItems,
   };
 }
 

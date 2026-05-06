@@ -2,26 +2,24 @@ import { AppwriteException, Query, Storage, TablesDB, type Models } from 'node-a
 import type { CurrentUserProfile } from './auth.js';
 import type { AppwriteResourceConfig } from './config.js';
 import { ContentActionError } from './errors.js';
+import {
+  cleanupMediaFiles,
+  listPostMediaRowsByPostId,
+  resolvePostDeleteFileIds,
+  type PostMediaRow,
+} from './post-media.js';
+import { runTransaction } from './transactions.js';
 
-const POST_DELETE_SELECT = ['$id', 'imageId', 'creator.$id'];
-const DELETE_MEDIA_MAX_ATTEMPTS = 3;
-const DELETE_MEDIA_RETRY_DELAY_MS = 250;
+const POST_DELETE_SELECT = ['$id', 'creator.$id'];
 
 type PostDeleteSnapshot = Models.Row & {
-  imageId?: string | null;
   creator?: string | (Models.Row & { $id: string }) | null;
 };
 
 export type DeletePostResult = {
   postId: string;
-  imageCleanupFailed: boolean;
+  mediaCleanupFailed: boolean;
 };
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
 
 function resolveCreatorProfileId(post: PostDeleteSnapshot): string | null {
   if (typeof post.creator === 'string') {
@@ -36,39 +34,6 @@ function resolveCreatorProfileId(post: PostDeleteSnapshot): string | null {
 
   return null;
 }
-
-async function runTransaction<T>(
-  tablesDB: TablesDB,
-  run: (transactionId: string) => Promise<T>,
-): Promise<T> {
-  const transaction = await tablesDB.createTransaction();
-  let shouldRollback = true;
-
-  try {
-    const result = await run(transaction.$id);
-    await tablesDB.updateTransaction({
-      transactionId: transaction.$id,
-      commit: true,
-    });
-    shouldRollback = false;
-
-    return result;
-  } catch (error) {
-    if (shouldRollback) {
-      try {
-        await tablesDB.updateTransaction({
-          transactionId: transaction.$id,
-          rollback: true,
-        });
-      } catch {
-        // Ignore rollback failures and preserve the original error.
-      }
-    }
-
-    throw error;
-  }
-}
-
 async function getPostDeleteSnapshot(
   tablesDB: TablesDB,
   config: AppwriteResourceConfig,
@@ -111,6 +76,7 @@ async function deletePostData(
   tablesDB: TablesDB,
   config: AppwriteResourceConfig,
   postId: string,
+  mediaRows: PostMediaRow[],
 ): Promise<void> {
   await runTransaction(tablesDB, async (transactionId) => {
     await tablesDB.deleteRows({
@@ -127,6 +93,15 @@ async function deletePostData(
       transactionId,
     });
 
+    if (mediaRows.length > 0) {
+      await tablesDB.deleteRows({
+        databaseId: config.databaseId,
+        tableId: config.postMediaTableId,
+        queries: [Query.equal('postId', postId)],
+        transactionId,
+      });
+    }
+
     await tablesDB.deleteRow({
       databaseId: config.databaseId,
       tableId: config.postsTableId,
@@ -134,66 +109,6 @@ async function deletePostData(
       transactionId,
     });
   });
-}
-
-async function cleanupPostMedia(
-  storage: Storage,
-  config: AppwriteResourceConfig,
-  post: PostDeleteSnapshot,
-  log: (message: string) => void,
-  error: (message: string) => void,
-): Promise<boolean> {
-  const fileId = post.imageId?.trim() ?? '';
-
-  if (!fileId) {
-    return false;
-  }
-
-  for (let attempt = 1; attempt <= DELETE_MEDIA_MAX_ATTEMPTS; attempt += 1) {
-    try {
-      await storage.deleteFile({
-        bucketId: config.storageId,
-        fileId,
-      });
-
-      return false;
-    } catch (caughtError) {
-      if (caughtError instanceof AppwriteException && caughtError.code === 404) {
-        return false;
-      }
-
-      const isLastAttempt = attempt === DELETE_MEDIA_MAX_ATTEMPTS;
-      const message = caughtError instanceof Error ? caughtError.message : String(caughtError);
-
-      if (isLastAttempt) {
-        error(
-          JSON.stringify({
-            event: 'content-actions.post-delete.image-cleanup-failed',
-            postId: post.$id,
-            fileId,
-            attempt,
-            message,
-          }),
-        );
-
-        return true;
-      }
-
-      log(
-        JSON.stringify({
-          event: 'content-actions.post-delete.image-cleanup-retry',
-          postId: post.$id,
-          fileId,
-          attempt,
-          message,
-        }),
-      );
-
-      await sleep(DELETE_MEDIA_RETRY_DELAY_MS * attempt);
-    }
-  }
-
-  return true;
 }
 
 export async function deletePostForCurrentUser(
@@ -210,29 +125,40 @@ export async function deletePostForCurrentUser(
   if (!post) {
     return {
       postId,
-      imageCleanupFailed: false,
+      mediaCleanupFailed: false,
     };
   }
 
   assertCanDeletePost(post, profile);
+  const mediaRows = await listPostMediaRowsByPostId(tablesDB, config, postId);
+  const fileIds = resolvePostDeleteFileIds(mediaRows);
 
   try {
-    await deletePostData(tablesDB, config, postId);
+    await deletePostData(tablesDB, config, postId, mediaRows);
   } catch (caughtError) {
     if (caughtError instanceof AppwriteException && caughtError.code === 404) {
       return {
         postId,
-        imageCleanupFailed: false,
+        mediaCleanupFailed: false,
       };
     }
 
     throw caughtError;
   }
 
-  const imageCleanupFailed = await cleanupPostMedia(storage, config, post, log, error);
+  const mediaCleanupFailed = await cleanupMediaFiles(
+    storage,
+    config,
+    fileIds,
+    log,
+    error,
+    {
+      eventPrefix: 'content-actions.post-delete',
+    },
+  );
 
   return {
     postId,
-    imageCleanupFailed,
+    mediaCleanupFailed,
   };
 }

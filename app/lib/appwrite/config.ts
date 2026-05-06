@@ -9,6 +9,7 @@ export const appwriteConfig = {
   postsTableId: import.meta.env.VITE_APPWRITE_POSTS_TABLE_ID,
   saveTableId: import.meta.env.VITE_APPWRITE_SAVES_TABLE_ID,
   likesTableId: import.meta.env.VITE_APPWRITE_LIKES_TABLE_ID,
+  postMediaTableId: import.meta.env.VITE_APPWRITE_POST_MEDIA_TABLE_ID,
   contentActionsFunctionId: import.meta.env.VITE_APPWRITE_CONTENT_ACTIONS_FUNCTION_ID,
 };
 

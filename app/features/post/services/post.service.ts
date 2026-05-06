@@ -1,26 +1,37 @@
 import {
-  createPostRow,
   DEFAULT_HOME_FEED_PAGE_SIZE,
   DEFAULT_PROFILE_FEED_PAGE_SIZE,
   DEFAULT_SEARCH_POST_PAGE_SIZE,
   countProfilePublishedPosts,
-  deletePostImage,
   getPostImageView,
   getPostEditorRow,
   getPostById,
   getRecentPosts,
   listHomeFeedPostRows,
   listExplorePostRows,
+  listPostMediaRowsByPostId,
   listProfilePublishedPostRows,
   listSearchPostRows,
   searchPostRows,
-  updatePostRow,
-  uploadPostImage,
 } from '../api/post.api';
-import { deletePostWithContentAction } from '../api/post.actions.api';
-import { getImageMetadata } from '../lib/image-metadata';
+import {
+  createPostWithContentAction,
+  deletePostWithContentAction,
+  updatePostWithContentAction,
+} from '../api/post.actions.api';
+import {
+  buildCreatePostActionPayload,
+  buildUpdatePostActionPayload,
+} from '../lib/post-publish-payload';
+import {
+  buildUploadedFileIdMap,
+  cleanupUploadedMediaFiles,
+  uploadNewMediaItems,
+} from '../lib/post-upload-cleanup';
 import {
   mapHomeFeedRowsToCursorPage,
+  mapPostMediaRowsToExistingEditorItems,
+  mapPostMediaRowsToOrderedViewModels,
   mapPostRowsToCardViewModels,
   mapPostRowsToCursorPage,
   mapPostRowsToGridItemViewModels,
@@ -28,11 +39,11 @@ import {
   mapPostRowToDetailViewModel,
 } from '../mappers/post.mapper';
 import type {
+  CreatePostPublishInput,
+  CreatePostPublishResult,
   CursorPage,
-  CreatePostInput,
   DeletePostResult,
   HomeFeedPostViewModel,
-  ImageMetadataResult,
   ListPostRowsParams,
   PostCardViewModel,
   PostDetailViewModel,
@@ -40,14 +51,13 @@ import type {
   ProfileFeedPage,
   ProfilePostPageParams,
   PostGridItemViewModel,
-  PostMutationResult,
-  RawPostMutationRow,
+  UploadedPostMediaFile,
   SearchFeedPage,
   SearchPostPageParams,
   SearchPostRowsParams,
-  UpdatePostInput,
+  UpdatePostPublishInput,
+  UpdatePostPublishResult,
 } from '../types/post.type';
-import { DEFAULT_POST_ASPECT_RATIO_BUCKET } from '../types/post.type';
 
 const DEFAULT_EXPLORE_POST_PAGE_SIZE = 9;
 const DEFAULT_SEARCH_RESULTS_LIMIT = 20;
@@ -59,66 +69,6 @@ function clampListLimit(limit: number | undefined, fallback: number): number {
   }
 
   return Math.min(Math.max(Math.trunc(limit), 1), APPWRITE_MAX_LIST_LIMIT);
-}
-
-function mapPostMutationRowToResult(row: RawPostMutationRow): PostMutationResult {
-  return {
-    id: row.$id,
-    imageId: row.imageId,
-    imageUrl: row.imageUrl,
-  };
-}
-
-function createFallbackImageMetadata(): ImageMetadataResult {
-  return {
-    width: null,
-    height: null,
-    aspectRatioBucket: DEFAULT_POST_ASPECT_RATIO_BUCKET,
-    placeholder: null,
-  };
-}
-
-function hasUsablePreparedImageMetadata(
-  metadata: ImageMetadataResult | null | undefined,
-): metadata is ImageMetadataResult {
-  if (!metadata) {
-    return false;
-  }
-
-  return metadata.width !== null && metadata.height !== null;
-}
-
-async function resolveImageMetadata(
-  file: File,
-  preparedImageMetadata?: ImageMetadataResult | null,
-): Promise<ImageMetadataResult> {
-  if (hasUsablePreparedImageMetadata(preparedImageMetadata)) {
-    return preparedImageMetadata;
-  }
-
-  try {
-    const resolvedMetadata = await getImageMetadata(file);
-
-    if (hasUsablePreparedImageMetadata(resolvedMetadata)) {
-      return resolvedMetadata;
-    }
-  } catch (error) {
-    console.error('[PostService.resolveImageMetadata] Failed to compute image metadata.', error);
-  }
-
-  return createFallbackImageMetadata();
-}
-
-async function cleanupUploadedImage(fileId: string | null, context: string): Promise<void> {
-  if (!fileId) {
-    return;
-  }
-
-  try {
-    await deletePostImage(fileId);
-  } catch (error) {
-    console.error(`[PostService.${context}] Failed to clean up uploaded post image.`, error);
-  }
 }
 
 export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
@@ -146,16 +96,17 @@ export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
 
 export async function getPostDetail(postId: string): Promise<PostDetailViewModel | null> {
   try {
-    // 1. 调用 API 获取原始数据
-    const response = await getPostById(postId);
+    const [postRow, mediaRows] = await Promise.all([
+      getPostById(postId),
+      listPostMediaRowsByPostId(postId),
+    ]);
 
-    // 2. 业务规则：防御性编程，处理空结果或无效响应
-    if (!response) {
+    if (!postRow) {
       return null;
     }
 
-    // 3. 将 raw row 交给 mapper 进行转换
-    const viewModel = mapPostRowToDetailViewModel(response);
+    const media = mapPostMediaRowsToOrderedViewModels(mediaRows, getPostImageView);
+    const viewModel = mapPostRowToDetailViewModel(postRow, media);
 
     return viewModel;
   } catch (error) {
@@ -170,105 +121,72 @@ export async function getPostEditorInitialData(
   postId: string,
 ): Promise<PostEditorInitialData | null> {
   try {
-    const response = await getPostEditorRow(postId);
+    const [postRow, postMediaRows] = await Promise.all([
+      getPostEditorRow(postId),
+      listPostMediaRowsByPostId(postId),
+    ]);
 
-    if (!response) {
+    if (!postRow) {
       return null;
     }
 
-    return mapPostEditorRowToInitialData(response);
+    const existingMediaItems = mapPostMediaRowsToExistingEditorItems(postMediaRows, getPostImageView);
+
+    return mapPostEditorRowToInitialData(postRow, existingMediaItems);
   } catch (error) {
     console.error(`[PostService.getPostEditorInitialData] Error:`, error);
     throw error;
   }
 }
 
-export async function createPost(input: CreatePostInput): Promise<PostMutationResult> {
-  let uploadedFileId: string | null = null;
+export async function createPost(
+  input: CreatePostPublishInput,
+): Promise<CreatePostPublishResult> {
+  let uploadedFiles: UploadedPostMediaFile[] = [];
 
   try {
-    const imageMetadata = await resolveImageMetadata(input.file, input.preparedImageMetadata);
-    const uploadedFile = await uploadPostImage(input.file, input.ownerAccountId);
-    uploadedFileId = uploadedFile.$id;
+    uploadedFiles = await uploadNewMediaItems(
+      input.mediaItems.map((mediaItem) => ({
+        clientMediaId: mediaItem.clientMediaId,
+        file: mediaItem.file,
+      })),
+      input.ownerAccountId,
+    );
+    const uploadedFileIdByClientMediaId = buildUploadedFileIdMap(uploadedFiles);
+    const payload = buildCreatePostActionPayload(input, uploadedFileIdByClientMediaId);
 
-    const createdPost = await createPostRow({
-      creatorProfileId: input.creatorProfileId,
-      ownerAccountId: input.ownerAccountId,
-      caption: input.caption,
-      imageId: uploadedFileId,
-      imageUrl: getPostImageView(uploadedFileId),
-      aspectRatioBucket: imageMetadata.aspectRatioBucket,
-      imagePlaceholder: imageMetadata.placeholder,
-      imageWidth: imageMetadata.width,
-      imageHeight: imageMetadata.height,
-      location: input.location,
-      tags: input.tags,
-    });
-
-    return mapPostMutationRowToResult(createdPost);
+    return await createPostWithContentAction(payload);
   } catch (error) {
-    await cleanupUploadedImage(uploadedFileId, 'createPost');
+    await cleanupUploadedMediaFiles(uploadedFiles, 'createPost');
     console.error(`[PostService.createPost] Error:`, error);
     throw error;
   }
 }
 
-export async function updatePost(input: UpdatePostInput): Promise<PostMutationResult> {
-  const nextFile = input.nextFile ?? null;
-
-  if (!nextFile) {
-    try {
-      const updatedPost = await updatePostRow({
-        postId: input.postId,
-        caption: input.caption,
-        imageId: input.currentImageId,
-        imageUrl: input.currentImageUrl,
-        aspectRatioBucket: input.currentAspectRatioBucket,
-        imagePlaceholder: input.currentImagePlaceholder,
-        imageWidth: input.currentImageWidth,
-        imageHeight: input.currentImageHeight,
-        location: input.location,
-        tags: input.tags,
-      });
-
-      return mapPostMutationRowToResult(updatedPost);
-    } catch (error) {
-      console.error(`[PostService.updatePost] Error:`, error);
-      throw error;
-    }
-  }
-
-  let uploadedFileId: string | null = null;
+export async function updatePost(
+  input: UpdatePostPublishInput,
+): Promise<UpdatePostPublishResult> {
+  let uploadedFiles: UploadedPostMediaFile[] = [];
 
   try {
-    const imageMetadata = await resolveImageMetadata(nextFile, input.nextPreparedImageMetadata);
-    const uploadedFile = await uploadPostImage(nextFile, input.ownerAccountId);
-    uploadedFileId = uploadedFile.$id;
+    uploadedFiles = await uploadNewMediaItems(
+      input.mediaItems
+        .filter(
+          (mediaItem): mediaItem is Extract<typeof mediaItem, { kind: 'local' }> =>
+            mediaItem.kind === 'local',
+        )
+        .map((mediaItem) => ({
+          clientMediaId: mediaItem.clientMediaId,
+          file: mediaItem.file,
+        })),
+      input.ownerAccountId,
+    );
+    const uploadedFileIdByClientMediaId = buildUploadedFileIdMap(uploadedFiles);
+    const payload = buildUpdatePostActionPayload(input, uploadedFileIdByClientMediaId);
 
-    const updatedPost = await updatePostRow({
-      postId: input.postId,
-      caption: input.caption,
-      imageId: uploadedFileId,
-      imageUrl: getPostImageView(uploadedFileId),
-      aspectRatioBucket: imageMetadata.aspectRatioBucket,
-      imagePlaceholder: imageMetadata.placeholder,
-      imageWidth: imageMetadata.width,
-      imageHeight: imageMetadata.height,
-      location: input.location,
-      tags: input.tags,
-    });
-
-    if (input.currentImageId && input.currentImageId !== uploadedFileId) {
-      try {
-        await deletePostImage(input.currentImageId);
-      } catch (error) {
-        console.error('[PostService.updatePost] Failed to delete previous post image.', error);
-      }
-    }
-
-    return mapPostMutationRowToResult(updatedPost);
+    return await updatePostWithContentAction(payload);
   } catch (error) {
-    await cleanupUploadedImage(uploadedFileId, 'updatePost');
+    await cleanupUploadedMediaFiles(uploadedFiles, 'updatePost');
     console.error(`[PostService.updatePost] Error:`, error);
     throw error;
   }

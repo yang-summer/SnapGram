@@ -2,6 +2,7 @@ import { AppwriteException } from 'node-appwrite';
 import { createAppwriteClients } from './appwrite.js';
 import { parseContentActionRequest } from './action.js';
 import { ConfigError, getMissingConfigKeys, readConfig } from './config.js';
+import { createPostForCurrentUser } from './create-post.js';
 import { getCurrentUserProfile, ProfileMissingError } from './auth.js';
 import { deletePostForCurrentUser } from './delete-post.js';
 import {
@@ -13,6 +14,7 @@ import {
 import { ContentActionError } from './errors.js';
 import type { FunctionContext } from './request.js';
 import { getHeader } from './request.js';
+import { updatePostForCurrentUser } from './update-post.js';
 
 function createErrorBody(code: string, message: string, extra?: Record<string, unknown>) {
   return {
@@ -90,6 +92,7 @@ export default async function main({ req, res, log, error }: FunctionContext) {
             storageId: config.storageId,
             usersTableId: config.usersTableId,
             postsTableId: config.postsTableId,
+            postMediaTableId: config.postMediaTableId,
             savesTableId: config.savesTableId,
             likesTableId: config.likesTableId,
           },
@@ -147,6 +150,40 @@ export default async function main({ req, res, log, error }: FunctionContext) {
           config,
           profile,
           actionRequest.postId,
+          log,
+          error,
+        );
+
+        return res.json({
+          ok: true,
+          action: actionRequest.action,
+          data: result,
+        });
+      }
+      case 'post.create': {
+        const result = await createPostForCurrentUser(
+          tablesDB,
+          storage,
+          config,
+          profile,
+          actionRequest,
+          log,
+          error,
+        );
+
+        return res.json({
+          ok: true,
+          action: actionRequest.action,
+          data: result,
+        });
+      }
+      case 'post.update': {
+        const result = await updatePostForCurrentUser(
+          tablesDB,
+          storage,
+          config,
+          profile,
+          actionRequest,
           log,
           error,
         );

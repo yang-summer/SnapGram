@@ -1,15 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { postKeys } from './post.keys';
 import { createPost, deletePostById, updatePost } from '../services/post.service';
-import type { CreatePostInput, UpdatePostInput } from '../types/post.type';
+import type { CreatePostPublishInput, UpdatePostPublishInput } from '../types/post.type';
 
 export function useCreatePostMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreatePostInput) => createPost(input),
+    mutationFn: (input: CreatePostPublishInput) => createPost(input),
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: postKeys.profileRoot() });
     },
   });
 }
@@ -18,11 +20,13 @@ export function useUpdatePostMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: UpdatePostInput) => updatePost(input),
+    mutationFn: (input: UpdatePostPublishInput) => updatePost(input),
+    retry: false,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: postKeys.detail(variables.postId) });
       queryClient.invalidateQueries({ queryKey: postKeys.editor(variables.postId) });
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: postKeys.profileRoot() });
     },
   });
 }
@@ -32,6 +36,7 @@ export function useDeletePostMutation() {
 
   return useMutation({
     mutationFn: (postId: string) => deletePostById(postId),
+    retry: false,
     onSuccess: ({ postId }) => {
       queryClient.removeQueries({ queryKey: postKeys.detail(postId), exact: true });
       queryClient.removeQueries({ queryKey: postKeys.editor(postId), exact: true });

@@ -21,7 +21,7 @@ type PlaceholderOptions = {
   maxLength?: number;
 };
 
-type LoadedImage = {
+export type LoadedImage = {
   image: HTMLImageElement;
   width: number;
   height: number;
@@ -184,18 +184,22 @@ export async function loadImageFromFile(file: File): Promise<LoadedImage> {
   }
 }
 
+export function getImageMetadataFromLoadedImage({
+  image,
+  width,
+  height,
+}: LoadedImage): ImageMetadataResult {
+  return {
+    width,
+    height,
+    aspectRatioBucket: pickNearestAspectRatioBucket(width, height),
+    placeholder: createImagePlaceholderDataUrl(image),
+  };
+}
+
 export async function getImageMetadata(file: File): Promise<ImageMetadataResult> {
   try {
-    const { image, width, height } = await loadImageFromFile(file);
-    const aspectRatioBucket = pickNearestAspectRatioBucket(width, height);
-    const placeholder = createImagePlaceholderDataUrl(image);
-
-    return {
-      width,
-      height,
-      aspectRatioBucket,
-      placeholder,
-    };
+    return getImageMetadataFromLoadedImage(await loadImageFromFile(file));
   } catch {
     return {
       width: null,

@@ -71,14 +71,29 @@ export type RawPostHomeFeedRow = Models.Row &
 
 export type RawPostEditorRow = Models.Row & {
   caption?: string | null;
-  imageId: string;
-  imageUrl: string;
-  aspectRatioBucket?: string | null;
-  imagePlaceholder?: string | null;
-  imageWidth?: number | null;
-  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
+};
+
+export type RawPostMediaRow = Models.Row & {
+  postId: string;
+  fileId: string;
+  sortOrder: number;
+  width?: number | null;
+  height?: number | null;
+  aspectRatioBucket?: string | null;
+  placeholder?: string | null;
+};
+
+export type PostMediaViewModel = {
+  id: string;
+  fileId: string;
+  imageUrl: string;
+  sortOrder: number;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
 };
 
 export type RawPostWriteRow = Models.Row & {
@@ -151,6 +166,8 @@ export type PostDetailViewModel = {
   caption: string;
   imageId: string;
   imageUrl: string;
+  media: PostMediaViewModel[];
+  mediaCount: number;
   location: string | null;
   tags: string[];
   creator: {
@@ -162,13 +179,9 @@ export type PostDetailViewModel = {
   saveCount: number;
 };
 
-export type PostDeleteSnapshot = Models.Row & {
-  imageId?: string | null;
-};
-
 export type DeletePostResult = {
   postId: string;
-  imageCleanupFailed: boolean;
+  mediaCleanupFailed: boolean;
 };
 
 export type PostGridItemViewModel = {
@@ -207,6 +220,37 @@ export type ImageMetadataResult = {
   placeholder: string | null;
 };
 
+export type PostMediaProcessStatus = 'processing' | 'ready' | 'failed';
+
+export type PreparedPostImageAsset = {
+  file: File;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type PostImagePreparationErrorCode =
+  | 'unsupported_type'
+  | 'empty_file'
+  | 'decode_failed'
+  | 'compress_failed';
+
+export type PostImagePreparationSuccessResult = {
+  status: 'ready';
+  asset: PreparedPostImageAsset;
+};
+
+export type PostImagePreparationFailureResult = {
+  status: 'failed';
+  code: PostImagePreparationErrorCode;
+  message: string;
+};
+
+export type PostImagePreparationResult =
+  | PostImagePreparationSuccessResult
+  | PostImagePreparationFailureResult;
+
 export type PreparedImageMetadataStatus = 'idle' | 'pending' | 'ready' | 'failed';
 
 export type PreparedImageDraft = {
@@ -227,35 +271,207 @@ export type ProfileTabCountResult = {
   count: number;
 };
 
-export type PostFormValues = {
+export type PostTextFormValues = {
   caption: string;
-  file: File[];
   location: string;
   tags: string;
 };
+
+export type ExistingPostMediaEditorItem = {
+  kind: 'existing';
+  clientMediaId: string;
+  mediaId: string;
+  fileId: string;
+  imageUrl: string;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+  status: 'ready';
+};
+
+export type LocalProcessingPostMediaEditorItem = {
+  kind: 'local';
+  clientMediaId: string;
+  status: 'processing';
+  file: File;
+  previewUrl: null;
+  width: null;
+  height: null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: null;
+};
+
+export type LocalReadyPostMediaEditorItem = {
+  kind: 'local';
+  clientMediaId: string;
+  status: 'ready';
+  file: File;
+  previewUrl: string;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type LocalFailedPostMediaEditorItem = {
+  kind: 'local';
+  clientMediaId: string;
+  status: 'failed';
+  file: File;
+  previewUrl: null;
+  width: null;
+  height: null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: null;
+  errorCode: PostImagePreparationErrorCode;
+  errorMessage: string;
+};
+
+export type LocalPostMediaEditorItem =
+  | LocalProcessingPostMediaEditorItem
+  | LocalReadyPostMediaEditorItem
+  | LocalFailedPostMediaEditorItem;
+
+export type PostMediaEditorItem = ExistingPostMediaEditorItem | LocalPostMediaEditorItem;
+export type ReadyLocalPostMediaEditorItem = Extract<LocalPostMediaEditorItem, { status: 'ready' }>;
+
+export type PostFormValues = PostTextFormValues;
 
 export type PostEditorInitialData = {
   id: string;
   caption: string;
-  imageId: string;
-  imageUrl: string;
-  aspectRatioBucket: PostAspectRatioBucket;
-  imagePlaceholder: string | null;
-  imageWidth: number | null;
-  imageHeight: number | null;
   location: string;
   tags: string;
+  existingMediaItems: ExistingPostMediaEditorItem[];
 };
 
-export type CreatePostInput = {
+export type CreatePostWithContentActionMediaInput = {
+  fileId: string;
+  sortOrder: number;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type CreatePostWithContentActionRequest = {
+  action: 'post.create';
+  caption: string;
+  location: string;
+  tags: string[];
+  media: CreatePostWithContentActionMediaInput[];
+};
+
+export type ExistingUpdatePostWithContentActionMediaInput = {
+  type: 'existing';
+  mediaId: string;
+  sortOrder: number;
+};
+
+export type NewUpdatePostWithContentActionMediaInput = {
+  type: 'new';
+  fileId: string;
+  sortOrder: number;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type UpdatePostWithContentActionMediaInput =
+  | ExistingUpdatePostWithContentActionMediaInput
+  | NewUpdatePostWithContentActionMediaInput;
+
+export type UpdatePostWithContentActionRequest = {
+  action: 'post.update';
+  postId: string;
+  caption: string;
+  location: string;
+  tags: string[];
+  media: UpdatePostWithContentActionMediaInput[];
+};
+
+export type CreatePostWithContentActionResult = {
+  postId: string;
+  mediaCount: number;
+  filePublicationFailed: boolean;
+};
+
+export type UpdatePostWithContentActionResult = {
+  postId: string;
+  mediaCount: number;
+  filePublicationFailed: boolean;
+  removedFileCleanupFailed: boolean;
+};
+
+export type CreatePostPublishMediaItem = {
+  clientMediaId: string;
+  file: File;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type CreatePostPublishInput = {
   creatorProfileId: string;
   ownerAccountId: string;
   caption: string;
-  file: File;
-  preparedImageMetadata?: ImageMetadataResult | null;
   location: string;
   tags: string[];
+  mediaItems: CreatePostPublishMediaItem[];
 };
+
+export type ExistingUpdatePostPublishMediaItem = {
+  kind: 'existing';
+  clientMediaId: string;
+  mediaId: string;
+  fileId: string;
+  imageUrl: string;
+  width: number | null;
+  height: number | null;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type NewUpdatePostPublishMediaItem = {
+  kind: 'local';
+  clientMediaId: string;
+  file: File;
+  width: number;
+  height: number;
+  aspectRatioBucket: PostAspectRatioBucket;
+  placeholder: string | null;
+};
+
+export type UpdatePostPublishMediaItem =
+  | ExistingUpdatePostPublishMediaItem
+  | NewUpdatePostPublishMediaItem;
+
+export type UpdatePostPublishInput = {
+  postId: string;
+  ownerAccountId: string;
+  caption: string;
+  location: string;
+  tags: string[];
+  mediaItems: UpdatePostPublishMediaItem[];
+};
+
+export type CreatePostPublishResult = CreatePostWithContentActionResult;
+export type UpdatePostPublishResult = UpdatePostWithContentActionResult;
+
+export type UploadablePostMediaItem = {
+  clientMediaId: string;
+  file: File;
+};
+
+export type UploadedPostMediaFile = {
+  clientMediaId: string;
+  fileId: string;
+};
+
+export type UploadedFileIdByClientMediaId = Record<string, string>;
 
 export type CreatePostApiInput = {
   creatorProfileId: string;
@@ -271,22 +487,6 @@ export type CreatePostApiInput = {
   tags: string[];
 };
 
-export type UpdatePostInput = {
-  postId: string;
-  ownerAccountId: string;
-  caption: string;
-  location: string;
-  tags: string[];
-  nextFile?: File | null;
-  nextPreparedImageMetadata?: ImageMetadataResult | null;
-  currentImageId: string;
-  currentImageUrl: string;
-  currentAspectRatioBucket: PostAspectRatioBucket;
-  currentImagePlaceholder: string | null;
-  currentImageWidth: number | null;
-  currentImageHeight: number | null;
-};
-
 export type UpdatePostApiInput = {
   postId: string;
   caption: string;
@@ -298,12 +498,6 @@ export type UpdatePostApiInput = {
   imageHeight?: number | null;
   location: string;
   tags: string[];
-};
-
-export type PostMutationResult = {
-  id: string;
-  imageId: string;
-  imageUrl: string;
 };
 
 export type CreateViewerPostLikeInput = {

@@ -1,15 +1,15 @@
 import {
   AppwriteException,
   ID,
-  Permission,
   Query,
-  Role,
   TablesDB,
   type Models,
 } from 'node-appwrite';
 import type { CurrentUserProfile } from './auth.js';
 import type { AppwriteResourceConfig } from './config.js';
 import { ContentActionError } from './errors.js';
+import { buildPrivateOwnerReadPermissions } from './permissions.js';
+import { runTransaction } from './transactions.js';
 
 const ENGAGEMENT_RECORD_SELECT = ['$id', 'postId', 'userId'];
 const POST_EXISTS_SELECT = ['$id'];
@@ -85,42 +85,6 @@ const SAVE_ENGAGEMENT_CONFIG: EngagementConfig = {
   recordName: 'save',
   unresolvedCode: 'SAVE_RECORD_UNRESOLVED',
 };
-
-function buildPrivateOwnerReadPermissions(accountId: string): string[] {
-  return [Permission.read(Role.user(accountId))];
-}
-
-async function runTransaction<T>(
-  tablesDB: TablesDB,
-  run: (transactionId: string) => Promise<T>,
-): Promise<T> {
-  const transaction = await tablesDB.createTransaction();
-  let shouldRollback = true;
-
-  try {
-    const result = await run(transaction.$id);
-    await tablesDB.updateTransaction({
-      transactionId: transaction.$id,
-      commit: true,
-    });
-    shouldRollback = false;
-
-    return result;
-  } catch (error) {
-    if (shouldRollback) {
-      try {
-        await tablesDB.updateTransaction({
-          transactionId: transaction.$id,
-          rollback: true,
-        });
-      } catch {
-        // Ignore rollback failures and preserve the original error.
-      }
-    }
-
-    throw error;
-  }
-}
 
 async function assertPostExists(
   tablesDB: TablesDB,
