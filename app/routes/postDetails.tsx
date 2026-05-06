@@ -3,6 +3,7 @@ import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import RouteErrorState from '~/components/feedback/route-error-state';
 import { Button } from '~/components/ui/button';
+import PostMediaCarousel from '~/features/post/components/PostMediaCarousel';
 import PostStats from '~/features/post/components/PostStats';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import { useDeletePostMutation } from '~/features/post/queries/post.mutation';
@@ -74,11 +75,13 @@ export default function PostDetails() {
   } else {
     content = (
       <div className="flex flex-col xl:flex-row w-full max-w-5xl rounded-[30px] border xl:rounded-l-[24px]">
-        <img
-          src={post.imageUrl}
-          alt="creator"
-          className="h-80 lg:h-120 xl:w-[48%] rounded-t-[30px] xl:rounded-l-[24px] xl:rounded-tr-none object-cover p-5"
-        />
+        <div className="p-5 xl:w-[48%] xl:shrink-0">
+          <PostMediaCarousel
+            media={post.media}
+            altBase={post.caption || `${post.creator.name}'s post media`}
+            className="rounded-[24px]"
+          />
+        </div>
         <div className="flex flex-col gap-5 lg:gap-7 flex-1 items-start p-8 rounded-[30px]">
           <div className="flex justify-between items-center w-full">
             <Link to={`/profile/${post.creator.id}`} className="flex items-center gap-3">
