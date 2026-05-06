@@ -154,10 +154,6 @@ function validatePostMediaItemsForSubmit(
     return 'Remove or retry failed images before submitting the post.';
   }
 
-  if (mode === 'update' && items.some((item) => item.kind === 'existing' && !item.mediaId)) {
-    return 'This post still uses legacy media data. Remove the legacy image and upload a replacement before saving.';
-  }
-
   const readyItemsCount = items.filter(
     (item) => item.kind === 'existing' || isReadyLocalMediaItem(item),
   ).length;
@@ -318,9 +314,7 @@ export default function PostForm({ action, post }: PostFormProps) {
           <Field className="w-full">
             <FieldLabel>Edit Photos</FieldLabel>
             <FieldDescription>
-              {post?.isLegacyMediaFallback
-                ? 'Remove the legacy image and upload replacement media before saving this post.'
-                : 'Reorder current media, remove existing items, or add new images before saving.'}
+              Reorder current media, remove existing items, or add new images before saving.
             </FieldDescription>
             <PostMediaEditor
               items={mediaItems}

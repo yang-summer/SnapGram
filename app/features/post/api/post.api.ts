@@ -8,9 +8,7 @@ import {
 import { buildPostSearchText } from '../lib/post-search';
 import type {
   CreatePostApiInput,
-  DeletePostResult,
   ListPostRowsParams,
-  PostDeleteSnapshot,
   ProfilePostPageParams,
   RawPostEditorRow,
   RawPostMediaRow,
@@ -79,12 +77,6 @@ const POST_DETAIL_SELECT = [
 const POST_EDITOR_SELECT = [
   '$id',
   'caption',
-  'imageId',
-  'imageUrl',
-  'aspectRatioBucket',
-  'imagePlaceholder',
-  'imageWidth',
-  'imageHeight',
   'location',
   'tags',
 ];
@@ -612,51 +604,6 @@ export async function searchPostRows({
     return posts;
   } catch (error) {
     console.error('[PostApi.searchPostRows] Failed to search posts.', error);
-    throw error;
-  }
-}
-
-export async function deletePost(postId: string): Promise<DeletePostResult> {
-  if (!postId) {
-    throw new Error('Post ID is required to delete a post.');
-  }
-
-  try {
-    const post = await tablesDB.getRow<PostDeleteSnapshot>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: postId,
-      queries: [Query.select(['imageId'])],
-    });
-
-    await tablesDB.deleteRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.postsTableId,
-      rowId: postId,
-    });
-
-    let mediaCleanupFailed = false;
-
-    if (post.imageId) {
-      try {
-        await storage.deleteFile({
-          bucketId: appwriteConfig.storageId,
-          fileId: post.imageId,
-        });
-      } catch (error) {
-        if (!(error instanceof AppwriteException && error.code === 404)) {
-          mediaCleanupFailed = true;
-          console.error('[PostApi.deletePost] Failed to delete post image.', error);
-        }
-      }
-    }
-
-    return {
-      postId,
-      mediaCleanupFailed,
-    };
-  } catch (error) {
-    console.error('[PostApi.deletePost] Failed to delete post.', error);
     throw error;
   }
 }

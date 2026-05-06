@@ -7,14 +7,12 @@ import {
   listPostMediaRowsByPostId,
   resolvePostDeleteFileIds,
   type PostMediaRow,
-  type PostDeleteSourceSnapshot,
 } from './post-media.js';
 import { runTransaction } from './transactions.js';
 
-const POST_DELETE_SELECT = ['$id', 'imageId', 'creator.$id'];
+const POST_DELETE_SELECT = ['$id', 'creator.$id'];
 
-type PostDeleteSnapshot = PostDeleteSourceSnapshot & {
-  imageId?: string | null;
+type PostDeleteSnapshot = Models.Row & {
   creator?: string | (Models.Row & { $id: string }) | null;
 };
 
@@ -133,7 +131,7 @@ export async function deletePostForCurrentUser(
 
   assertCanDeletePost(post, profile);
   const mediaRows = await listPostMediaRowsByPostId(tablesDB, config, postId);
-  const fileIds = resolvePostDeleteFileIds(post, mediaRows);
+  const fileIds = resolvePostDeleteFileIds(mediaRows);
 
   try {
     await deletePostData(tablesDB, config, postId, mediaRows);

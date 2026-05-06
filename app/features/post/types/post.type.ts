@@ -71,12 +71,6 @@ export type RawPostHomeFeedRow = Models.Row &
 
 export type RawPostEditorRow = Models.Row & {
   caption?: string | null;
-  imageId: string;
-  imageUrl: string;
-  aspectRatioBucket?: string | null;
-  imagePlaceholder?: string | null;
-  imageWidth?: number | null;
-  imageHeight?: number | null;
   location?: string | null;
   tags?: string[] | null;
 };
@@ -185,10 +179,6 @@ export type PostDetailViewModel = {
   saveCount: number;
 };
 
-export type PostDeleteSnapshot = Models.Row & {
-  imageId?: string | null;
-};
-
 export type DeletePostResult = {
   postId: string;
   mediaCleanupFailed: boolean;
@@ -290,9 +280,8 @@ export type PostTextFormValues = {
 export type ExistingPostMediaEditorItem = {
   kind: 'existing';
   clientMediaId: string;
-  isLegacyFallback: boolean;
-  mediaId?: string;
-  fileId?: string;
+  mediaId: string;
+  fileId: string;
   imageUrl: string;
   width: number | null;
   height: number | null;
@@ -355,7 +344,6 @@ export type PostEditorInitialData = {
   location: string;
   tags: string;
   existingMediaItems: ExistingPostMediaEditorItem[];
-  isLegacyMediaFallback: boolean;
 };
 
 export type CreatePostWithContentActionMediaInput = {
@@ -438,8 +426,8 @@ export type CreatePostPublishInput = {
 export type ExistingUpdatePostPublishMediaItem = {
   kind: 'existing';
   clientMediaId: string;
-  mediaId?: string;
-  fileId?: string;
+  mediaId: string;
+  fileId: string;
   imageUrl: string;
   width: number | null;
   height: number | null;

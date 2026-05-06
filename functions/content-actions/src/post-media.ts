@@ -37,10 +37,6 @@ export type PostMediaRow = Models.Row & {
   placeholder?: string | null;
 };
 
-export type PostDeleteSourceSnapshot = Models.Row & {
-  imageId?: string | null;
-};
-
 type CleanupMediaFilesOptions = {
   eventPrefix: string;
   maxAttempts?: number;
@@ -309,21 +305,12 @@ export async function listPostMediaRowsByPostId(
   return response.rows;
 }
 
-export function resolvePostDeleteFileIds(
-  post: PostDeleteSourceSnapshot | null,
-  mediaRows: PostMediaRow[],
-): string[] {
+export function resolvePostDeleteFileIds(mediaRows: PostMediaRow[]): string[] {
   const mediaFileIds = normalizeFileIds(
     mediaRows.map((mediaRow) => (typeof mediaRow.fileId === 'string' ? mediaRow.fileId : '')),
   );
 
-  if (mediaFileIds.length > 0) {
-    return mediaFileIds;
-  }
-
-  const legacyImageId = post?.imageId?.trim() ?? '';
-
-  return legacyImageId ? [legacyImageId] : [];
+  return mediaFileIds;
 }
 
 export function resolvePostMediaDiff(

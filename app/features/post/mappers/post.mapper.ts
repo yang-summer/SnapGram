@@ -20,16 +20,6 @@ import type {
   RawPostRow,
 } from '../types/post.type';
 
-type PostLegacyMediaSource = {
-  $id: string;
-  imageId: string;
-  imageUrl: string;
-  imageWidth?: number | null;
-  imageHeight?: number | null;
-  aspectRatioBucket?: string | null;
-  imagePlaceholder?: string | null;
-};
-
 type PostRowWithCreator = RawPostRow | RawPostListRow | RawPostHomeFeedRow;
 
 function mapPostCreator(row: PostRowWithCreator) {
@@ -151,26 +141,6 @@ export function mapPostMediaRowsToOrderedViewModels(
   return result;
 }
 
-export function buildLegacyFallbackMediaFromPost(row: PostLegacyMediaSource): PostMediaViewModel | null {
-  const fileId = row.imageId?.trim() ?? '';
-  const imageUrl = row.imageUrl?.trim() ?? '';
-
-  if (!fileId || !imageUrl) {
-    return null;
-  }
-
-  return {
-    id: `legacy-cover-${row.$id}`,
-    fileId,
-    imageUrl,
-    sortOrder: 0,
-    width: normalizeOptionalImageDimension(row.imageWidth),
-    height: normalizeOptionalImageDimension(row.imageHeight),
-    aspectRatioBucket: normalizePostAspectRatioBucket(row.aspectRatioBucket),
-    placeholder: normalizeOptionalImagePlaceholder(row.imagePlaceholder),
-  };
-}
-
 export function mapPostRowToCardViewModel(row: RawPostRow): PostCardViewModel | null {
   // 拦截坏数据：如果 row 不存在或者 creator 不存在，直接返回 null
   const creator = row ? mapPostCreator(row) : null;
@@ -277,29 +247,6 @@ export function mapPostRowToHomeFeedItemViewModel(
   };
 }
 
-function mapLegacyPostEditorCoverToExistingMediaItem(
-  row: RawPostEditorRow,
-): ExistingPostMediaEditorItem | null {
-  const legacyMedia = buildLegacyFallbackMediaFromPost(row);
-
-  if (!legacyMedia) {
-    return null;
-  }
-
-  return {
-    kind: 'existing',
-    clientMediaId: legacyMedia.id,
-    isLegacyFallback: true,
-    fileId: legacyMedia.fileId,
-    imageUrl: legacyMedia.imageUrl,
-    width: legacyMedia.width,
-    height: legacyMedia.height,
-    aspectRatioBucket: legacyMedia.aspectRatioBucket,
-    placeholder: legacyMedia.placeholder,
-    status: 'ready',
-  };
-}
-
 export function mapPostMediaRowsToExistingEditorItems(
   rows: RawPostMediaRow[],
   resolveImageUrl: (fileId: string) => string,
@@ -321,7 +268,6 @@ export function mapPostMediaRowsToExistingEditorItems(
     result.push({
       kind: 'existing',
       clientMediaId: row.$id,
-      isLegacyFallback: false,
       mediaId: row.$id,
       fileId,
       imageUrl: resolveImageUrl(fileId),
@@ -344,23 +290,12 @@ export function mapPostEditorRowToInitialData(
     return null;
   }
 
-  const fallbackMediaItem =
-    existingMediaItems.length === 0 ? mapLegacyPostEditorCoverToExistingMediaItem(row) : null;
-  const resolvedExistingMediaItems =
-    existingMediaItems.length > 0
-      ? existingMediaItems
-      : fallbackMediaItem
-        ? [fallbackMediaItem]
-        : [];
-  const isLegacyMediaFallback = resolvedExistingMediaItems.some((item) => item.isLegacyFallback);
-
   return {
     id: row.$id,
     caption: row.caption ?? '',
     location: row.location ?? '',
     tags: (row.tags ?? []).join(', '),
-    existingMediaItems: resolvedExistingMediaItems,
-    isLegacyMediaFallback,
+    existingMediaItems,
   };
 }
 

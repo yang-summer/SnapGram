@@ -29,7 +29,6 @@ import {
   uploadNewMediaItems,
 } from '../lib/post-upload-cleanup';
 import {
-  buildLegacyFallbackMediaFromPost,
   mapHomeFeedRowsToCursorPage,
   mapPostMediaRowsToExistingEditorItems,
   mapPostMediaRowsToOrderedViewModels,
@@ -49,13 +48,9 @@ import type {
   PostCardViewModel,
   PostDetailViewModel,
   PostEditorInitialData,
-  PostMediaViewModel,
   ProfileFeedPage,
   ProfilePostPageParams,
   PostGridItemViewModel,
-  RawPostEditorRow,
-  RawPostMediaRow,
-  RawPostRow,
   UploadedPostMediaFile,
   SearchFeedPage,
   SearchPostPageParams,
@@ -74,21 +69,6 @@ function clampListLimit(limit: number | undefined, fallback: number): number {
   }
 
   return Math.min(Math.max(Math.trunc(limit), 1), APPWRITE_MAX_LIST_LIMIT);
-}
-
-function resolvePostMediaViewModels(
-  postRow: RawPostRow | RawPostEditorRow,
-  mediaRows: RawPostMediaRow[],
-): PostMediaViewModel[] {
-  const orderedMedia = mapPostMediaRowsToOrderedViewModels(mediaRows, getPostImageView);
-
-  if (orderedMedia.length > 0) {
-    return orderedMedia;
-  }
-
-  const legacyFallbackMedia = buildLegacyFallbackMediaFromPost(postRow);
-
-  return legacyFallbackMedia ? [legacyFallbackMedia] : [];
 }
 
 export async function getRecentPostCards(): Promise<PostCardViewModel[]> {
@@ -125,7 +105,7 @@ export async function getPostDetail(postId: string): Promise<PostDetailViewModel
       return null;
     }
 
-    const media = resolvePostMediaViewModels(postRow, mediaRows);
+    const media = mapPostMediaRowsToOrderedViewModels(mediaRows, getPostImageView);
     const viewModel = mapPostRowToDetailViewModel(postRow, media);
 
     return viewModel;

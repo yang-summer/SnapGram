@@ -161,7 +161,7 @@ function reorderItems<T>(items: T[], fromIndex: number, toIndex: number): T[] {
 
 function getMediaCardTitle(item: PostMediaEditorItem, index: number): string {
   if (item.kind === 'existing') {
-    return item.isLegacyFallback ? `Legacy image ${index + 1}` : `Current image ${index + 1}`;
+    return `Current image ${index + 1}`;
   }
 
   return item.file.name;
@@ -171,7 +171,7 @@ function getMediaCardSummary(item: PostMediaEditorItem, index: number): string {
   const parts = [`#${index + 1}`];
 
   if (item.kind === 'existing') {
-    parts.push(item.isLegacyFallback ? 'legacy media' : 'existing media');
+    parts.push('existing media');
   } else {
     parts.push(formatFileSize(item.file.size));
   }
@@ -261,13 +261,6 @@ function SortableMediaCard({
           </div>
           <p className="text-xs text-muted-foreground">{getMediaCardSummary(item, index)}</p>
         </div>
-
-        {item.kind === 'existing' && item.isLegacyFallback ? (
-          <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
-            Legacy media metadata is incomplete. Remove this image and upload a replacement before
-            saving.
-          </p>
-        ) : null}
 
         {isLocalFailedItem(item) ? (
           <p className="rounded-xl bg-destructive/5 px-3 py-2 text-sm text-destructive">
