@@ -1,12 +1,45 @@
-import { useEffect } from 'react';
-import { useInView } from 'react-intersection-observer';
 import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
-import MasonryFeed from '../features/post/components/MasonryFeed';
+import { VirtualMasonryFeed } from '~/features/feed/components/VirtualMasonryFeed';
+import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
+import { useVirtualMasonryFeedState } from '~/features/feed/hooks/useVirtualMasonryFeedState';
+import MasonryPostCard from '../features/post/components/MasonryPostCard';
 import { useHomeFeedInfiniteQuery } from '../features/post/queries/post.queries';
+import type { HomeFeedPostViewModel } from '../features/post/types/post.type';
 import type { Route } from './+types/home';
+
+type HomeVirtualFeedContentProps = {
+  items: HomeFeedPostViewModel[];
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isLoadMoreError: boolean;
+  onLoadMore: () => Promise<unknown>;
+};
+
+function HomeVirtualFeedContent({
+  items,
+  hasNextPage,
+  isFetchingNextPage,
+  isLoadMoreError,
+  onLoadMore,
+}: HomeVirtualFeedContentProps) {
+  const virtualFeedState = useVirtualMasonryFeedState({
+    items,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoadMoreError,
+    onLoadMore,
+  });
+
+  return (
+    <VirtualMasonryFeed
+      state={virtualFeedState}
+      renderItem={(item) => <MasonryPostCard post={item} />}
+    />
+  );
+}
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -16,42 +49,14 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { ref: loadMoreRef, inView: isLoadMoreInView } = useInView({
-    rootMargin: '400px 0px',
+  const homeFeedQuery = useHomeFeedInfiniteQuery();
+  const state = useInfiniteFeedState({
+    query: homeFeedQuery,
   });
-  const {
-    data,
-    isPending,
-    isError,
-    error,
-    refetch,
-    isFetching,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-    isFetchNextPageError,
-  } = useHomeFeedInfiniteQuery();
-  const feedItems = data?.pages.flatMap((page) => page.items) ?? [];
-  const hasFeedItems = feedItems.length > 0;
-  const isInitialLoading = isPending;
-  const isInitialError = isError && !hasFeedItems;
-  const isEmpty = !isPending && !isError && !hasFeedItems;
-  const isLoadingMore = hasFeedItems && isFetchingNextPage;
-  const isLoadMoreError = hasFeedItems && isFetchNextPageError;
-  const isEndReached = hasFeedItems && !hasNextPage && !isFetchingNextPage && !isFetchNextPageError;
-
-  // 当底部 sentinel 接近视口时自动请求下一页；分页失败后不自动重试，交给用户手动触发。
-  useEffect(() => {
-    if (!isLoadMoreInView || !hasNextPage || isFetchingNextPage || isLoadMoreError) {
-      return;
-    }
-
-    void fetchNextPage();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isLoadMoreError, isLoadMoreInView]);
 
   let content: React.ReactNode;
 
-  if (isInitialLoading) {
+  if (state.isInitialLoading) {
     // 首次请求期间展示整页加载态。
     content = (
       <PageLoadingState
@@ -60,18 +65,22 @@ export default function Home() {
         className="px-0 py-4"
       />
     );
-  } else if (isInitialError) {
+  } else if (state.isInitialError) {
     // 首次请求失败时展示整页错误态，此时还没有可保留的 feed 内容。
     content = (
       <PageErrorState
         title="Failed to load your feed"
-        description={error instanceof Error ? error.message : 'Please try again in a moment.'}
-        onRetry={() => void refetch()}
-        isRetrying={isFetching}
+        description={
+          state.initialError instanceof Error
+            ? state.initialError.message
+            : 'Please try again in a moment.'
+        }
+        onRetry={() => void state.retryInitial()}
+        isRetrying={state.isRetryingInitial}
         className="px-0 py-4"
       />
     );
-  } else if (isEmpty) {
+  } else if (state.isEmpty) {
     // 首次请求成功但没有帖子时展示空状态。
     content = (
       <PageEmptyState
@@ -84,31 +93,33 @@ export default function Home() {
     // 已有内容时始终保留瀑布流，后续分页状态只在底部区域展示。
     content = (
       <div className="flex w-full flex-col gap-8">
-        <MasonryFeed items={feedItems} />
-
-        {hasNextPage && !isLoadMoreError ? (
-          <div ref={loadMoreRef} aria-hidden="true" className="h-1 w-full" />
-        ) : null}
+        <HomeVirtualFeedContent
+          items={state.items}
+          hasNextPage={state.hasNextPage}
+          isFetchingNextPage={state.isFetchingNextPage}
+          isLoadMoreError={state.isLoadMoreError}
+          onLoadMore={state.retryLoadMore}
+        />
 
         <div className="flex min-h-12 w-full items-center justify-center text-sm text-ink-subtle">
-          {isLoadingMore ? <p>Loading more posts...</p> : null}
+          {state.isLoadingMore ? <p>Loading more posts...</p> : null}
 
-          {isLoadMoreError ? (
+          {state.isLoadMoreError ? (
             <div className="flex flex-col items-center gap-3 text-center">
               <p>Unable to load more posts.</p>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isFetchingNextPage}
-                onClick={() => void fetchNextPage()}
+                disabled={state.isFetchingNextPage}
+                onClick={() => void state.retryLoadMore()}
               >
                 Retry
               </Button>
             </div>
           ) : null}
 
-          {isEndReached ? <p>You're all caught up.</p> : null}
+          {state.isEndReached ? <p>You're all caught up.</p> : null}
         </div>
       </div>
     );

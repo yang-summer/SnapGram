@@ -3,9 +3,11 @@ import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
-import MasonryFeed from '~/features/post/components/MasonryFeed';
+import { VirtualMasonryFeed } from '~/features/feed/components/VirtualMasonryFeed';
+import type { InfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
+import { useVirtualMasonryFeedState } from '~/features/feed/hooks/useVirtualMasonryFeedState';
+import MasonryPostCard from '~/features/post/components/MasonryPostCard';
 import type { HomeFeedPostViewModel } from '~/features/post/types/post.type';
-import type { ProfileInfiniteFeedState } from '../hooks/useProfileInfiniteFeedState';
 
 export type ProfileFeedTabContentCopy = {
   loadingTitle?: string;
@@ -20,16 +22,47 @@ export type ProfileFeedTabContentCopy = {
 };
 
 type ProfileFeedTabContentProps = {
-  state: ProfileInfiniteFeedState<HomeFeedPostViewModel>;
+  state: InfiniteFeedState<HomeFeedPostViewModel>;
   copy: ProfileFeedTabContentCopy;
   className?: string;
 };
+
+type ProfileVirtualFeedContentProps = {
+  items: HomeFeedPostViewModel[];
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isLoadMoreError: boolean;
+  onLoadMore: () => Promise<unknown>;
+};
+
+function ProfileVirtualFeedContent({
+  items,
+  hasNextPage,
+  isFetchingNextPage,
+  isLoadMoreError,
+  onLoadMore,
+}: ProfileVirtualFeedContentProps) {
+  const virtualFeedState = useVirtualMasonryFeedState({
+    items,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoadMoreError,
+    onLoadMore,
+  });
+
+  return (
+    <VirtualMasonryFeed
+      state={virtualFeedState}
+      renderItem={(item) => <MasonryPostCard post={item} />}
+    />
+  );
+}
 
 function ProfileFeedLoadMoreState({
   state,
   copy,
 }: {
-  state: ProfileInfiniteFeedState<HomeFeedPostViewModel>;
+  state: InfiniteFeedState<HomeFeedPostViewModel>;
   copy: ProfileFeedTabContentCopy;
 }) {
   return (
@@ -98,11 +131,13 @@ export default function ProfileFeedTabContent({
   } else {
     content = (
       <div className="flex w-full flex-col gap-8">
-        <MasonryFeed items={state.items} />
-
-        {state.hasVisibleItems && state.hasNextPage && !state.isLoadMoreError ? (
-          <div ref={state.loadMoreRef} aria-hidden="true" className="h-1 w-full" />
-        ) : null}
+        <ProfileVirtualFeedContent
+          items={state.items}
+          hasNextPage={state.hasNextPage}
+          isFetchingNextPage={state.isFetchingNextPage}
+          isLoadMoreError={state.isLoadMoreError}
+          onLoadMore={state.retryLoadMore}
+        />
 
         <ProfileFeedLoadMoreState state={state} copy={copy} />
       </div>
