@@ -1,5 +1,5 @@
 import { CircleUserRound, Compass, Home, SquarePlus } from 'lucide-react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, type Location } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 
 const bottombarLinks = [
@@ -20,8 +20,13 @@ const bottombarLinks = [
   },
 ];
 
-export default function Bottombar() {
-  const { pathname } = useLocation();
+type BottombarProps = {
+  location?: Pick<Location, 'pathname'>;
+};
+
+export default function Bottombar({ location: providedLocation }: BottombarProps) {
+  const currentLocation = useLocation();
+  const { pathname } = providedLocation ?? currentLocation;
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   return (
