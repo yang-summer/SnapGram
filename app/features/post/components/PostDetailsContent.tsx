@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Button } from '~/components/ui/button';
+import { cn } from '~/lib/utils';
 import PostMediaCarousel from './PostMediaCarousel';
 import PostStats from './PostStats';
 import type { PostDetailViewModel } from '../types/post.type';
@@ -8,16 +10,25 @@ type PostDetailsContentProps = {
   post: PostDetailViewModel;
   viewerProfileId: string;
   onDeletePost: () => void;
+  className?: string;
+  headerLeadingAction?: ReactNode;
 };
 
 export default function PostDetailsContent({
   post,
   viewerProfileId,
   onDeletePost,
+  className,
+  headerLeadingAction,
 }: PostDetailsContentProps) {
   return (
-    <div className="flex w-full max-w-5xl flex-col rounded-[30px] border xl:flex-row xl:rounded-l-[24px]">
-      <div className="p-5 xl:w-[48%] xl:shrink-0">
+    <div
+      className={cn(
+        'flex w-full max-w-5xl flex-col rounded-[30px] border lg:flex-row lg:rounded-l-[24px]',
+        className,
+      )}
+    >
+      <div className="p-5 lg:w-[48%] lg:shrink-0">
         <PostMediaCarousel
           media={post.media}
           altBase={post.caption || `${post.creator.name}'s post media`}
@@ -27,19 +38,27 @@ export default function PostDetailsContent({
 
       <div className="flex flex-1 flex-col items-start gap-5 rounded-[30px] p-8 lg:gap-7">
         <div className="flex w-full items-center justify-between">
-          <Link to={`/profile/${post.creator.id}`} className="flex items-center gap-3">
-            <img
-              src={post.creator.imageUrl || '/assets/icons/profile-placeholder.svg'}
-              alt="creator"
-              className="h-8 w-8 rounded-full lg:h-12 lg:w-12"
-            />
-            <div className="flex flex-col gap-1">
-              <p>{post.creator.name}</p>
-              <div className="flex items-center justify-center gap-2">
-                <p>{post.createdAt}</p>•<p>{post.location}</p>
+          <div className="flex min-w-0 items-center gap-3">
+            {headerLeadingAction ? (
+              <div className="shrink-0 lg:hidden">{headerLeadingAction}</div>
+            ) : null}
+
+            <Link to={`/profile/${post.creator.id}`} className="flex min-w-0 items-center gap-3">
+              <img
+                src={post.creator.imageUrl || '/assets/icons/profile-placeholder.svg'}
+                alt="creator"
+                className="h-8 w-8 rounded-full lg:h-12 lg:w-12"
+              />
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="truncate">{post.creator.name}</p>
+                <div className="flex items-center gap-2 text-sm text-ink-subtle">
+                  <p className="truncate">{post.createdAt}</p>
+                  <span aria-hidden="true">•</span>
+                  <p className="truncate">{post.location}</p>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          </div>
 
           <div className="flex items-center justify-center gap-4">
             <Link
