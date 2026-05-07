@@ -1,5 +1,6 @@
 import { Heart, ImageOff, UserRound } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
+import { createPostDetailNavigationState } from '../lib/post-detail-navigation';
 import ProgressiveImage from './ProgressiveImage';
 import type { HomeFeedPostViewModel } from '../types/post.type';
 
@@ -8,13 +9,20 @@ type MasonryPostCardProps = {
 };
 
 export default function MasonryPostCard({ post }: MasonryPostCardProps) {
+  const location = useLocation();
+  const postDetailState = createPostDetailNavigationState(location);
   const imageAlt = post.caption.trim().length > 0 ? post.caption : `${post.creator.name}'s post cover`;
   const hasCoverImage = post.imageUrl.trim().length > 0;
   const hasCreatorAvatar = typeof post.creator.imageUrl === 'string' && post.creator.imageUrl.length > 0;
 
   return (
     <article className="min-w-0 overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-sm">
-      <Link to={`/posts/${post.id}`} className="block">
+      <Link
+        to={`/posts/${post.id}`}
+        state={postDetailState}
+        preventScrollReset
+        className="block"
+      >
         {hasCoverImage ? (
           <ProgressiveImage
             src={post.imageUrl}
@@ -35,6 +43,8 @@ export default function MasonryPostCard({ post }: MasonryPostCardProps) {
       <div className="flex flex-col gap-3 p-3">
         <Link
           to={`/posts/${post.id}`}
+          state={postDetailState}
+          preventScrollReset
           className="line-clamp-2 text-sm leading-5 font-medium text-ink-strong"
         >
           {post.caption || 'Untitled post'}

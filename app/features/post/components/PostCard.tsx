@@ -1,5 +1,6 @@
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
+import { createPostDetailNavigationState } from '../lib/post-detail-navigation';
 import PostStats from './PostStats';
 import type { PostCardViewModel } from '../types/post.type';
 
@@ -8,9 +9,11 @@ type PostCardProps = {
 };
 
 export default function PostCard({ post }: PostCardProps) {
+  const location = useLocation();
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   const currentUserProfileId = currentUser?.profileId ?? '';
+  const postDetailState = createPostDetailNavigationState(location);
 
   if (!post.creator) return null;
 
@@ -39,7 +42,11 @@ export default function PostCard({ post }: PostCardProps) {
           <img src={'/assets/icons/edit.svg'} alt="edit" width={20} height={20} />
         </Link>
       </div>
-      <Link to={`/posts/${post.id}`}>
+      <Link
+        to={`/posts/${post.id}`}
+        state={postDetailState}
+        preventScrollReset
+      >
         <div>
           <p>{post.caption}</p>
           <ul className="flex gap-1 mt-2">
