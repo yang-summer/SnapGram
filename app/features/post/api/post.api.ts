@@ -74,12 +74,7 @@ const POST_DETAIL_SELECT = [
   'creator.name',
   'creator.imageUrl',
 ];
-const POST_EDITOR_SELECT = [
-  '$id',
-  'caption',
-  'location',
-  'tags',
-];
+const POST_EDITOR_SELECT = ['$id', 'caption', 'location', 'tags'];
 const POST_MEDIA_SELECT = [
   '$id',
   'postId',
