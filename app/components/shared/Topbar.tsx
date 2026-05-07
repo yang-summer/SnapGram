@@ -1,5 +1,5 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { Link, useLocation, useNavigate, type Location } from 'react-router';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '../ui/input-group';
 import { Menu, SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,12 +8,18 @@ import MoreMenu from '~/components/shared/MoreMenu';
 const SEARCH_RESULT_ROUTE = '/search-result';
 const SEARCH_KEYWORD_MIN_LENGTH = 3;
 
-export default function Topbar() {
+type TopbarProps = {
+  location?: Pick<Location, 'pathname' | 'search'>;
+};
+
+export default function Topbar({ location: providedLocation }: TopbarProps) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const currentLocation = useLocation();
+  const location = providedLocation ?? currentLocation;
   const isSearchResultRoute = location.pathname === SEARCH_RESULT_ROUTE;
-  const routeKeyword = isSearchResultRoute ? (searchParams.get('keyword') ?? '').trim() : null;
+  const routeKeyword = isSearchResultRoute
+    ? (new URLSearchParams(location.search).get('keyword') ?? '').trim()
+    : null;
   const [searchValue, setSearchValue] = useState(routeKeyword ?? '');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
