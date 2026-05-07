@@ -1,8 +1,8 @@
 import { useOutletContext } from 'react-router';
+import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
 import ProfileFeedTabContent, {
   type ProfileFeedTabContentCopy,
 } from '~/features/profile/components/ProfileFeedTabContent';
-import { useProfileInfiniteFeedState } from '~/features/profile/hooks/useProfileInfiniteFeedState';
 import type { ProfileRouteOutletContext } from '~/features/profile/types/profile-route.type';
 import { useProfilePostsInfiniteQuery } from '~/features/post/queries/post.queries';
 
@@ -36,7 +36,7 @@ export default function ProfilePosts() {
   const { profileId, isOwner, profileName } =
     useOutletContext<ProfileRouteOutletContext>();
   const profilePostsQuery = useProfilePostsInfiniteQuery(profileId);
-  const state = useProfileInfiniteFeedState({
+  const state = useInfiniteFeedState({
     query: profilePostsQuery,
   });
   const copy = getProfilePostsTabCopy(isOwner, profileName);

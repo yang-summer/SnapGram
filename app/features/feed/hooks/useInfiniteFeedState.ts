@@ -1,5 +1,4 @@
-import { useEffect, useMemo } from 'react';
-import { useInView } from 'react-intersection-observer';
+import { useMemo } from 'react';
 import type { CursorPage } from '~/features/post/types/post.type';
 
 type InfiniteFeedQueryResult<TItem> = {
@@ -19,7 +18,6 @@ type InfiniteFeedQueryResult<TItem> = {
 
 type UseInfiniteFeedStateOptions<TItem> = {
   query: InfiniteFeedQueryResult<TItem>;
-  rootMargin?: string;
 };
 
 export type InfiniteFeedState<TItem> = {
@@ -35,7 +33,6 @@ export type InfiniteFeedState<TItem> = {
   isLoadMoreError: boolean;
   isEndReached: boolean;
   isFetchingNextPage: boolean;
-  loadMoreRef: (node?: Element | null) => void;
   retryInitial: () => Promise<unknown>;
   retryLoadMore: () => Promise<unknown>;
 };
@@ -50,11 +47,7 @@ function flattenFeedItems<TItem>(pages: Array<CursorPage<TItem>> | undefined): T
 
 export function useInfiniteFeedState<TItem>({
   query,
-  rootMargin = '400px 0px',
 }: UseInfiniteFeedStateOptions<TItem>): InfiniteFeedState<TItem> {
-  const { ref: loadMoreRef, inView: isLoadMoreInView } = useInView({
-    rootMargin,
-  });
   // 将 infinite query 的多页结果拍平成单一 items，供内容区直接渲染。
   const items = useMemo(() => flattenFeedItems(query.data?.pages), [query.data?.pages]);
   // 当前是否已经有至少一张可见卡片。
@@ -86,29 +79,6 @@ export function useInfiniteFeedState<TItem>({
     return query.fetchNextPage();
   }
 
-  // 当已经有可见内容时，使用底部 sentinel 驱动正常的自动加载更多。
-  // 一旦分页失败，则停止自动重试，交由底部状态区的手动重试按钮接管。
-  useEffect(() => {
-    if (
-      !hasVisibleItems ||
-      !isLoadMoreInView ||
-      !hasNextPage ||
-      query.isFetchingNextPage ||
-      query.isFetchNextPageError
-    ) {
-      return;
-    }
-
-    void query.fetchNextPage();
-  }, [
-    query.fetchNextPage,
-    hasVisibleItems,
-    hasNextPage,
-    isLoadMoreInView,
-    query.isFetchingNextPage,
-    query.isFetchNextPageError,
-  ]);
-
   return {
     items,
     hasVisibleItems,
@@ -122,7 +92,6 @@ export function useInfiniteFeedState<TItem>({
     isLoadMoreError,
     isEndReached,
     isFetchingNextPage: query.isFetchingNextPage,
-    loadMoreRef,
     retryInitial,
     retryLoadMore,
   };

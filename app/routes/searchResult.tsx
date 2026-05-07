@@ -1,74 +1,63 @@
-import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
-import { useInView } from 'react-intersection-observer';
 import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
-import MasonryFeed from '~/features/post/components/MasonryFeed';
+import { VirtualMasonryFeed } from '~/features/feed/components/VirtualMasonryFeed';
+import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
+import { useVirtualMasonryFeedState } from '~/features/feed/hooks/useVirtualMasonryFeedState';
+import MasonryPostCard from '~/features/post/components/MasonryPostCard';
 import { useSearchPostsInfiniteQuery } from '~/features/post/queries/post.queries';
+import type { HomeFeedPostViewModel } from '~/features/post/types/post.type';
 
 const SEARCH_KEYWORD_MIN_LENGTH = 3;
 
-export default function SearchResult() {
-  const [searchParams] = useSearchParams();
-  const { ref: loadMoreRef, inView: isLoadMoreInView } = useInView({
-    rootMargin: '400px 0px',
+type SearchVirtualFeedContentProps = {
+  items: HomeFeedPostViewModel[];
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isLoadMoreError: boolean;
+  onLoadMore: () => Promise<unknown>;
+};
+
+function SearchVirtualFeedContent({
+  items,
+  hasNextPage,
+  isFetchingNextPage,
+  isLoadMoreError,
+  onLoadMore,
+}: SearchVirtualFeedContentProps) {
+  const virtualFeedState = useVirtualMasonryFeedState({
+    items,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoadMoreError,
+    onLoadMore,
   });
 
+  return (
+    <VirtualMasonryFeed
+      state={virtualFeedState}
+      renderItem={(item) => <MasonryPostCard post={item} />}
+    />
+  );
+}
+
+export default function SearchResult() {
+  const [searchParams] = useSearchParams();
   const keyword = (searchParams.get('keyword') ?? '').trim();
   const hasKeyword = keyword.length > 0;
   const isKeywordTooShort =
     hasKeyword && keyword.length < SEARCH_KEYWORD_MIN_LENGTH;
   const canSearch = keyword.length >= SEARCH_KEYWORD_MIN_LENGTH;
 
-  const {
-    data,
-    isPending,
-    isError,
-    error,
-    refetch,
-    isFetching,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-    isFetchNextPageError,
-  } = useSearchPostsInfiniteQuery(keyword);
+  const searchPostsQuery = useSearchPostsInfiniteQuery(keyword);
+  const state = useInfiniteFeedState({
+    query: searchPostsQuery,
+  });
 
-  const feedItems = data?.pages.flatMap((page) => page.items) ?? [];
-  const hasFeedItems = feedItems.length > 0;
-  const isInitialLoading = canSearch && isPending;
-  const isInitialError = canSearch && isError && !hasFeedItems;
-  const isEmpty = canSearch && !isPending && !isError && !hasFeedItems;
-  const isLoadingMore = hasFeedItems && isFetchingNextPage;
-  const isLoadMoreError = hasFeedItems && isFetchNextPageError;
-  const isEndReached =
-    hasFeedItems && !hasNextPage && !isFetchingNextPage && !isFetchNextPageError;
-
-  // 当底部 sentinel 进入视口附近时自动加载下一页；如果当前不能搜索、已经没有下一页、
-  // 正在请求下一页，或上一轮“加载更多”失败，则停止自动触发，避免无效请求和无限重试。
-  useEffect(() => {
-    if (
-      !canSearch ||
-      !isLoadMoreInView ||
-      !hasNextPage ||
-      isFetchingNextPage ||
-      isLoadMoreError
-    ) {
-      return;
-    }
-
-    void fetchNextPage();
-  }, [
-    canSearch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoadMoreError,
-    isLoadMoreInView,
-  ]);
-
-  let content: React.ReactNode;
+  let content: ReactNode;
 
   if (!hasKeyword) {
     // URL 中没有 keyword 时，不发起搜索请求，展示引导态提示用户从顶部栏输入关键词。
@@ -88,7 +77,7 @@ export default function SearchResult() {
         className="px-0 py-4"
       />
     );
-  } else if (isInitialLoading) {
+  } else if (state.isInitialLoading) {
     // 首次进入结果页且搜索请求仍在进行时，展示整页加载态。
     content = (
       <PageLoadingState
@@ -97,20 +86,22 @@ export default function SearchResult() {
         className="px-0 py-4"
       />
     );
-  } else if (isInitialError) {
+  } else if (state.isInitialError) {
     // 首次搜索失败且当前还没有任何可展示结果时，展示整页错误态和重试入口。
     content = (
       <PageErrorState
         title="Failed to load search results"
         description={
-          error instanceof Error ? error.message : 'Please try again in a moment.'
+          state.initialError instanceof Error
+            ? state.initialError.message
+            : 'Please try again in a moment.'
         }
-        onRetry={() => void refetch()}
-        isRetrying={isFetching}
+        onRetry={() => void state.retryInitial()}
+        isRetrying={state.isRetryingInitial}
         className="px-0 py-4"
       />
     );
-  } else if (isEmpty) {
+  } else if (state.isEmpty) {
     // 搜索成功但没有命中任何帖子时，展示无结果空态。
     content = (
       <PageEmptyState
@@ -123,27 +114,28 @@ export default function SearchResult() {
     // 已经拿到至少一条结果时，始终保留瀑布流内容；后续分页状态只在底部状态区展示。
     content = (
       <div className="flex w-full flex-col gap-8">
-        <MasonryFeed items={feedItems} />
-
-        {/* 仅在仍有下一页且当前不处于“加载更多失败”时挂载 sentinel，驱动自动翻页。 */}
-        {hasFeedItems && hasNextPage && !isLoadMoreError ? (
-          <div ref={loadMoreRef} aria-hidden="true" className="h-1 w-full" />
-        ) : null}
+        <SearchVirtualFeedContent
+          items={state.items}
+          hasNextPage={state.hasNextPage}
+          isFetchingNextPage={state.isFetchingNextPage}
+          isLoadMoreError={state.isLoadMoreError}
+          onLoadMore={state.retryLoadMore}
+        />
 
         <div className="flex min-h-12 w-full items-center justify-center text-center text-sm text-ink-subtle">
           {/* 已有结果后继续翻页时，只在底部显示“加载更多中”，不覆盖现有内容。 */}
-          {isLoadingMore ? <p>Loading more results...</p> : null}
+          {state.isLoadingMore ? <p>Loading more results...</p> : null}
 
           {/* 后续分页失败时，保留已渲染结果，仅在底部提供手动重试入口。 */}
-          {isLoadMoreError ? (
+          {state.isLoadMoreError ? (
             <div className="flex flex-col items-center gap-3">
               <p>Unable to load more search results.</p>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isFetchingNextPage}
-                onClick={() => void fetchNextPage()}
+                disabled={state.isFetchingNextPage}
+                onClick={() => void state.retryLoadMore()}
               >
                 Retry
               </Button>
@@ -151,7 +143,9 @@ export default function SearchResult() {
           ) : null}
 
           {/* 已有结果且确认没有下一页时，在底部给出明确的列表结束提示。 */}
-          {isEndReached ? <p>You have reached the end of the search results.</p> : null}
+          {state.isEndReached ? (
+            <p>You have reached the end of the search results.</p>
+          ) : null}
         </div>
       </div>
     );
