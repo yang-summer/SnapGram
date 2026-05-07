@@ -1,28 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  MASONRY_FALLBACK_CONTAINER_WIDTH,
+  MASONRY_LAYOUT,
+  estimateMasonryCardHeight,
+  getMasonryColumnCount,
+  getMasonryColumnWidth,
+  normalizeMeasuredWidth,
+} from '~/features/feed/lib/masonry-layout';
 import MasonryPostCard from './MasonryPostCard';
-import type { HomeFeedPostViewModel, PostAspectRatioBucket } from '../types/post.type';
-
-const DEFAULT_MASONRY_COLUMN_WIDTH = 240;
-const MASONRY_MIN_COLUMN_COUNT = 2;
-const MASONRY_MAX_COLUMN_COUNT = 5;
-const MASONRY_MIN_COLUMN_WIDTH = 220;
-const MASONRY_CARD_HORIZONTAL_PADDING = 12;
-const MASONRY_CARD_VERTICAL_PADDING = 12;
-const MASONRY_CARD_CONTENT_GAP = 10;
-const MASONRY_CARD_META_HEIGHT = 44;
-const MASONRY_CAPTION_LINE_HEIGHT = 20;
-const MASONRY_CAPTION_MAX_LINES = 2;
-const MASONRY_MIN_CHARS_PER_LINE = 12;
-const MASONRY_ESTIMATED_CHAR_WIDTH = 8;
-const MASONRY_COLUMN_GAP = 16;
-const MASONRY_FALLBACK_CONTAINER_WIDTH =
-  DEFAULT_MASONRY_COLUMN_WIDTH * MASONRY_MIN_COLUMN_COUNT + MASONRY_COLUMN_GAP;
-
-const ASPECT_RATIO_VALUES: Record<PostAspectRatioBucket, number> = {
-  '1:1': 1,
-  '3:4': 3 / 4,
-  '4:3': 4 / 3,
-};
+import type { HomeFeedPostViewModel } from '../types/post.type';
 
 export type MasonryFeedProps = {
   items: HomeFeedPostViewModel[];
@@ -32,96 +18,6 @@ type MasonryColumn = {
   items: HomeFeedPostViewModel[];
   estimatedHeight: number;
 };
-
-// 将任意列数约束到瀑布流允许的 2-5 列范围内。
-function clampMasonryColumnCount(columnCount: number): number {
-  if (!Number.isFinite(columnCount)) {
-    return MASONRY_MIN_COLUMN_COUNT;
-  }
-
-  return Math.min(
-    Math.max(Math.trunc(columnCount), MASONRY_MIN_COLUMN_COUNT),
-    MASONRY_MAX_COLUMN_COUNT,
-  );
-}
-
-// 根据容器真实宽度推导当前应该使用的列数。
-function getMasonryColumnCount(containerWidth: number): number {
-  if (!Number.isFinite(containerWidth) || containerWidth <= 0) {
-    return MASONRY_MIN_COLUMN_COUNT;
-  }
-
-  const rawColumnCount = Math.floor(
-    (containerWidth + MASONRY_COLUMN_GAP) / (MASONRY_MIN_COLUMN_WIDTH + MASONRY_COLUMN_GAP),
-  );
-
-  return clampMasonryColumnCount(rawColumnCount);
-}
-
-// 根据容器宽度、列数和列间距计算每一列的实际可用宽度。
-function getMasonryColumnWidth(containerWidth: number, columnCount: number): number {
-  if (!Number.isFinite(containerWidth) || containerWidth <= 0) {
-    return DEFAULT_MASONRY_COLUMN_WIDTH;
-  }
-
-  const normalizedColumnCount = clampMasonryColumnCount(columnCount);
-  const totalGapWidth = MASONRY_COLUMN_GAP * (normalizedColumnCount - 1);
-
-  return Math.max(1, (containerWidth - totalGapWidth) / normalizedColumnCount);
-}
-
-// 归一化 ResizeObserver 或 DOM 测量得到的宽度，避免亚像素抖动反复触发重排。
-function normalizeMeasuredWidth(width: number): number {
-  if (!Number.isFinite(width) || width <= 0) {
-    return 0;
-  }
-
-  return Math.round(width);
-}
-
-// 将图片比例桶转换为 CSS aspect-ratio 和高度估算可使用的数值比例。
-function getAspectRatioValue(bucket: PostAspectRatioBucket): number {
-  return ASPECT_RATIO_VALUES[bucket];
-}
-
-// 根据 caption 长度和列宽估算两行截断后的文案高度。
-function estimateCaptionHeight(caption: string, columnWidth: number): number {
-  const normalizedCaption = caption.trim();
-
-  if (normalizedCaption.length === 0) {
-    return 0;
-  }
-
-  const contentWidth = Math.max(columnWidth - MASONRY_CARD_HORIZONTAL_PADDING * 2, 1);
-  const estimatedCharsPerLine = Math.max(
-    MASONRY_MIN_CHARS_PER_LINE,
-    Math.floor(contentWidth / MASONRY_ESTIMATED_CHAR_WIDTH),
-  );
-  const estimatedLineCount = Math.min(
-    Math.ceil(normalizedCaption.length / estimatedCharsPerLine),
-    MASONRY_CAPTION_MAX_LINES,
-  );
-
-  return estimatedLineCount * MASONRY_CAPTION_LINE_HEIGHT;
-}
-
-// 估算单张首页卡片的整体高度，用于决定它应该进入当前最短列。
-function estimateMasonryCardHeight(
-  item: HomeFeedPostViewModel,
-  columnWidth: number,
-): number {
-  const aspectRatio = getAspectRatioValue(item.aspectRatioBucket);
-  const imageHeight = columnWidth / aspectRatio;
-  const captionHeight = estimateCaptionHeight(item.caption, columnWidth);
-  const contentHeight = captionHeight > 0 ? captionHeight + MASONRY_CARD_CONTENT_GAP : 0;
-
-  return (
-    imageHeight +
-    MASONRY_CARD_META_HEIGHT +
-    contentHeight +
-    MASONRY_CARD_VERTICAL_PADDING * 2
-  );
-}
 
 // 创建固定数量的空列，后续分配算法会逐个填充 items 和累计估算高度。
 function createEmptyColumns(columnCount: number): MasonryColumn[] {
@@ -161,7 +57,7 @@ function distributeItemsToColumns(
     const estimatedCardHeight = estimateMasonryCardHeight(item, normalizedColumnWidth);
 
     targetColumn.items.push(item);
-    targetColumn.estimatedHeight += estimatedCardHeight + MASONRY_COLUMN_GAP;
+    targetColumn.estimatedHeight += estimatedCardHeight + MASONRY_LAYOUT.columnGap;
   }
 
   return columns;
@@ -225,7 +121,7 @@ export default function MasonryFeed({ items }: MasonryFeedProps) {
       className="grid w-full"
       style={{
         gridTemplateColumns: `repeat(${layout.columns.length}, minmax(0, 1fr))`,
-        gap: MASONRY_COLUMN_GAP,
+        gap: MASONRY_LAYOUT.columnGap,
       }}
       data-feed-count={items.length}
       data-column-count={layout.columns.length}
@@ -236,7 +132,7 @@ export default function MasonryFeed({ items }: MasonryFeedProps) {
         <div
           key={columnIndex}
           className="flex min-w-0 flex-col"
-          style={{ gap: MASONRY_COLUMN_GAP }}
+          style={{ gap: MASONRY_LAYOUT.columnGap }}
           data-column-index={columnIndex}
           data-column-height={Math.round(column.estimatedHeight)}
         >

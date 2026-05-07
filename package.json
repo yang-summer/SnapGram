@@ -15,6 +15,7 @@
     "@react-router/node": "7.12.0",
     "@react-router/serve": "7.12.0",
     "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-virtual": "^3.13.24",
     "ahooks": "^3.9.7",
     "appwrite": "^23.0.0",
     "class-variance-authority": "^0.7.1",
