@@ -3,10 +3,8 @@ import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
-import { VirtualMasonryFeed } from '~/features/feed/components/VirtualMasonryFeed';
 import type { InfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
-import { useVirtualMasonryFeedState } from '~/features/feed/hooks/useVirtualMasonryFeedState';
-import MasonryPostCard from '~/features/post/components/MasonryPostCard';
+import PostMasonryFeed from '~/features/post/components/PostMasonryFeed';
 import type { HomeFeedPostViewModel } from '~/features/post/types/post.type';
 
 export type ProfileFeedTabContentCopy = {
@@ -26,37 +24,6 @@ type ProfileFeedTabContentProps = {
   copy: ProfileFeedTabContentCopy;
   className?: string;
 };
-
-type ProfileVirtualFeedContentProps = {
-  items: HomeFeedPostViewModel[];
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  isLoadMoreError: boolean;
-  onLoadMore: () => Promise<unknown>;
-};
-
-function ProfileVirtualFeedContent({
-  items,
-  hasNextPage,
-  isFetchingNextPage,
-  isLoadMoreError,
-  onLoadMore,
-}: ProfileVirtualFeedContentProps) {
-  const virtualFeedState = useVirtualMasonryFeedState({
-    items,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoadMoreError,
-    onLoadMore,
-  });
-
-  return (
-    <VirtualMasonryFeed
-      state={virtualFeedState}
-      renderItem={(item) => <MasonryPostCard post={item} />}
-    />
-  );
-}
 
 function ProfileFeedLoadMoreState({
   state,
@@ -131,7 +98,7 @@ export default function ProfileFeedTabContent({
   } else {
     content = (
       <div className="flex w-full flex-col gap-8">
-        <ProfileVirtualFeedContent
+        <PostMasonryFeed
           items={state.items}
           hasNextPage={state.hasNextPage}
           isFetchingNextPage={state.isFetchingNextPage}

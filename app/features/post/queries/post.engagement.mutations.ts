@@ -25,6 +25,15 @@ function invalidateViewerLikes(queryClient: QueryClient, viewerProfileId: string
   });
 }
 
+function invalidateViewerProfileLikedViews(queryClient: QueryClient, viewerProfileId: string) {
+  queryClient.invalidateQueries({
+    queryKey: postKeys.profileLikedFeedScope(viewerProfileId),
+  });
+  queryClient.invalidateQueries({
+    queryKey: postKeys.profileLikedCount(viewerProfileId),
+  });
+}
+
 function invalidateViewerSaves(queryClient: QueryClient, viewerProfileId: string) {
   queryClient.invalidateQueries({
     queryKey: postKeys.viewerSavesScope(viewerProfileId),
@@ -39,6 +48,7 @@ export function useCreateViewerPostLikeMutation() {
     onSuccess: (result) => {
       invalidatePostViews(queryClient, result.postId);
       invalidateViewerLikes(queryClient, result.viewerProfileId);
+      invalidateViewerProfileLikedViews(queryClient, result.viewerProfileId);
     },
   });
 }
@@ -51,6 +61,7 @@ export function useDeleteViewerPostLikeMutation() {
     onSuccess: (result) => {
       invalidatePostViews(queryClient, result.postId);
       invalidateViewerLikes(queryClient, result.viewerProfileId);
+      invalidateViewerProfileLikedViews(queryClient, result.viewerProfileId);
     },
   });
 }

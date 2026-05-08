@@ -1,21 +1,45 @@
 import { Heart, ImageOff, UserRound } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
+import { usePostLikeToggle } from '../hooks/usePostLikeToggle';
 import { createPostDetailNavigationState } from '../lib/post-detail-navigation';
 import ProgressiveImage from './ProgressiveImage';
 import type { HomeFeedPostViewModel } from '../types/post.type';
 
 type MasonryPostCardProps = {
   post: HomeFeedPostViewModel;
+  viewerProfileId?: string;
+  initialIsLiked?: boolean;
 };
 
-export default function MasonryPostCard({ post }: MasonryPostCardProps) {
+export default function MasonryPostCard({
+  post,
+  viewerProfileId = '',
+  initialIsLiked = false,
+}: MasonryPostCardProps) {
   const location = useLocation();
   const postDetailState = createPostDetailNavigationState(location);
+  const {
+    isLiked,
+    likeCount,
+    isPending: isLikePending,
+    toggleLike,
+  } = usePostLikeToggle({
+    postId: post.id,
+    viewerProfileId,
+    initialIsLiked,
+    initialLikeCount: post.likeCount,
+  });
   const imageAlt =
     post.caption.trim().length > 0 ? post.caption : `${post.creator.name}'s post cover`;
   const hasCoverImage = post.imageUrl.trim().length > 0;
   const hasCreatorAvatar =
     typeof post.creator.imageUrl === 'string' && post.creator.imageUrl.length > 0;
+
+  async function handleLikeClick(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    await toggleLike();
+  }
 
   return (
     <article className="min-w-0 overflow-hidden rounded-2xl bg-card text-card-foreground">
@@ -68,10 +92,20 @@ export default function MasonryPostCard({ post }: MasonryPostCardProps) {
             <span className="truncate text-sm text-ink-medium">{post.creator.name}</span>
           </Link>
 
-          <div className="flex shrink-0 items-center gap-1 text-sm text-ink-subtle">
-            <Heart aria-hidden="true" className="size-4" />
-            <span>{post.likeCount}</span>
-          </div>
+          <button
+            type="button"
+            disabled={!viewerProfileId || isLikePending}
+            aria-pressed={isLiked}
+            aria-label={isLiked ? 'Unlike post' : 'Like post'}
+            onClick={(event) => void handleLikeClick(event)}
+            className="flex shrink-0 items-center gap-1 text-sm text-ink-subtle cursor-pointer disabled:cursor-default disabled:opacity-70"
+          >
+            <Heart
+              aria-hidden="true"
+              className={isLiked ? 'size-4 fill-current text-primary' : 'size-4'}
+            />
+            <span>{likeCount}</span>
+          </button>
         </div>
       </div>
     </article>

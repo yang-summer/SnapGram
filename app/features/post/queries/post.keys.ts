@@ -23,8 +23,10 @@ export const postKeys = {
     [...postKeys.profileScope(profileId), 'posts', params] as const,
   profilePostCount: (profileId: string) =>
     [...postKeys.profileScope(profileId), 'posts-count'] as const,
+  profileLikedFeedScope: (profileId: string) =>
+    [...postKeys.profileScope(profileId), 'liked-feed'] as const,
   profileLikedFeed: (profileId: string, params: { limit: number }) =>
-    [...postKeys.profileScope(profileId), 'liked-feed', params] as const,
+    [...postKeys.profileLikedFeedScope(profileId), params] as const,
   profileLikedCount: (profileId: string) =>
     [...postKeys.profileScope(profileId), 'liked-count'] as const,
   profileSavedFeed: (profileId: string, params: { limit: number }) =>

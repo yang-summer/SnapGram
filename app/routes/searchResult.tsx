@@ -5,45 +5,11 @@ import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
-import { VirtualMasonryFeed } from '~/features/feed/components/VirtualMasonryFeed';
 import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
-import { useVirtualMasonryFeedState } from '~/features/feed/hooks/useVirtualMasonryFeedState';
-import MasonryPostCard from '~/features/post/components/MasonryPostCard';
+import PostMasonryFeed from '~/features/post/components/PostMasonryFeed';
 import { useSearchPostsInfiniteQuery } from '~/features/post/queries/post.queries';
-import type { HomeFeedPostViewModel } from '~/features/post/types/post.type';
 
 const SEARCH_KEYWORD_MIN_LENGTH = 3;
-
-type SearchVirtualFeedContentProps = {
-  items: HomeFeedPostViewModel[];
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  isLoadMoreError: boolean;
-  onLoadMore: () => Promise<unknown>;
-};
-
-function SearchVirtualFeedContent({
-  items,
-  hasNextPage,
-  isFetchingNextPage,
-  isLoadMoreError,
-  onLoadMore,
-}: SearchVirtualFeedContentProps) {
-  const virtualFeedState = useVirtualMasonryFeedState({
-    items,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoadMoreError,
-    onLoadMore,
-  });
-
-  return (
-    <VirtualMasonryFeed
-      state={virtualFeedState}
-      renderItem={(item) => <MasonryPostCard post={item} />}
-    />
-  );
-}
 
 export default function SearchResult() {
   const [searchParams] = useSearchParams();
@@ -114,7 +80,7 @@ export default function SearchResult() {
     // 已经拿到至少一条结果时，始终保留瀑布流内容；后续分页状态只在底部状态区展示。
     content = (
       <div className="flex w-full flex-col gap-8">
-        <SearchVirtualFeedContent
+        <PostMasonryFeed
           items={state.items}
           hasNextPage={state.hasNextPage}
           isFetchingNextPage={state.isFetchingNextPage}

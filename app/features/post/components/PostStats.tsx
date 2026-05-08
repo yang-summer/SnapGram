@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Bookmark, Heart } from 'lucide-react';
+import { usePostLikeToggle } from '../hooks/usePostLikeToggle';
 import {
-  useCreateViewerPostLikeMutation,
   useCreateViewerPostSaveMutation,
-  useDeleteViewerPostLikeMutation,
   useDeleteViewerPostSaveMutation,
 } from '../queries/post.engagement.mutations';
 import {
@@ -21,26 +20,26 @@ type PostStatsProps = {
 };
 
 export default function PostStats({ post, viewerProfileId }: PostStatsProps) {
-  const [likeCount, setLikeCount] = useState(post.likeCount);
   const [saveCount, setSaveCount] = useState(post.saveCount);
-  const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const { data: viewerLikedPost } = useViewerLikedPostQuery(viewerProfileId, post.id);
   const { data: viewerSavedPost } = useViewerSavedPostQuery(viewerProfileId, post.id);
-
-  const { mutateAsync: createViewerPostLike } = useCreateViewerPostLikeMutation();
-  const { mutateAsync: deleteViewerPostLike } = useDeleteViewerPostLikeMutation();
   const { mutateAsync: createViewerPostSave } = useCreateViewerPostSaveMutation();
   const { mutateAsync: deleteViewerPostSave } = useDeleteViewerPostSaveMutation();
+  const {
+    isLiked,
+    likeCount,
+    toggleLike: handleToggleLike,
+  } = usePostLikeToggle({
+    postId: post.id,
+    viewerProfileId,
+    initialIsLiked: !!viewerLikedPost,
+    initialLikeCount: post.likeCount,
+  });
 
   useEffect(() => {
-    setLikeCount(post.likeCount);
     setSaveCount(post.saveCount);
-  }, [post.id, post.likeCount, post.saveCount]);
-
-  useEffect(() => {
-    setIsLiked(!!viewerLikedPost);
-  }, [viewerLikedPost]);
+  }, [post.id, post.saveCount]);
 
   useEffect(() => {
     setIsSaved(!!viewerSavedPost);
@@ -48,36 +47,7 @@ export default function PostStats({ post, viewerProfileId }: PostStatsProps) {
 
   async function handleLikePost(e: React.MouseEvent) {
     e.stopPropagation();
-
-    if (!viewerProfileId) {
-      return;
-    }
-
-    const previousIsLiked = isLiked;
-    const previousLikeCount = likeCount;
-
-    try {
-      if (isLiked) {
-        setIsLiked(false);
-        setLikeCount((currentCount) => Math.max(0, currentCount - 1));
-
-        await deleteViewerPostLike({
-          postId: post.id,
-        });
-
-        return;
-      }
-
-      setIsLiked(true);
-      setLikeCount((currentCount) => currentCount + 1);
-
-      await createViewerPostLike({
-        postId: post.id,
-      });
-    } catch {
-      setIsLiked(previousIsLiked);
-      setLikeCount(previousLikeCount);
-    }
+    await handleToggleLike();
   }
 
   async function handleSavePost(e: React.MouseEvent) {
