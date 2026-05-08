@@ -51,7 +51,7 @@ export default function ProfileTabs({
   return (
     <nav
       aria-label="Profile sections"
-      className="flex flex-wrap gap-2 rounded-3xl border bg-card p-2 shadow-sm"
+      className="flex flex-wrap justify-center gap-2 rounded-3xl bg-card p-2"
     >
       {tabs.map((tab) => (
         <NavLink
@@ -59,7 +59,7 @@ export default function ProfileTabs({
           to={`/profile/${profileId}/${tab.key}`}
           className={({ isActive }) =>
             cn(
-              'flex min-w-[120px] items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition-colors',
+              'flex min-w-30 items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition-colors',
               isActive
                 ? 'bg-surface-soft text-foreground'
                 : 'text-muted-foreground hover:bg-surface-soft hover:text-foreground',

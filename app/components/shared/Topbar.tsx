@@ -58,7 +58,7 @@ export default function Topbar({ location: providedLocation }: TopbarProps) {
     return (
       <Link to="/" className="min-w-0 justify-self-start">
         <div className="flex items-center gap-1">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-700">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="36"
@@ -66,9 +66,9 @@ export default function Topbar({ location: providedLocation }: TopbarProps) {
               viewBox="0 0 24 24"
               fill="none"
               stroke="white"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
               <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
               <path d="M20 2v4"></path>
@@ -76,7 +76,7 @@ export default function Topbar({ location: providedLocation }: TopbarProps) {
               <circle cx="4" cy="20" r="2"></circle>
             </svg>
           </div>
-          <span className="text-[1.75rem] font-black text-blue-700">小蓝书</span>
+          <span className="text-2xl font-black text-blue-700">Snapgram</span>
         </div>
       </Link>
     );
@@ -118,7 +118,7 @@ export default function Topbar({ location: providedLocation }: TopbarProps) {
             onChange={(event) => {
               setSearchValue(event.target.value);
             }}
-            className="placeholder:text-ink-placeholder focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-none"
+            className="text-base placeholder:text-base placeholder:text-ink-placeholder focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-none"
             placeholder="Search..."
             aria-label="Search posts"
           />

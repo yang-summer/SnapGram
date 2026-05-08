@@ -22,51 +22,6 @@ export function getProfileDisplayName(profile: PublicUserProfileViewModel): stri
   return profile.name || profile.username || 'Snapgram User';
 }
 
-function ProfileStats({
-  postsCount,
-  savedCount,
-  likedCount,
-  isOwner,
-}: ProfileStatsProps) {
-  const stats = [
-    {
-      key: 'posts',
-      label: 'Posts',
-      value: formatCount(postsCount),
-    },
-    ...(isOwner
-      ? [
-          {
-            key: 'saved',
-            label: 'Saved',
-            value: formatCount(savedCount),
-          },
-          {
-            key: 'liked',
-            label: 'Liked',
-            value: formatCount(likedCount),
-          },
-        ]
-      : []),
-  ];
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      {stats.map((stat) => (
-        <div
-          key={stat.key}
-          className="rounded-2xl border bg-background/60 px-4 py-3 shadow-xs"
-        >
-          <div className="text-lg font-semibold text-foreground">{stat.value}</div>
-          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            {stat.label}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function ProfileHeader({
   profile,
   profileId,
@@ -79,8 +34,8 @@ export default function ProfileHeader({
   const usernameLabel = profile.username ? `@${profile.username}` : 'No username yet';
 
   return (
-    <section className="rounded-3xl border bg-card p-6 shadow-sm">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <section className="flex justify-center rounded-3xl bg-card p-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <img
             src={profile.imageUrl}
@@ -97,9 +52,7 @@ export default function ProfileHeader({
             {profile.bio ? (
               <p className="max-w-2xl text-sm leading-6 text-foreground">{profile.bio}</p>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                This profile has not added a bio yet.
-              </p>
+              <p className="text-sm text-muted-foreground">This profile has not added a bio yet.</p>
             )}
           </div>
         </div>
@@ -108,14 +61,6 @@ export default function ProfileHeader({
             <Link to={`/update-profile/${profileId}`}>Edit Profile</Link>
           </Button>
         ) : null}
-      </div>
-      <div className="mt-6">
-        <ProfileStats
-          postsCount={postsCount}
-          savedCount={savedCount}
-          likedCount={likedCount}
-          isOwner={isOwner}
-        />
       </div>
     </section>
   );

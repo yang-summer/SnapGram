@@ -22,7 +22,7 @@ type ProfilePageFrameProps = {
 function ProfilePageFrame({ children }: ProfilePageFrameProps) {
   return (
     <div className="flex">
-      <div className="flex flex-1 flex-col items-center overflow-scroll px-5 py-8 md:px-8 lg:px-10">
+      <div className="flex flex-1 flex-col items-center px-5 py-8 md:px-8 lg:px-10">
         <div className="w-full max-w-6xl">{children}</div>
       </div>
     </div>

@@ -21,11 +21,7 @@ type RootLayoutFrameProps = {
   shellLocation?: Pick<Location, 'pathname' | 'search'>;
 };
 
-function RootLayoutFrame({
-  children,
-  modalContent,
-  shellLocation,
-}: RootLayoutFrameProps) {
+function RootLayoutFrame({ children, modalContent, shellLocation }: RootLayoutFrameProps) {
   const currentLocation = useLocation();
   const effectiveLocation = shellLocation ?? currentLocation;
 
@@ -59,7 +55,7 @@ function RootLayoutFrame({
         <Bottombar location={effectiveLocation} />
       </nav>
       {modalContent ? (
-        <div className="fixed inset-0 z-[60] overflow-hidden">{modalContent}</div>
+        <div className="fixed inset-0 z-60 overflow-hidden">{modalContent}</div>
       ) : null}
     </RequireAuth>
   );
@@ -71,7 +67,9 @@ export default function RootLayout() {
   const navigationType = useNavigationType();
   const locationState = location.state as PostDetailNavigationState | null;
   const backgroundLocation = locationState?.backgroundLocation ?? null;
-  const isPostDetailModal = Boolean(backgroundLocation && matchPath('/posts/:id', location.pathname));
+  const isPostDetailModal = Boolean(
+    backgroundLocation && matchPath('/posts/:id', location.pathname),
+  );
   const modalBackgroundLocation = isPostDetailModal ? backgroundLocation : null;
   const backgroundOutletRef = useRef<ReactNode>(outlet);
 

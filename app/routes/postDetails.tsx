@@ -19,11 +19,7 @@ type PostDetailsPageShellProps = {
 };
 
 function PostDetailsPageShell({ children }: PostDetailsPageShellProps) {
-  return (
-    <div className="flex flex-col items-center gap-10 overflow-scroll px-5 py-10 md:p-14">
-      {children}
-    </div>
-  );
+  return <div className="flex flex-col items-center gap-10 px-5 py-10 md:p-14">{children}</div>;
 }
 
 type PostDetailsModalShellProps = {
@@ -46,7 +42,7 @@ function PostDetailsModalShell({ children, onClose }: PostDetailsModalShellProps
           event.stopPropagation();
           onClose();
         }}
-        className="hidden lg:flex fixed top-5 left-5 z-10 h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/70"
+        className="hidden lg:flex fixed top-5 left-5 z-10 h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/70 cursor-pointer"
         aria-label="Close post details"
       >
         <X className="size-5" />
@@ -97,7 +93,14 @@ export default function PostDetails() {
   }
 
   const postId = id;
-  const { data: post, isPending, isError, error, refetch, isFetching } = useGetPostByIdQuery(postId);
+  const {
+    data: post,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useGetPostByIdQuery(postId);
   const { mutateAsync: deletePost } = useDeletePostMutation();
 
   async function handleDeletePost() {
@@ -113,7 +116,9 @@ export default function PostDetails() {
 
       navigate(-1);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete post. Please try again.');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete post. Please try again.',
+      );
     }
   }
 
@@ -127,10 +132,10 @@ export default function PostDetails() {
       variant="ghost"
       size="icon"
       onClick={handleClose}
-      className="rounded-full text-ink-strong"
+      className="rounded-full text-ink-strong cursor-pointer"
       aria-label="Close post details"
     >
-      <ArrowLeft className="size-5" />
+      <X className="size-6" />
     </Button>
   ) : null;
 
@@ -178,7 +183,11 @@ export default function PostDetails() {
     );
   }
 
-  return <PostDetailsShell isModal={isModal} onClose={handleClose}>{content}</PostDetailsShell>;
+  return (
+    <PostDetailsShell isModal={isModal} onClose={handleClose}>
+      {content}
+    </PostDetailsShell>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

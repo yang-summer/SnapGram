@@ -9,6 +9,7 @@ import MasonryPostCard from '../features/post/components/MasonryPostCard';
 import { useHomeFeedInfiniteQuery } from '../features/post/queries/post.queries';
 import type { HomeFeedPostViewModel } from '../features/post/types/post.type';
 import type { Route } from './+types/home';
+import { House } from 'lucide-react';
 
 type HomeVirtualFeedContentProps = {
   items: HomeFeedPostViewModel[];
@@ -126,9 +127,14 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:p-14">
+    <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
       <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
-        <h2 className="text-left w-full">Home Feed</h2>
+        <div className="flex justify-start items-center gap-3 w-full">
+          <House className="size-9" aria-hidden="true" />
+          <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
+            Home Feed
+          </h2>
+        </div>
         {content}
       </div>
     </div>

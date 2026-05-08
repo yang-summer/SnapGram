@@ -11,17 +11,19 @@ type MasonryPostCardProps = {
 export default function MasonryPostCard({ post }: MasonryPostCardProps) {
   const location = useLocation();
   const postDetailState = createPostDetailNavigationState(location);
-  const imageAlt = post.caption.trim().length > 0 ? post.caption : `${post.creator.name}'s post cover`;
+  const imageAlt =
+    post.caption.trim().length > 0 ? post.caption : `${post.creator.name}'s post cover`;
   const hasCoverImage = post.imageUrl.trim().length > 0;
-  const hasCreatorAvatar = typeof post.creator.imageUrl === 'string' && post.creator.imageUrl.length > 0;
+  const hasCreatorAvatar =
+    typeof post.creator.imageUrl === 'string' && post.creator.imageUrl.length > 0;
 
   return (
-    <article className="min-w-0 overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-sm">
+    <article className="min-w-0 overflow-hidden rounded-2xl bg-card text-card-foreground">
       <Link
         to={`/posts/${post.id}`}
         state={postDetailState}
         preventScrollReset
-        className="block"
+        className="block rounded-2xl outline -outline-offset-1 outline-black/10"
       >
         {hasCoverImage ? (
           <ProgressiveImage
@@ -32,7 +34,7 @@ export default function MasonryPostCard({ post }: MasonryPostCardProps) {
           />
         ) : (
           <div
-            className="flex items-center justify-center rounded-[24px] bg-surface-soft text-ink-subtle"
+            className="flex items-center justify-center rounded-2xl bg-surface-soft text-ink-subtle"
             style={{ aspectRatio: 3 / 4 }}
           >
             <ImageOff aria-hidden="true" className="size-8" />
@@ -40,7 +42,7 @@ export default function MasonryPostCard({ post }: MasonryPostCardProps) {
         )}
       </Link>
 
-      <div className="flex flex-col gap-3 p-3">
+      <div className="flex flex-col gap-2 p-3">
         <Link
           to={`/posts/${post.id}`}
           state={postDetailState}
@@ -56,10 +58,10 @@ export default function MasonryPostCard({ post }: MasonryPostCardProps) {
               <img
                 src={post.creator.imageUrl ?? undefined}
                 alt={post.creator.name}
-                className="size-8 shrink-0 rounded-full object-cover"
+                className="size-6 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-ink-subtle">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-soft text-ink-subtle">
                 <UserRound aria-hidden="true" className="size-4" />
               </div>
             )}

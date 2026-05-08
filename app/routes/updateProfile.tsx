@@ -1,4 +1,4 @@
-import { PencilLine } from 'lucide-react';
+import { UserRoundPen } from 'lucide-react';
 import { Navigate, useParams } from 'react-router';
 import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
@@ -16,9 +16,9 @@ type UpdateProfilePageFrameProps = {
 function UpdateProfilePageFrame({ children }: UpdateProfilePageFrameProps) {
   return (
     <div className="flex">
-      <div className="flex flex-1 flex-col items-center gap-10 overflow-scroll px-5 py-10 md:px-8 lg:p-14">
+      <div className="flex flex-1 flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
         <div className="flex w-full max-w-4xl items-center gap-3">
-          <PencilLine className="size-9" aria-hidden="true" />
+          <UserRoundPen className="size-9" aria-hidden="true" />
           <h2 className="w-full text-left text-[24px] font-bold leading-[140%] tracking-tighter">
             Edit Profile
           </h2>

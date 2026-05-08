@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
+import { Bookmark, Heart } from 'lucide-react';
 import {
   useCreateViewerPostLikeMutation,
   useCreateViewerPostSaveMutation,
   useDeleteViewerPostLikeMutation,
   useDeleteViewerPostSaveMutation,
 } from '../queries/post.engagement.mutations';
-import { useViewerLikedPostQuery, useViewerSavedPostQuery } from '../queries/post.engagement.queries';
+import {
+  useViewerLikedPostQuery,
+  useViewerSavedPostQuery,
+} from '../queries/post.engagement.queries';
 
 type PostStatsProps = {
   post: {
@@ -118,25 +122,27 @@ export default function PostStats({ post, viewerProfileId }: PostStatsProps) {
 
   return (
     <div className="flex justify-between items-center z-20">
-      <div className="flex gap-2 mr-5">
-        <img
-          src={isLiked ? '/assets/icons/liked.svg' : '/assets/icons/like.svg'}
-          alt="like"
-          width={20}
-          height={20}
+      <div className="flex gap-2 mr-5 items-center">
+        <Heart
+          aria-hidden="true"
           onClick={(e) => handleLikePost(e)}
-          className="cursor-pointer"
+          className={
+            isLiked
+              ? 'size-5 cursor-pointer fill-current text-primary'
+              : 'size-5 cursor-pointer'
+          }
         />
         <p>{likeCount}</p>
       </div>
-      <div className="flex gap-2">
-        <img
-          src={isSaved ? '/assets/icons/saved.svg' : '/assets/icons/save.svg'}
-          alt="save"
-          width={20}
-          height={20}
+      <div className="flex gap-2 items-center">
+        <Bookmark
+          aria-hidden="true"
           onClick={(e) => handleSavePost(e)}
-          className="cursor-pointer"
+          className={
+            isSaved
+              ? 'size-5 cursor-pointer fill-current text-primary'
+              : 'size-5 cursor-pointer'
+          }
         />
         <p>{saveCount}</p>
       </div>

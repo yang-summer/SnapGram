@@ -126,7 +126,9 @@ function getOrderedReadyUpdatePublishMediaItems(
     .filter(
       (
         item,
-      ): item is ExistingPostMediaEditorItem | Extract<PostMediaEditorItem, { kind: 'local'; status: 'ready' }> =>
+      ): item is
+        | ExistingPostMediaEditorItem
+        | Extract<PostMediaEditorItem, { kind: 'local'; status: 'ready' }> =>
         isExistingMediaItem(item) || isReadyLocalMediaItem(item),
     )
     .map((item) =>
@@ -174,7 +176,9 @@ export default function PostForm({ action, post }: PostFormProps) {
   const { mutateAsync: createPost, isPending: isLoadingCreate } = useCreatePostMutation();
   const { mutateAsync: updatePost, isPending: isLoadingUpdate } = useUpdatePostMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [mediaItems, setMediaItems] = useState<PostMediaEditorItem[]>(() => getInitialMediaItems(post));
+  const [mediaItems, setMediaItems] = useState<PostMediaEditorItem[]>(() =>
+    getInitialMediaItems(post),
+  );
   const [mediaError, setMediaError] = useState<string | null>(null);
   const isEditMode = action === 'Update';
   const hasProcessingMediaItems = mediaItems.some(
@@ -242,9 +246,7 @@ export default function PostForm({ action, post }: PostFormProps) {
         }
 
         if (updatedPost.removedFileCleanupFailed) {
-          toast.warning(
-            'Post was updated, but some removed media files could not be cleaned up.',
-          );
+          toast.warning('Post was updated, but some removed media files could not be cleaned up.');
         }
 
         navigate(`/posts/${updatedPost.postId}`);
@@ -303,7 +305,7 @@ export default function PostForm({ action, post }: PostFormProps) {
                 aria-invalid={fieldState.invalid}
                 placeholder=""
                 autoComplete="off"
-                className="h-36 rounded-xl border-none ring-offset-light-3 focus-visible:ring-1 focus-visible:ring-offset-1"
+                className="h-36"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
@@ -326,9 +328,7 @@ export default function PostForm({ action, post }: PostFormProps) {
         ) : (
           <Field className="w-full">
             <FieldLabel>Add Photos</FieldLabel>
-            <FieldDescription>
-              Choose and order up to 6 images before publishing.
-            </FieldDescription>
+            <FieldDescription>Choose and order up to 6 images before publishing.</FieldDescription>
             <PostMediaEditor
               items={mediaItems}
               error={mediaError}
@@ -351,7 +351,7 @@ export default function PostForm({ action, post }: PostFormProps) {
                 aria-invalid={fieldState.invalid}
                 placeholder=""
                 autoComplete="off"
-                className="h-12 border-none placeholder:text-light-4 ring-offset-light-3 focus-visible:ring-1 focus-visible:ring-offset-1"
+                className="h-12"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
@@ -371,7 +371,7 @@ export default function PostForm({ action, post }: PostFormProps) {
                 aria-invalid={fieldState.invalid}
                 placeholder=""
                 autoComplete="off"
-                className="h-12 border-none placeholder:text-light-4 ring-offset-light-3 focus-visible:ring-1 focus-visible:ring-offset-1"
+                className="h-12"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
@@ -379,11 +379,20 @@ export default function PostForm({ action, post }: PostFormProps) {
         />
       </FieldGroup>
 
-      <div className="flex items-center justify-end gap-4">
-        <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+      <div className="flex items-center justify-end gap-4 mt-9">
+        <Button
+          type="button"
+          variant="ghost"
+          className="cursor-pointer"
+          onClick={() => navigate(-1)}
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting || hasProcessingMediaItems}>
+        <Button
+          type="submit"
+          className="cursor-pointer"
+          disabled={isSubmitting || hasProcessingMediaItems}
+        >
           {isSubmitting ? 'Loading...' : action} Post
         </Button>
       </div>
