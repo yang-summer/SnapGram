@@ -1,6 +1,9 @@
-import { Link, useLocation } from 'react-router';
+import { Link } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
-import { createPostDetailNavigationState } from '../lib/post-detail-navigation';
+import {
+  buildStandalonePostHref,
+  useOptionalContextualPostRoute,
+} from '../lib/contextual-post-route';
 import PostStats from './PostStats';
 import type { PostCardViewModel } from '../types/post.type';
 
@@ -9,11 +12,13 @@ type PostCardProps = {
 };
 
 export default function PostCard({ post }: PostCardProps) {
-  const location = useLocation();
+  const contextualPostRoute = useOptionalContextualPostRoute();
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   const currentUserProfileId = currentUser?.profileId ?? '';
-  const postDetailState = createPostDetailNavigationState(location);
+  const postDetailLinkProps = contextualPostRoute
+    ? contextualPostRoute.buildPostLink(post.id)
+    : { to: buildStandalonePostHref(post.id) };
 
   if (!post.creator) return null;
 
@@ -43,9 +48,7 @@ export default function PostCard({ post }: PostCardProps) {
         </Link>
       </div>
       <Link
-        to={`/posts/${post.id}`}
-        state={postDetailState}
-        preventScrollReset
+        {...postDetailLinkProps}
       >
         <div>
           <p>{post.caption}</p>

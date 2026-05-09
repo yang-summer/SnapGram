@@ -1,7 +1,10 @@
-import { Link, useLocation } from 'react-router';
+import { Link } from 'react-router';
 import PostStats from './PostStats';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
-import { createPostDetailNavigationState } from '../lib/post-detail-navigation';
+import {
+  buildStandalonePostHref,
+  useOptionalContextualPostRoute,
+} from '../lib/contextual-post-route';
 import type { PostGridItemViewModel } from '../types/post.type';
 
 type GridPostListProps = {
@@ -15,19 +18,22 @@ export default function GridPostList({
   showUser = true,
   showStats = true,
 }: GridPostListProps) {
-  const location = useLocation();
+  const contextualPostRoute = useOptionalContextualPostRoute();
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   const currentUserProfileId = currentUser?.profileId ?? '';
-  const postDetailState = createPostDetailNavigationState(location);
   return (
     <ul className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-7 max-w-5xl">
       {posts.map((post) => (
         <li key={post.id} className="relative min-w-80 h-80">
+          {/*
+            Prefer the active contextual route when available so parent pages can
+            render modal subroutes; otherwise fall back to the standalone detail page.
+          */}
           <Link
-            to={`/posts/${post.id}`}
-            state={postDetailState}
-            preventScrollReset
+            {...(contextualPostRoute
+              ? contextualPostRoute.buildPostLink(post.id)
+              : { to: buildStandalonePostHref(post.id) })}
             className="flex rounded-[24px] border overflow-hidden cursor-pointer w-full h-full"
           >
             <img src={post.imageUrl} alt="post" className="w-full h-full object-cover" />

@@ -1,7 +1,10 @@
 import { Heart, ImageOff, UserRound } from 'lucide-react';
-import { Link, useLocation } from 'react-router';
+import { Link } from 'react-router';
 import { usePostLikeToggle } from '../hooks/usePostLikeToggle';
-import { createPostDetailNavigationState } from '../lib/post-detail-navigation';
+import {
+  buildStandalonePostHref,
+  useOptionalContextualPostRoute,
+} from '../lib/contextual-post-route';
 import ProgressiveImage from './ProgressiveImage';
 import type { HomeFeedPostViewModel } from '../types/post.type';
 
@@ -16,8 +19,10 @@ export default function MasonryPostCard({
   viewerProfileId = '',
   initialIsLiked = false,
 }: MasonryPostCardProps) {
-  const location = useLocation();
-  const postDetailState = createPostDetailNavigationState(location);
+  const contextualPostRoute = useOptionalContextualPostRoute();
+  const postDetailLinkProps = contextualPostRoute
+    ? contextualPostRoute.buildPostLink(post.id)
+    : { to: buildStandalonePostHref(post.id) };
   const {
     isLiked,
     likeCount,
@@ -45,9 +50,7 @@ export default function MasonryPostCard({
   return (
     <article className="min-w-0 overflow-hidden rounded-2xl bg-card text-card-foreground">
       <Link
-        to={`/posts/${post.id}`}
-        state={postDetailState}
-        preventScrollReset
+        {...postDetailLinkProps}
         className="block rounded-2xl outline -outline-offset-1 outline-black/10"
       >
         {hasCoverImage ? (
@@ -69,9 +72,7 @@ export default function MasonryPostCard({
 
       <div className="flex flex-col gap-2 p-3">
         <Link
-          to={`/posts/${post.id}`}
-          state={postDetailState}
-          preventScrollReset
+          {...postDetailLinkProps}
           className="line-clamp-2 text-sm leading-5 font-medium text-ink-strong"
         >
           {post.caption || 'Untitled post'}
