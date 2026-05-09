@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDropzone, type FileWithPath } from 'react-dropzone';
+import { ImagePlus } from 'lucide-react';
 import { getImageMetadata } from '~/features/post/lib/image-metadata';
 import type { PreparedImageDraft } from '~/features/post/types/post.type';
 import { Button } from '../ui/button';
@@ -106,7 +107,9 @@ export default function FileUploader({ fieldChange, mediaUrl, onPreparedChange }
         </>
       ) : (
         <div className="flex flex-col items-center p-7 h-80 lg:h-153">
-          <img src="/assets/icons/file-upload.svg" width={96} height={77} alt="file upload" />
+          <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-surface-soft text-ink-subtle">
+            <ImagePlus aria-hidden="true" className="size-12" />
+          </div>
 
           <h3 className="mb-2 mt-6">Drag photo here</h3>
           <p className="mb-6">WEBP, PNG, JPG</p>

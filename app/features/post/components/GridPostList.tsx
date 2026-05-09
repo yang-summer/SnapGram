@@ -1,3 +1,4 @@
+import { UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import PostStats from './PostStats';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
@@ -42,11 +43,17 @@ export default function GridPostList({
           <div className="absolute bottom-0 p-5 flex justify-between items-center w-full bg-linear-to-t from-gray-900 to-transparent rounded-b-[24px] gap-2">
             {showUser && (
               <div className="flex flex-1 items-center justify-start gap-2">
-                <img
-                  src={post.creator.imageUrl || '/assets/icons/profile-placeholder.svg'}
-                  alt="creator"
-                  className="h-8 w-8 rounded-full"
-                />
+                {post.creator.imageUrl ? (
+                  <img
+                    src={post.creator.imageUrl}
+                    alt="creator"
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft/90 text-white">
+                    <UserRound aria-hidden="true" className="size-4" />
+                  </div>
+                )}
                 <p className="line-clamp-1">{post.creator.name}</p>
               </div>
             )}

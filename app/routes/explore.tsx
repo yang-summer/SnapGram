@@ -1,3 +1,4 @@
+import { Filter, SearchIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
@@ -99,7 +100,7 @@ export default function Explore() {
       <div className="flex flex-col max-w-5xl items-center w-full gap-6 md:gap-9">
         <h2>Search Posts</h2>
         <div className="flex gap-1 px-4 w-full rounded-lg">
-          <img src="/assets/icons/search.svg" width={24} height={24} alt="search" />
+          <SearchIcon aria-hidden="true" className="size-6 shrink-0 text-ink-subtle" />
           <Input
             type="text"
             placeholder="Search"
@@ -116,7 +117,7 @@ export default function Explore() {
         <h3>Popular Today</h3>
         <div className="flex justify-center items-center gap-3 rounded-xl px-4 py-2 cursor-pointer">
           <p>All</p>
-          <img src="/assets/icons/filter.svg" width={20} height={20} alt="filter" />
+          <Filter aria-hidden="true" className="size-5 text-ink-subtle" />
         </div>
       </div>
 
