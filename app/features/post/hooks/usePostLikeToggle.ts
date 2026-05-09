@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
 import {
   useCreateViewerPostLikeMutation,
   useDeleteViewerPostLikeMutation,
+  useViewerPostLikePending,
 } from '../queries/post.engagement.mutations';
+import { useViewerLikedPostQuery } from '../queries/post.engagement.queries';
 
 type UsePostLikeToggleOptions = {
   postId: string;
   viewerProfileId: string;
   initialIsLiked: boolean;
   initialLikeCount: number;
+  queryEnabled?: boolean;
 };
 
 type UsePostLikeToggleResult = {
@@ -23,53 +25,44 @@ export function usePostLikeToggle({
   viewerProfileId,
   initialIsLiked,
   initialLikeCount,
+  queryEnabled = true,
 }: UsePostLikeToggleOptions): UsePostLikeToggleResult {
-  const [isLiked, setIsLiked] = useState(initialIsLiked);
-  const [likeCount, setLikeCount] = useState(initialLikeCount);
-  const { mutateAsync: createViewerPostLike, isPending: isCreatePending } =
-    useCreateViewerPostLikeMutation();
-  const { mutateAsync: deleteViewerPostLike, isPending: isDeletePending } =
-    useDeleteViewerPostLikeMutation();
-
-  useEffect(() => {
-    setIsLiked(initialIsLiked);
-  }, [initialIsLiked, postId]);
-
-  useEffect(() => {
-    setLikeCount(initialLikeCount);
-  }, [initialLikeCount, postId]);
+  const engagementTarget = {
+    viewerProfileId,
+    postId,
+  };
+  const { data: viewerLikedPost } = useViewerLikedPostQuery(viewerProfileId, postId, {
+    enabled: queryEnabled,
+  });
+  const { mutateAsync: createViewerPostLike } = useCreateViewerPostLikeMutation(engagementTarget);
+  const { mutateAsync: deleteViewerPostLike } = useDeleteViewerPostLikeMutation(engagementTarget);
+  const isPending = useViewerPostLikePending(engagementTarget);
+  const isLiked =
+    typeof viewerLikedPost === 'undefined' ? initialIsLiked : viewerLikedPost !== null;
+  const likeCount = initialLikeCount;
 
   async function toggleLike() {
     if (!viewerProfileId) {
       return false;
     }
 
-    const previousIsLiked = isLiked;
-    const previousLikeCount = likeCount;
-
     try {
       if (isLiked) {
-        setIsLiked(false);
-        setLikeCount((currentCount) => Math.max(0, currentCount - 1));
-        await deleteViewerPostLike({ postId });
+        await deleteViewerPostLike();
         return false;
       }
 
-      setIsLiked(true);
-      setLikeCount((currentCount) => currentCount + 1);
-      await createViewerPostLike({ postId });
+      await createViewerPostLike();
       return true;
     } catch {
-      setIsLiked(previousIsLiked);
-      setLikeCount(previousLikeCount);
-      return previousIsLiked;
+      return isLiked;
     }
   }
 
   return {
     isLiked,
     likeCount,
-    isPending: isCreatePending || isDeletePending,
+    isPending,
     toggleLike,
   };
 }

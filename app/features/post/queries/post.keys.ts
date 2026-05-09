@@ -8,6 +8,12 @@ function normalizePostIdsForKey(postIds: readonly string[]) {
   ).sort();
 }
 
+function normalizeKeySegment(value: string) {
+  const normalizedValue = value.trim();
+
+  return normalizedValue.length > 0 ? normalizedValue : 'unknown';
+}
+
 export const postKeys = {
   all: ['posts'] as const,
   lists: () => [...postKeys.all, 'list'] as const,
@@ -29,8 +35,10 @@ export const postKeys = {
     [...postKeys.profileLikedFeedScope(profileId), params] as const,
   profileLikedCount: (profileId: string) =>
     [...postKeys.profileScope(profileId), 'liked-count'] as const,
+  profileSavedFeedScope: (profileId: string) =>
+    [...postKeys.profileScope(profileId), 'saved-feed'] as const,
   profileSavedFeed: (profileId: string, params: { limit: number }) =>
-    [...postKeys.profileScope(profileId), 'saved-feed', params] as const,
+    [...postKeys.profileSavedFeedScope(profileId), params] as const,
   profileSavedCount: (profileId: string) =>
     [...postKeys.profileScope(profileId), 'saved-count'] as const,
   details: () => [...postKeys.all, 'detail'] as const,
@@ -46,6 +54,10 @@ export const postKeys = {
     [...postKeys.viewerLikesScope(viewerProfileId), 'single', postId] as const,
   viewerLikesByPosts: (viewerProfileId: string, postIds: readonly string[]) =>
     [...postKeys.viewerLikesScope(viewerProfileId), 'batch', normalizePostIdsForKey(postIds)] as const,
+  viewerLikeMutationKey: (viewerProfileId: string, postId: string) =>
+    [...postKeys.viewerLikesScope(viewerProfileId), 'mutation', 'toggle', postId] as const,
+  viewerLikeMutationScopeId: (viewerProfileId: string, postId: string) =>
+    `posts:engagement:viewer-likes:${normalizeKeySegment(viewerProfileId)}:${normalizeKeySegment(postId)}`,
   viewerSavesRoot: () => [...postKeys.engagement(), 'viewer-saves'] as const,
   viewerSavesScope: (viewerProfileId: string) =>
     [...postKeys.viewerSavesRoot(), viewerProfileId] as const,
@@ -55,4 +67,8 @@ export const postKeys = {
     [...postKeys.viewerSavesScope(viewerProfileId), 'single', postId] as const,
   viewerSavesByPosts: (viewerProfileId: string, postIds: readonly string[]) =>
     [...postKeys.viewerSavesScope(viewerProfileId), 'batch', normalizePostIdsForKey(postIds)] as const,
+  viewerSaveMutationKey: (viewerProfileId: string, postId: string) =>
+    [...postKeys.viewerSavesScope(viewerProfileId), 'mutation', 'toggle', postId] as const,
+  viewerSaveMutationScopeId: (viewerProfileId: string, postId: string) =>
+    `posts:engagement:viewer-saves:${normalizeKeySegment(viewerProfileId)}:${normalizeKeySegment(postId)}`,
 };

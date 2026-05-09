@@ -28,6 +28,7 @@ export default function MasonryPostCard({
     viewerProfileId,
     initialIsLiked,
     initialLikeCount: post.likeCount,
+    queryEnabled: false,
   });
   const imageAlt =
     post.caption.trim().length > 0 ? post.caption : `${post.creator.name}'s post cover`;
