@@ -1,4 +1,4 @@
-import { CircleUserRound, Compass, Home, SquarePlus } from 'lucide-react';
+import { CircleUserRound, Home, SquarePlus } from 'lucide-react';
 import { Link, useLocation, type Location } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 
@@ -11,11 +11,6 @@ const bottombarLinks = [
     Icon: Home,
     route: '/feed',
     label: 'Home',
-  },
-  {
-    Icon: Compass,
-    route: '/explore',
-    label: 'Explore',
   },
   {
     Icon: SquarePlus,
@@ -44,7 +39,7 @@ export default function Bottombar({ location: providedLocation }: BottombarProps
     : 'text-ink-subtle';
 
   return (
-    <div className="grid grid-cols-4 gap-2 bg-surface-raised h-full">
+    <div className="grid grid-cols-3 gap-2 bg-surface-raised h-full">
       {bottombarLinks.map((link) => {
         const isActive = isPathWithinRoute(pathname, link.route);
         const colorClass = isActive ? 'text-ink-strong' : 'text-ink-subtle';

@@ -7,7 +7,6 @@ export default [
     route('feed', 'routes/feed.tsx', [
       route('posts/:postId', 'routes/feed.post.tsx'),
     ]),
-    route('explore', 'routes/explore.tsx'),
     route('search-result', 'routes/searchResult.tsx', [
       route('posts/:postId', 'routes/searchResult.post.tsx'),
     ]),

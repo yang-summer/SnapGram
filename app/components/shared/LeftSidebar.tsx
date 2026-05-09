@@ -1,7 +1,7 @@
 import { PiUser } from 'react-icons/pi';
 import { Link, NavLink } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
-import { Compass, House, Menu, SquarePlus } from 'lucide-react';
+import { House, Menu, SquarePlus } from 'lucide-react';
 import MoreMenu from '~/components/shared/MoreMenu';
 
 const sidebarLinks = [
@@ -9,11 +9,6 @@ const sidebarLinks = [
     Icon: House,
     route: '/feed',
     label: 'Home',
-  },
-  {
-    Icon: Compass,
-    route: '/explore',
-    label: 'Explore',
   },
   {
     Icon: SquarePlus,
