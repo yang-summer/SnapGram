@@ -1,9 +1,10 @@
-import { useOutletContext } from 'react-router';
+import { Outlet, useOutletContext } from 'react-router';
 import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
 import ProfileFeedTabContent, {
   type ProfileFeedTabContentCopy,
 } from '~/features/profile/components/ProfileFeedTabContent';
 import type { ProfileRouteOutletContext } from '~/features/profile/types/profile-route.type';
+import { ContextualPostRouteProvider } from '~/features/post/lib/contextual-post-route';
 import { useProfileLikedFeedInfiniteQuery } from '~/features/post/queries/post.engagement.queries';
 
 function getProfileLikedTabCopy(
@@ -41,5 +42,16 @@ export default function ProfileLiked() {
   });
   const copy = getProfileLikedTabCopy(isOwner, profileName);
 
-  return <ProfileFeedTabContent state={state} copy={copy} className="w-full" />;
+  return (
+    <ContextualPostRouteProvider
+      source="profile-liked"
+      closeTo={`/profile/${profileId}/liked`}
+      buildPostHref={(postId) => `/profile/${profileId}/liked/${postId}`}
+    >
+      <div className="w-full">
+        <ProfileFeedTabContent state={state} copy={copy} className="w-full" />
+        <Outlet />
+      </div>
+    </ContextualPostRouteProvider>
+  );
 }

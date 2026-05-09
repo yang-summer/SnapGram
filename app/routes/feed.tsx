@@ -3,10 +3,12 @@ import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
 import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
+import { ContextualPostRouteProvider } from '~/features/post/lib/contextual-post-route';
 import PostMasonryFeed from '../features/post/components/PostMasonryFeed';
 import { useHomeFeedInfiniteQuery } from '../features/post/queries/post.queries';
 import type { Route } from './+types/feed';
 import { House } from 'lucide-react';
+import { Outlet } from 'react-router';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -93,16 +95,23 @@ export default function Feed() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
-      <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
-        <div className="flex justify-start items-center gap-3 w-full">
-          <House className="size-9" aria-hidden="true" />
-          <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
-            Home Feed
-          </h2>
+    <ContextualPostRouteProvider
+      source="feed"
+      closeTo="/feed"
+      buildPostHref={(postId) => `/feed/posts/${postId}`}
+    >
+      <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
+        <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
+          <div className="flex justify-start items-center gap-3 w-full">
+            <House className="size-9" aria-hidden="true" />
+            <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
+              Home Feed
+            </h2>
+          </div>
+          {content}
+          <Outlet />
         </div>
-        {content}
       </div>
-    </div>
+    </ContextualPostRouteProvider>
   );
 }

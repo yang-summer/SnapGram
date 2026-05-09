@@ -1,22 +1,25 @@
 import { SearchIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useSearchParams } from 'react-router';
+import { Outlet, useSearchParams } from 'react-router';
 import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
 import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
 import PostMasonryFeed from '~/features/post/components/PostMasonryFeed';
+import { ContextualPostRouteProvider } from '~/features/post/lib/contextual-post-route';
 import { useSearchPostsInfiniteQuery } from '~/features/post/queries/post.queries';
 
 const SEARCH_KEYWORD_MIN_LENGTH = 3;
 
 export default function SearchResult() {
   const [searchParams] = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const searchSuffix =
+    searchParamsString.length > 0 ? `?${searchParamsString}` : '';
   const keyword = (searchParams.get('keyword') ?? '').trim();
   const hasKeyword = keyword.length > 0;
   const isKeywordTooShort = hasKeyword && keyword.length < SEARCH_KEYWORD_MIN_LENGTH;
-  const canSearch = keyword.length >= SEARCH_KEYWORD_MIN_LENGTH;
 
   const searchPostsQuery = useSearchPostsInfiniteQuery(keyword);
   const state = useInfiniteFeedState({
@@ -116,23 +119,30 @@ export default function SearchResult() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
-      <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
-        <div className="flex w-full flex-col gap-2">
-          <div className="flex justify-start items-center gap-3 w-full">
-            <SearchIcon className="size-9" aria-hidden="true" />
-            <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
-              Search Results
-            </h2>
+    <ContextualPostRouteProvider
+      source="search-result"
+      closeTo={`/search-result${searchSuffix}`}
+      buildPostHref={(postId) => `/search-result/posts/${postId}${searchSuffix}`}
+    >
+      <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
+        <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
+          <div className="flex w-full flex-col gap-2">
+            <div className="flex justify-start items-center gap-3 w-full">
+              <SearchIcon className="size-9" aria-hidden="true" />
+              <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
+                Search Results
+              </h2>
+            </div>
+            {hasKeyword ? (
+              <p className="text-sm text-ink-subtle">Showing posts matching "{keyword}".</p>
+            ) : (
+              <p className="text-sm text-ink-subtle">Use the top bar to search published posts.</p>
+            )}
           </div>
-          {hasKeyword ? (
-            <p className="text-sm text-ink-subtle">Showing posts matching "{keyword}".</p>
-          ) : (
-            <p className="text-sm text-ink-subtle">Use the top bar to search published posts.</p>
-          )}
+          {content}
+          <Outlet />
         </div>
-        {content}
       </div>
-    </div>
+    </ContextualPostRouteProvider>
   );
 }
