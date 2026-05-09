@@ -5,7 +5,7 @@ import { Button } from '~/components/ui/button';
 import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
 import PostMasonryFeed from '../features/post/components/PostMasonryFeed';
 import { useHomeFeedInfiniteQuery } from '../features/post/queries/post.queries';
-import type { Route } from './+types/home';
+import type { Route } from './+types/feed';
 import { House } from 'lucide-react';
 
 export function meta({}: Route.MetaArgs) {
@@ -15,7 +15,7 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
+export default function Feed() {
   const homeFeedQuery = useHomeFeedInfiniteQuery();
   const state = useInfiniteFeedState({
     query: homeFeedQuery,

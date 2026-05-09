@@ -5,7 +5,7 @@ import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 const bottombarLinks = [
   {
     Icon: Home,
-    route: '/',
+    route: '/feed',
     label: 'Home',
   },
   {

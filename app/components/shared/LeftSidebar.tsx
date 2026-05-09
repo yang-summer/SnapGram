@@ -7,7 +7,7 @@ import MoreMenu from '~/components/shared/MoreMenu';
 const sidebarLinks = [
   {
     Icon: House,
-    route: '/',
+    route: '/feed',
     label: 'Home',
   },
   {
