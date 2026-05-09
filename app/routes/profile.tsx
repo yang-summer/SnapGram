@@ -37,8 +37,8 @@ export default function Profile() {
   }
 
   const profileId = id;
-  const isSavedTab = !!useMatch('/profile/:id/saved');
-  const isLikedTab = !!useMatch('/profile/:id/liked');
+  const isSavedTab = !!useMatch('/profile/:id/saved/*');
+  const isLikedTab = !!useMatch('/profile/:id/liked/*');
   const activeTab = isSavedTab ? 'saved' : isLikedTab ? 'liked' : 'posts';
   const { data: currentUserResult } = useCurrentUserQuery();
   const currentUser =

@@ -8,6 +8,10 @@ import MoreMenu from '~/components/shared/MoreMenu';
 const SEARCH_RESULT_ROUTE = '/search-result';
 const SEARCH_KEYWORD_MIN_LENGTH = 3;
 
+function isPathWithinRoute(pathname: string, route: string) {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
 type TopbarProps = {
   location?: Pick<Location, 'pathname' | 'search'>;
 };
@@ -16,7 +20,10 @@ export default function Topbar({ location: providedLocation }: TopbarProps) {
   const navigate = useNavigate();
   const currentLocation = useLocation();
   const location = providedLocation ?? currentLocation;
-  const isSearchResultRoute = location.pathname === SEARCH_RESULT_ROUTE;
+  const isSearchResultRoute = isPathWithinRoute(
+    location.pathname,
+    SEARCH_RESULT_ROUTE,
+  );
   const routeKeyword = isSearchResultRoute
     ? (new URLSearchParams(location.search).get('keyword') ?? '').trim()
     : null;
