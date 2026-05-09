@@ -26,7 +26,10 @@ export default function ContextualPostDetailsRoute() {
   }
 
   function handleClose() {
-    void navigate(contextualPostRoute.closeTo, { replace: true });
+    void navigate(contextualPostRoute.closeTo, {
+      replace: true,
+      preventScrollReset: true,
+    });
   }
 
   return (

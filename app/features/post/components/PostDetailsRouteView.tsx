@@ -38,7 +38,7 @@ export function PostDetailsModalShell({
 
   return (
     <div
-      className="h-full w-full bg-black/60 backdrop-blur-[2px]"
+      className="fixed inset-0 z-60 overflow-hidden bg-black/60 backdrop-blur-[2px]"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
