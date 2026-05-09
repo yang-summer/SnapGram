@@ -6,13 +6,7 @@ import { toast } from 'sonner';
 import type { input } from 'zod';
 import InlineErrorAlert from '~/components/feedback/inline-error-alert';
 import { Button } from '~/components/ui/button';
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '~/components/ui/field';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
 import { EditProfileValidation } from '~/lib/validation';
@@ -29,9 +23,7 @@ type EditProfileFormProps = {
 
 type EditProfileFormInputValues = input<typeof EditProfileValidation>;
 
-function getDefaultValues(
-  profile: EditableUserProfileViewModel,
-): EditableUserProfileFormValues {
+function getDefaultValues(profile: EditableUserProfileViewModel): EditableUserProfileFormValues {
   return {
     name: profile.name,
     bio: profile.bio ?? '',
@@ -75,11 +67,7 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { mutateAsync: updateProfile, isPending: isUpdatingProfile } =
     useUpdateEditableUserProfileMutation();
-  const form = useForm<
-    EditProfileFormInputValues,
-    unknown,
-    EditableUserProfileFormValues
-  >({
+  const form = useForm<EditProfileFormInputValues, unknown, EditableUserProfileFormValues>({
     resolver: zodResolver(EditProfileValidation),
     defaultValues: getDefaultValues(profile),
   });
@@ -143,17 +131,10 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
   }
 
   return (
-    <form
-      id="form-editProfile"
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="w-full max-w-4xl"
-    >
+    <form id="form-editProfile" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-4xl">
       <FieldGroup className="gap-8">
         {submitError ? (
-          <InlineErrorAlert
-            title="Unable to update profile"
-            message={submitError}
-          />
+          <InlineErrorAlert title="Unable to update profile" message={submitError} />
         ) : null}
 
         <div className="rounded-3xl border bg-card p-6 shadow-sm">
@@ -242,13 +223,14 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
+            className="cursor-pointer"
             onClick={handleCancel}
             disabled={isUpdatingProfile}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitDisabled}>
+          <Button type="submit" className="cursor-pointer" disabled={isSubmitDisabled}>
             {isUpdatingProfile ? 'Saving...' : 'Save changes'}
           </Button>
         </div>

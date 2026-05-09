@@ -169,7 +169,7 @@ export default function ProgressiveImage({
   return (
     <div
       ref={containerRef}
-      className={cn('relative w-full overflow-hidden rounded-[24px] bg-surface-soft', className)}
+      className={cn('relative w-full overflow-hidden rounded-2xl bg-surface-soft', className)}
       style={{ aspectRatio: ASPECT_RATIO_VALUES[aspectRatioBucket] }}
       data-has-placeholder={normalizedPlaceholder ? 'true' : 'false'}
       data-status={status}

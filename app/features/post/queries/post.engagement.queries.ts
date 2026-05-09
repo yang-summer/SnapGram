@@ -17,20 +17,38 @@ import { postKeys } from './post.keys';
 const VIEWER_ENGAGEMENT_STALE_TIME = 30_000;
 const PROFILE_ENGAGEMENT_STALE_TIME = 30_000;
 
-export function useViewerLikedPostQuery(viewerProfileId: string, postId: string) {
+type ViewerEngagementQueryOptions = {
+  enabled?: boolean;
+};
+
+export function useViewerLikedPostQuery(
+  viewerProfileId: string,
+  postId: string,
+  options?: ViewerEngagementQueryOptions,
+) {
+  const enabled =
+    viewerProfileId.length > 0 && postId.length > 0 && (options?.enabled ?? true);
+
   return useQuery({
     queryKey: postKeys.viewerLike(viewerProfileId, postId),
     queryFn: () => getViewerLikedPost(viewerProfileId, postId),
-    enabled: viewerProfileId.length > 0 && postId.length > 0,
+    enabled,
     staleTime: VIEWER_ENGAGEMENT_STALE_TIME,
   });
 }
 
-export function useViewerSavedPostQuery(viewerProfileId: string, postId: string) {
+export function useViewerSavedPostQuery(
+  viewerProfileId: string,
+  postId: string,
+  options?: ViewerEngagementQueryOptions,
+) {
+  const enabled =
+    viewerProfileId.length > 0 && postId.length > 0 && (options?.enabled ?? true);
+
   return useQuery({
     queryKey: postKeys.viewerSave(viewerProfileId, postId),
     queryFn: () => getViewerSavedPost(viewerProfileId, postId),
-    enabled: viewerProfileId.length > 0 && postId.length > 0,
+    enabled,
     staleTime: VIEWER_ENGAGEMENT_STALE_TIME,
   });
 }

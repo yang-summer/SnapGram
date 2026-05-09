@@ -42,7 +42,7 @@ export default function RequireGuest({ children }: RequireGuestProps) {
   }
 
   if (data?.status === 'authenticated' || data?.status === 'profile_missing') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/feed" replace />;
   }
 
   return <>{children}</>;

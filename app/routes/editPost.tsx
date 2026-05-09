@@ -2,6 +2,7 @@ import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import RouteErrorState from '~/components/feedback/route-error-state';
+import { SquarePen } from 'lucide-react';
 import PostForm from '~/features/post/components/PostForm';
 import { useGetPostEditorQuery } from '~/features/post/queries/post.queries';
 import { useParams } from 'react-router';
@@ -20,9 +21,9 @@ export default function EditPost() {
   if (isPending) {
     return (
       <div className="flex">
-        <div className="flex flex-1 flex-col items-center gap-10 overflow-scroll px-5 py-10 md:px-8 lg:p-14">
+        <div className="flex flex-1 flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
           <div className="flex justify-start items-center gap-3 max-w-5xl w-full">
-            <img src="/assets/icons/add-post.svg" width={36} height={36} alt="add" />
+            <SquarePen className="size-9" aria-hidden="true" />
             <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
               Edit Post
             </h2>
@@ -40,9 +41,9 @@ export default function EditPost() {
   if (isError) {
     return (
       <div className="flex">
-        <div className="flex flex-1 flex-col items-center gap-10 overflow-scroll px-5 py-10 md:px-8 lg:p-14">
+        <div className="flex flex-1 flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
           <div className="flex justify-start items-center gap-3 max-w-5xl w-full">
-            <img src="/assets/icons/add-post.svg" width={36} height={36} alt="add" />
+            <SquarePen className="size-9" aria-hidden="true" />
             <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
               Edit Post
             </h2>
@@ -62,9 +63,9 @@ export default function EditPost() {
   if (!post) {
     return (
       <div className="flex">
-        <div className="flex flex-1 flex-col items-center gap-10 overflow-scroll px-5 py-10 md:px-8 lg:p-14">
+        <div className="flex flex-1 flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
           <div className="flex justify-start items-center gap-3 max-w-5xl w-full">
-            <img src="/assets/icons/add-post.svg" width={36} height={36} alt="add" />
+            <SquarePen className="size-9" aria-hidden="true" />
             <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
               Edit Post
             </h2>
@@ -81,9 +82,9 @@ export default function EditPost() {
 
   return (
     <div className="flex">
-      <div className="flex flex-col flex-1 items-center gap-10 overflow-scroll py-10 px-5 md:px-8 lg:p-14">
+      <div className="flex flex-col flex-1 items-center gap-10 py-10 px-5 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
         <div className="flex justify-start items-center gap-3 max-w-5xl w-full">
-          <img src="/assets/icons/add-post.svg" width={36} height={36} alt="add" />
+          <SquarePen className="size-9" aria-hidden="true" />
           <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
             Edit Post
           </h2>
@@ -97,9 +98,9 @@ export default function EditPost() {
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   return (
     <div className="flex">
-      <div className="flex flex-1 flex-col items-center gap-10 overflow-scroll px-5 py-10 md:px-8 lg:p-14">
+      <div className="flex flex-1 flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
         <div className="flex justify-start items-center gap-3 max-w-5xl w-full">
-          <img src="/assets/icons/add-post.svg" width={36} height={36} alt="add" />
+          <SquarePen className="size-9" aria-hidden="true" />
           <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
             Edit Post
           </h2>

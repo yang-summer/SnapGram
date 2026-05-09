@@ -7,8 +7,19 @@ import {
   signOut,
   signUpWithEmail,
 } from '../services/auth.service';
-import type { CurrentUserResult, SignInInput, SignUpInput } from '../types/auth.type';
+import type {
+  CurrentUserResult,
+  GuestCurrentUserResult,
+  SignInInput,
+  SignUpInput,
+} from '../types/auth.type';
 import { authKeys } from './auth.keys';
+
+const GUEST_CURRENT_USER_RESULT: GuestCurrentUserResult = {
+  status: 'guest',
+  account: null,
+  user: null,
+};
 
 function setCurrentUserCache(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -59,10 +70,7 @@ export function useSignOutMutation() {
       const cachedCurrentUser = queryClient.getQueryData<CurrentUserResult>(authKeys.currentUser());
       const viewerProfileId = getAuthenticatedViewerProfileId(cachedCurrentUser);
 
-      queryClient.removeQueries({
-        queryKey: authKeys.currentUser(),
-        exact: true,
-      });
+      setCurrentUserCache(queryClient, GUEST_CURRENT_USER_RESULT);
 
       if (viewerProfileId) {
         queryClient.removeQueries({

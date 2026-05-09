@@ -33,7 +33,7 @@ body {
   --card-foreground: var(--ink-strong);
   --popover: var(--surface-raised);
   --popover-foreground: var(--ink-strong);
-  --primary: #bb0028;
+  --primary: #1447e6;
   --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -64,21 +64,21 @@ body {
 .dark {
   color-scheme: dark;
 
-  --background: #211c1d;
-  --surface-raised: #211c1d;
-  --surface-soft: rgb(243 240 240 / 0.08);
+  --background: #0a0a0a;
+  --surface-raised: #0a0a0a;
+  --surface-soft: #141414;
 
-  --ink-strong: #f3f0f0;
-  --ink-medium: rgb(243 240 240 / 0.8);
-  --ink-subtle: rgb(243 240 240 / 0.6);
-  --ink-placeholder: rgb(243 240 240 / 0.32);
+  --ink-strong: #fff;
+  --ink-medium: rgb(255 255 255 / 0.8);
+  --ink-subtle: rgb(255 255 255 / 0.6);
+  --ink-placeholder: rgb(255 255 255 / 0.3);
 
   --foreground: var(--ink-strong);
   --card: var(--surface-raised);
   --card-foreground: var(--ink-strong);
   --popover: var(--surface-raised);
   --popover-foreground: var(--ink-strong);
-  --primary: #e80535;
+  --primary: #1447e6;
   --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);

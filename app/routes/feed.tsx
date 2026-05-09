@@ -2,44 +2,13 @@ import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
-import { VirtualMasonryFeed } from '~/features/feed/components/VirtualMasonryFeed';
 import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
-import { useVirtualMasonryFeedState } from '~/features/feed/hooks/useVirtualMasonryFeedState';
-import MasonryPostCard from '../features/post/components/MasonryPostCard';
+import { ContextualPostRouteProvider } from '~/features/post/lib/contextual-post-route';
+import PostMasonryFeed from '../features/post/components/PostMasonryFeed';
 import { useHomeFeedInfiniteQuery } from '../features/post/queries/post.queries';
-import type { HomeFeedPostViewModel } from '../features/post/types/post.type';
-import type { Route } from './+types/home';
-
-type HomeVirtualFeedContentProps = {
-  items: HomeFeedPostViewModel[];
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  isLoadMoreError: boolean;
-  onLoadMore: () => Promise<unknown>;
-};
-
-function HomeVirtualFeedContent({
-  items,
-  hasNextPage,
-  isFetchingNextPage,
-  isLoadMoreError,
-  onLoadMore,
-}: HomeVirtualFeedContentProps) {
-  const virtualFeedState = useVirtualMasonryFeedState({
-    items,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoadMoreError,
-    onLoadMore,
-  });
-
-  return (
-    <VirtualMasonryFeed
-      state={virtualFeedState}
-      renderItem={(item) => <MasonryPostCard post={item} />}
-    />
-  );
-}
+import type { Route } from './+types/feed';
+import { House } from 'lucide-react';
+import { Outlet } from 'react-router';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -48,7 +17,7 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
+export default function Feed() {
   const homeFeedQuery = useHomeFeedInfiniteQuery();
   const state = useInfiniteFeedState({
     query: homeFeedQuery,
@@ -93,7 +62,7 @@ export default function Home() {
     // 已有内容时始终保留瀑布流，后续分页状态只在底部区域展示。
     content = (
       <div className="flex w-full flex-col gap-8">
-        <HomeVirtualFeedContent
+        <PostMasonryFeed
           items={state.items}
           hasNextPage={state.hasNextPage}
           isFetchingNextPage={state.isFetchingNextPage}
@@ -126,11 +95,23 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:p-14">
-      <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
-        <h2 className="text-left w-full">Home Feed</h2>
-        {content}
+    <ContextualPostRouteProvider
+      source="feed"
+      closeTo="/feed"
+      buildPostHref={(postId) => `/feed/posts/${postId}`}
+    >
+      <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
+        <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
+          <div className="flex justify-start items-center gap-3 w-full">
+            <House className="size-9" aria-hidden="true" />
+            <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
+              Home Feed
+            </h2>
+          </div>
+          {content}
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </ContextualPostRouteProvider>
   );
 }

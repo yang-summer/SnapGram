@@ -68,7 +68,27 @@ export default function SigninForm() {
       className="flex flex-col items-center w-full max-w-md gap-8 px-4 sm:px-6"
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <img src="/assets/images/logo.svg" />
+        <div className="flex items-center gap-1">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-700">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+              <path d="M20 2v4"></path>
+              <path d="M22 4h-4"></path>
+              <circle cx="4" cy="20" r="2"></circle>
+            </svg>
+          </div>
+          <span className="text-2xl font-black text-blue-700">Snapgram</span>
+        </div>
         <h2 className="text-xl font-bold">Log in to your account</h2>
         <p className="text-xs sm:text-sm">To use Snapgram please enter your details</p>
       </div>

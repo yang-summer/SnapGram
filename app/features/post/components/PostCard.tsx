@@ -1,6 +1,10 @@
-import { Link, useLocation } from 'react-router';
+import { ImageOff, SquarePen, UserRound } from 'lucide-react';
+import { Link } from 'react-router';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
-import { createPostDetailNavigationState } from '../lib/post-detail-navigation';
+import {
+  buildStandalonePostHref,
+  useOptionalContextualPostRoute,
+} from '../lib/contextual-post-route';
 import PostStats from './PostStats';
 import type { PostCardViewModel } from '../types/post.type';
 
@@ -9,11 +13,13 @@ type PostCardProps = {
 };
 
 export default function PostCard({ post }: PostCardProps) {
-  const location = useLocation();
+  const contextualPostRoute = useOptionalContextualPostRoute();
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   const currentUserProfileId = currentUser?.profileId ?? '';
-  const postDetailState = createPostDetailNavigationState(location);
+  const postDetailLinkProps = contextualPostRoute
+    ? contextualPostRoute.buildPostLink(post.id)
+    : { to: buildStandalonePostHref(post.id) };
 
   if (!post.creator) return null;
 
@@ -22,11 +28,17 @@ export default function PostCard({ post }: PostCardProps) {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Link to={`/profile/${post.creator.id}`}>
-            <img
-              src={post?.creator?.imageUrl || '/assets/icons/profile-placeholder.svg'}
-              alt="creator"
-              className="rounded-full w-12 lg:h-12"
-            />
+            {post.creator.imageUrl ? (
+              <img
+                src={post.creator.imageUrl}
+                alt="creator"
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-soft text-ink-subtle">
+                <UserRound aria-hidden="true" className="size-6" />
+              </div>
+            )}
           </Link>
           <div className="flex flex-col">
             <p>{post.creator.name}</p>
@@ -39,14 +51,10 @@ export default function PostCard({ post }: PostCardProps) {
           to={`/update-post/${post.id}`}
           className={currentUserProfileId !== post.creator.id ? 'hidden' : ''}
         >
-          <img src={'/assets/icons/edit.svg'} alt="edit" width={20} height={20} />
+          <SquarePen aria-hidden="true" className="size-5" />
         </Link>
       </div>
-      <Link
-        to={`/posts/${post.id}`}
-        state={postDetailState}
-        preventScrollReset
-      >
+      <Link {...postDetailLinkProps}>
         <div>
           <p>{post.caption}</p>
           <ul className="flex gap-1 mt-2">
@@ -55,11 +63,17 @@ export default function PostCard({ post }: PostCardProps) {
             ))}
           </ul>
         </div>
-        <img
-          src={post.imageUrl || '/assets/icons/profile-placeholder.svg'}
-          className="h-64 xs:h-[400px] lg:h-112.5 w-full rounded-[24px] object-cover mb-5"
-          alt="post image"
-        />
+        {post.imageUrl ? (
+          <img
+            src={post.imageUrl}
+            className="h-64 xs:h-[400px] lg:h-112.5 w-full rounded-[24px] object-cover mb-5"
+            alt="post image"
+          />
+        ) : (
+          <div className="mb-5 flex h-64 w-full items-center justify-center rounded-[24px] bg-surface-soft text-ink-subtle xs:h-[400px] lg:h-112.5">
+            <ImageOff aria-hidden="true" className="size-10" />
+          </div>
+        )}
       </Link>
       <PostStats
         post={post}

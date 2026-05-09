@@ -1,56 +1,25 @@
+import { SearchIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useSearchParams } from 'react-router';
+import { Outlet, useSearchParams } from 'react-router';
 import PageEmptyState from '~/components/feedback/page-empty-state';
 import PageErrorState from '~/components/feedback/page-error-state';
 import PageLoadingState from '~/components/feedback/page-loading-state';
 import { Button } from '~/components/ui/button';
-import { VirtualMasonryFeed } from '~/features/feed/components/VirtualMasonryFeed';
 import { useInfiniteFeedState } from '~/features/feed/hooks/useInfiniteFeedState';
-import { useVirtualMasonryFeedState } from '~/features/feed/hooks/useVirtualMasonryFeedState';
-import MasonryPostCard from '~/features/post/components/MasonryPostCard';
+import PostMasonryFeed from '~/features/post/components/PostMasonryFeed';
+import { ContextualPostRouteProvider } from '~/features/post/lib/contextual-post-route';
 import { useSearchPostsInfiniteQuery } from '~/features/post/queries/post.queries';
-import type { HomeFeedPostViewModel } from '~/features/post/types/post.type';
 
 const SEARCH_KEYWORD_MIN_LENGTH = 3;
 
-type SearchVirtualFeedContentProps = {
-  items: HomeFeedPostViewModel[];
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  isLoadMoreError: boolean;
-  onLoadMore: () => Promise<unknown>;
-};
-
-function SearchVirtualFeedContent({
-  items,
-  hasNextPage,
-  isFetchingNextPage,
-  isLoadMoreError,
-  onLoadMore,
-}: SearchVirtualFeedContentProps) {
-  const virtualFeedState = useVirtualMasonryFeedState({
-    items,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoadMoreError,
-    onLoadMore,
-  });
-
-  return (
-    <VirtualMasonryFeed
-      state={virtualFeedState}
-      renderItem={(item) => <MasonryPostCard post={item} />}
-    />
-  );
-}
-
 export default function SearchResult() {
   const [searchParams] = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const searchSuffix =
+    searchParamsString.length > 0 ? `?${searchParamsString}` : '';
   const keyword = (searchParams.get('keyword') ?? '').trim();
   const hasKeyword = keyword.length > 0;
-  const isKeywordTooShort =
-    hasKeyword && keyword.length < SEARCH_KEYWORD_MIN_LENGTH;
-  const canSearch = keyword.length >= SEARCH_KEYWORD_MIN_LENGTH;
+  const isKeywordTooShort = hasKeyword && keyword.length < SEARCH_KEYWORD_MIN_LENGTH;
 
   const searchPostsQuery = useSearchPostsInfiniteQuery(keyword);
   const state = useInfiniteFeedState({
@@ -114,7 +83,7 @@ export default function SearchResult() {
     // 已经拿到至少一条结果时，始终保留瀑布流内容；后续分页状态只在底部状态区展示。
     content = (
       <div className="flex w-full flex-col gap-8">
-        <SearchVirtualFeedContent
+        <PostMasonryFeed
           items={state.items}
           hasNextPage={state.hasNextPage}
           isFetchingNextPage={state.isFetchingNextPage}
@@ -143,31 +112,37 @@ export default function SearchResult() {
           ) : null}
 
           {/* 已有结果且确认没有下一页时，在底部给出明确的列表结束提示。 */}
-          {state.isEndReached ? (
-            <p>You have reached the end of the search results.</p>
-          ) : null}
+          {state.isEndReached ? <p>You have reached the end of the search results.</p> : null}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:p-14">
-      <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
-        <div className="flex w-full flex-col gap-2">
-          <h2 className="w-full text-left">Search Results</h2>
-          {hasKeyword ? (
-            <p className="text-sm text-ink-subtle">
-              Showing posts matching "{keyword}".
-            </p>
-          ) : (
-            <p className="text-sm text-ink-subtle">
-              Use the top bar to search published posts.
-            </p>
-          )}
+    <ContextualPostRouteProvider
+      source="search-result"
+      closeTo={`/search-result${searchSuffix}`}
+      buildPostHref={(postId) => `/search-result/posts/${postId}${searchSuffix}`}
+    >
+      <div className="flex flex-col items-center gap-10 px-5 py-10 md:px-8 lg:px-14 lg:pt-10 lg:pb-14">
+        <div className="flex w-full max-w-7xl flex-col items-center gap-6 md:gap-9">
+          <div className="flex w-full flex-col gap-2">
+            <div className="flex justify-start items-center gap-3 w-full">
+              <SearchIcon className="size-9" aria-hidden="true" />
+              <h2 className="text-[24px] font-bold leading-[140%] tracking-tighter w-full text-left">
+                Search Results
+              </h2>
+            </div>
+            {hasKeyword ? (
+              <p className="text-sm text-ink-subtle">Showing posts matching "{keyword}".</p>
+            ) : (
+              <p className="text-sm text-ink-subtle">Use the top bar to search published posts.</p>
+            )}
+          </div>
+          {content}
+          <Outlet />
         </div>
-        {content}
       </div>
-    </div>
+    </ContextualPostRouteProvider>
   );
 }
