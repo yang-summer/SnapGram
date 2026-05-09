@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,7 @@ export default function MoreMenu({
   sideOffset = 4,
   alignOffset = 0,
 }: MoreMenuProps) {
+  const navigate = useNavigate();
   const { mutate: signOut, isPending: isSigningOut } = useSignOutMutation();
 
   return (
@@ -49,7 +51,11 @@ export default function MoreMenu({
           variant="destructive"
           disabled={isSigningOut}
           onSelect={() => {
-            signOut();
+            signOut(undefined, {
+              onSuccess: () => {
+                void navigate('/sign-in', { replace: true });
+              },
+            });
           }}
           className="cursor-pointer rounded-lg px-3 py-2.5 text-base font-medium"
         >
