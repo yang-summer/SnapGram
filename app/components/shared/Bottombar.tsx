@@ -36,16 +36,24 @@ export default function Bottombar({ location: providedLocation }: BottombarProps
   const profileRoute = currentUser?.profileId
     ? `/profile/${currentUser.profileId}`
     : null;
+  const isProfileActive = profileRoute
+    ? isPathWithinRoute(pathname, profileRoute)
+    : false;
+  const profileColorClass = isProfileActive
+    ? 'text-ink-strong'
+    : 'text-ink-subtle';
+
   return (
     <div className="grid grid-cols-4 gap-2 bg-surface-raised h-full">
       {bottombarLinks.map((link) => {
         const isActive = isPathWithinRoute(pathname, link.route);
+        const colorClass = isActive ? 'text-ink-strong' : 'text-ink-subtle';
 
         return (
           <Link
             to={link.route}
             key={link.label}
-            className={`flex items-center justify-center gap-1 p-2 ${isActive && 'text-ink-strong'} text-ink-subtle transition-colors hover:bg-surface-soft`}
+            className={`flex items-center justify-center gap-1 p-2 ${colorClass} transition-colors hover:bg-surface-soft`}
           >
             <link.Icon className="w-6 h-6" />
             <span className="hidden md:flex text-base font-normal">{link.label}</span>
@@ -54,7 +62,7 @@ export default function Bottombar({ location: providedLocation }: BottombarProps
       })}
       <Link
         to={`/profile/${currentUser?.profileId ?? ''}`}
-        className={`flex items-center justify-center gap-1 p-2 text-ink-subtle transition-colors ${profileRoute && isPathWithinRoute(pathname, profileRoute) ? 'text-ink-strong' : ''} hover:bg-surface-soft`}
+        className={`flex items-center justify-center gap-1 p-2 ${profileColorClass} transition-colors hover:bg-surface-soft`}
       >
         <CircleUserRound className="w-6 h-6" />
         <span className="hidden md:flex text-base font-normal">Me</span>
