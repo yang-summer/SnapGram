@@ -4,9 +4,13 @@ import { index, layout, route } from '@react-router/dev/routes';
 export default [
   layout('layouts/rootLayout.tsx', [
     index('routes/rootRedirect.tsx'),
-    route('feed', 'routes/feed.tsx'),
+    route('feed', 'routes/feed.tsx', [
+      route('posts/:postId', 'routes/feed.post.tsx'),
+    ]),
     route('explore', 'routes/explore.tsx'),
-    route('search-result', 'routes/searchResult.tsx'),
+    route('search-result', 'routes/searchResult.tsx', [
+      route('posts/:postId', 'routes/searchResult.post.tsx'),
+    ]),
     route('saved', 'routes/saved.tsx'),
     route('all-users', 'routes/allUsers.tsx'),
     route('function-healthcheck', 'routes/functionHealthcheck.tsx'),
@@ -15,9 +19,15 @@ export default [
     route('posts/:id', 'routes/postDetails.tsx'),
     route('profile/:id', 'routes/profile.tsx', [
       index('routes/profile.index.tsx'),
-      route('posts', 'routes/profile.posts.tsx'),
-      route('saved', 'routes/profile.saved.tsx'),
-      route('liked', 'routes/profile.liked.tsx'),
+      route('posts', 'routes/profile.posts.tsx', [
+        route(':postId', 'routes/profile.posts.post.tsx'),
+      ]),
+      route('saved', 'routes/profile.saved.tsx', [
+        route(':postId', 'routes/profile.saved.post.tsx'),
+      ]),
+      route('liked', 'routes/profile.liked.tsx', [
+        route(':postId', 'routes/profile.liked.post.tsx'),
+      ]),
     ]),
     route('update-profile/:id', 'routes/updateProfile.tsx'),
   ]),
