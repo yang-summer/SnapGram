@@ -7,10 +7,10 @@ import RouteErrorState from '~/components/feedback/route-error-state';
 import { Button } from '~/components/ui/button';
 import { useCurrentUserQuery } from '~/features/auth/queries/auth.queries';
 import PostDetailsContent from '~/features/post/components/PostDetailsContent';
-import type { PostDetailNavigationState } from '~/features/post/lib/post-detail-navigation';
+import { useIsPostDetailModalActive } from '~/features/post/lib/post-detail-modal-runtime';
 import { useDeletePostMutation } from '~/features/post/queries/post.mutation';
 import { useGetPostByIdQuery } from '~/features/post/queries/post.queries';
-import { useLocation, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import type { Route } from './+types/postDetails';
 
@@ -80,13 +80,11 @@ function PostDetailsShell({ isModal, onClose, children }: PostDetailsShellProps)
 
 export default function PostDetails() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { id } = useParams();
   const { data } = useCurrentUserQuery();
   const currentUser = data?.status === 'authenticated' ? data.user : null;
   const currentUserProfileId = currentUser?.profileId ?? '';
-  const locationState = location.state as PostDetailNavigationState | null;
-  const isModal = Boolean(locationState?.backgroundLocation);
+  const isModal = useIsPostDetailModalActive();
 
   if (!id) {
     throw new Error('PostDetails route requires a post id.');
