@@ -13,10 +13,6 @@ import type {
   ViewerPostSaveMutationResult,
 } from '../types/post.type';
 
-type ContentActionHealthcheckRequest = {
-  action: 'healthcheck';
-};
-
 type ContentActionPostLikeRequest = {
   action: 'post.like';
   postId: string;
@@ -43,7 +39,6 @@ type ContentActionPostDeleteRequest = {
 };
 
 type ContentActionRequest =
-  | ContentActionHealthcheckRequest
   | ContentActionPostLikeRequest
   | ContentActionPostUnlikeRequest
   | ContentActionPostSaveRequest
@@ -165,10 +160,6 @@ async function executeContentAction(
   });
 
   return mapExecutionResult(execution);
-}
-
-export async function runContentActionsHealthcheck(): Promise<ContentActionExecutionResult> {
-  return executeContentAction({ action: 'healthcheck' });
 }
 
 export async function likePostWithContentAction(
