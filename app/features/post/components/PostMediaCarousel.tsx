@@ -227,7 +227,7 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
     return (
       <section
         className={cn(
-          'relative flex items-center justify-center overflow-hidden rounded-[24px] bg-surface-soft',
+          'relative flex items-center justify-center overflow-hidden bg-secondary',
           className,
         )}
         style={{ aspectRatio: getAspectRatioValue(DEFAULT_POST_ASPECT_RATIO_BUCKET) }}
@@ -246,7 +246,7 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
 
   return (
     <section
-      className={cn('relative overflow-hidden rounded-[24px] bg-surface-soft', className)}
+      className={cn('relative overflow-hidden bg-surface-soft', className)}
       style={{ aspectRatio: viewportAspectRatio }}
       role="region"
       aria-roledescription="carousel"
@@ -271,21 +271,9 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${media.length}`}
               >
-                <div className="relative flex size-full items-center justify-center overflow-hidden bg-surface-soft">
-                  {item.placeholder ? (
-                    <img
-                      src={item.placeholder}
-                      alt=""
-                      aria-hidden="true"
-                      className={cn(
-                        'absolute inset-0 size-full object-cover blur-xl transition-opacity duration-300',
-                        hasFailed ? 'opacity-0' : 'opacity-100',
-                      )}
-                    />
-                  ) : null}
-
+                <div className="relative flex size-full items-center justify-center overflow-hidden bg-secondary">
                   {hasFailed ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-linear-to-br from-surface-soft to-background/70 px-6 text-center text-sm text-muted-foreground">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-secondary px-6 text-center text-sm text-muted-foreground">
                       <div className="rounded-full bg-background/80 p-3 shadow-sm">
                         <ImageOffIcon aria-hidden="true" />
                       </div>

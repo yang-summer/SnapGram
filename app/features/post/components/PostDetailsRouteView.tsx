@@ -15,7 +15,13 @@ type PostDetailsPageShellProps = {
 };
 
 export function PostDetailsPageShell({ children }: PostDetailsPageShellProps) {
-  return <div className="flex flex-col items-center gap-10 px-5 py-10 md:p-14">{children}</div>;
+  return (
+    <div className="flex lg:h-[calc(100vh-72px)] w-full items-start justify-center overflow-y-auto lg:items-center">
+      <div className="flex w-full lg:h-[calc(100%-2*24px)] lg:w-auto 2xl:h-[calc(100%-2*32px)] lg:rounded-[20px] lg:border lg:border-border overflow-hidden">
+        {children}
+      </div>
+    </div>
+  );
 }
 
 type PostDetailsModalShellProps = {
@@ -23,10 +29,7 @@ type PostDetailsModalShellProps = {
   onClose: () => void;
 };
 
-export function PostDetailsModalShell({
-  children,
-  onClose,
-}: PostDetailsModalShellProps) {
+export function PostDetailsModalShell({ children, onClose }: PostDetailsModalShellProps) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -56,38 +59,18 @@ export function PostDetailsModalShell({
         <X className="size-5" />
       </button>
 
-      <div className="h-full w-full overflow-y-auto overscroll-contain">
-        <div className="flex min-h-full w-full items-start justify-center lg:items-center lg:p-6 xl:p-10">
-          <div
-            className="flex w-full max-w-6xl justify-center"
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            {children}
-          </div>
+      <div className="flex h-full w-full items-start justify-center overflow-y-auto lg:items-center">
+        <div
+          className="flex h-full w-full justify-center lg:h-[calc(100%-2*24px)] lg:w-auto 2xl:h-[calc(100%-2*32px)] lg:rounded-[20px] overflow-hidden"
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {children}
         </div>
       </div>
     </div>
   );
-}
-
-type PostDetailsShellProps = {
-  isModal: boolean;
-  onClose: () => void;
-  children: ReactNode;
-};
-
-function PostDetailsShell({
-  isModal,
-  onClose,
-  children,
-}: PostDetailsShellProps) {
-  if (isModal) {
-    return <PostDetailsModalShell onClose={onClose}>{children}</PostDetailsModalShell>;
-  }
-
-  return <PostDetailsPageShell>{children}</PostDetailsPageShell>;
 }
 
 type PostDetailsRouteViewProps = {
@@ -183,18 +166,13 @@ export default function PostDetailsRouteView({
         viewerProfileId={currentUserProfileId}
         onDeletePost={handleDeletePost}
         headerLeadingAction={mobileCloseButton}
-        className={
-          isModal
-            ? 'max-w-none rounded-none border-0 bg-card shadow-none lg:max-w-5xl lg:rounded-[30px] lg:border lg:shadow-2xl'
-            : undefined
-        }
       />
     );
   }
 
-  return (
-    <PostDetailsShell isModal={isModal} onClose={onClose}>
-      {content}
-    </PostDetailsShell>
-  );
+  if (isModal) {
+    return <PostDetailsModalShell onClose={onClose}>{content}</PostDetailsModalShell>;
+  }
+
+  return <PostDetailsPageShell>{content}</PostDetailsPageShell>;
 }
