@@ -101,6 +101,9 @@ export default function PostDetailsContent({
           media={post.media}
           altBase={post.caption || `${post.creator.name}'s post media`}
           className="h-full w-full"
+          enablePreview
+          postId={post.id}
+          creatorName={post.creator.name}
         />
       </div>
 
