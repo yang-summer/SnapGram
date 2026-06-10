@@ -7,6 +7,7 @@ import {
   type PostAspectRatioBucket,
   type PostMediaViewModel,
 } from '../types/post.type';
+import PostImagePreviewDialog from './PostImagePreviewDialog';
 
 const ASPECT_RATIO_VALUES: Record<PostAspectRatioBucket, number> = {
   '1:1': 1,
@@ -18,6 +19,9 @@ type PostMediaCarouselProps = {
   media: PostMediaViewModel[];
   altBase: string;
   className?: string;
+  enablePreview?: boolean;
+  postId?: string;
+  creatorName?: string;
 };
 
 // 把目标索引限制在合法范围内，避免按钮和键盘切换时越界。
@@ -72,12 +76,22 @@ function resolveSettledIndex(
   return clampIndex(nextIndex, maxIndex);
 }
 
-export default function PostMediaCarousel({ media, altBase, className }: PostMediaCarouselProps) {
+export default function PostMediaCarousel({
+  media,
+  altBase,
+  className,
+  enablePreview = false,
+  postId,
+  creatorName = '',
+}: PostMediaCarouselProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [failedMediaIds, setFailedMediaIds] = useState<Set<string>>(() => new Set());
   const mediaIdsKey = useMemo(() => media.map((item) => item.id).join('|'), [media]);
+  const normalizedPostId = typeof postId === 'string' ? postId.trim() : '';
+  const canPreviewMedia = enablePreview && normalizedPostId.length > 0;
   const viewportAspectRatio = getAspectRatioValue(
     media[0]?.aspectRatioBucket ?? DEFAULT_POST_ASPECT_RATIO_BUCKET,
   );
@@ -91,6 +105,7 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
     // 避免切换到另一条帖子后仍停留在旧的滚动位置或错误状态。
     slideRefs.current = slideRefs.current.slice(0, media.length);
     setCurrentIndex(0);
+    setPreviewIndex(null);
     setFailedMediaIds(new Set());
 
     const viewport = viewportRef.current;
@@ -205,8 +220,32 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
     });
   }
 
+  function openPreview(index: number) {
+    if (!canPreviewMedia) {
+      return;
+    }
+
+    const targetMedia = media[index];
+
+    if (!targetMedia || failedMediaIds.has(targetMedia.id)) {
+      return;
+    }
+
+    setPreviewIndex(index);
+  }
+
+  function handlePreviewOpenChange(isOpen: boolean) {
+    if (!isOpen) {
+      setPreviewIndex(null);
+    }
+  }
+
   // 支持键盘左右方向键切换，补齐轮播基础可访问性。
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (previewIndex !== null) {
+      return;
+    }
+
     if (!showControls) {
       return;
     }
@@ -227,7 +266,7 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
     return (
       <section
         className={cn(
-          'relative flex items-center justify-center overflow-hidden rounded-[24px] bg-surface-soft',
+          'relative flex items-center justify-center overflow-hidden bg-secondary',
           className,
         )}
         style={{ aspectRatio: getAspectRatioValue(DEFAULT_POST_ASPECT_RATIO_BUCKET) }}
@@ -246,7 +285,7 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
 
   return (
     <section
-      className={cn('relative overflow-hidden rounded-[24px] bg-surface-soft', className)}
+      className={cn('relative overflow-hidden bg-surface-soft', className)}
       style={{ aspectRatio: viewportAspectRatio }}
       role="region"
       aria-roledescription="carousel"
@@ -271,21 +310,9 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${media.length}`}
               >
-                <div className="relative flex size-full items-center justify-center overflow-hidden bg-surface-soft">
-                  {item.placeholder ? (
-                    <img
-                      src={item.placeholder}
-                      alt=""
-                      aria-hidden="true"
-                      className={cn(
-                        'absolute inset-0 size-full object-cover blur-xl transition-opacity duration-300',
-                        hasFailed ? 'opacity-0' : 'opacity-100',
-                      )}
-                    />
-                  ) : null}
-
+                <div className="relative flex size-full items-center justify-center overflow-hidden bg-secondary">
                   {hasFailed ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-linear-to-br from-surface-soft to-background/70 px-6 text-center text-sm text-muted-foreground">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-secondary px-6 text-center text-sm text-muted-foreground">
                       <div className="rounded-full bg-background/80 p-3 shadow-sm">
                         <ImageOffIcon aria-hidden="true" />
                       </div>
@@ -297,8 +324,12 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
                       alt={createMediaAlt(altBase, index, media.length)}
                       loading={index === 0 ? 'eager' : 'lazy'}
                       decoding="async"
+                      onClick={() => openPreview(index)}
                       onError={() => handleMediaError(item.id)}
-                      className="relative size-full object-contain"
+                      className={cn(
+                        'relative size-full object-contain',
+                        canPreviewMedia && 'cursor-zoom-in',
+                      )}
                     />
                   )}
                 </div>
@@ -360,6 +391,18 @@ export default function PostMediaCarousel({ media, altBase, className }: PostMed
             })}
           </div>
         </>
+      ) : null}
+
+      {canPreviewMedia && previewIndex !== null ? (
+        <PostImagePreviewDialog
+          open={previewIndex !== null}
+          media={media}
+          initialIndex={previewIndex}
+          postId={normalizedPostId}
+          creatorName={creatorName}
+          altBase={altBase}
+          onOpenChange={handlePreviewOpenChange}
+        />
       ) : null}
     </section>
   );

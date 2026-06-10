@@ -10,7 +10,6 @@ type PostDetailsContentProps = {
   post: PostDetailViewModel;
   viewerProfileId: string;
   onDeletePost: () => void;
-  className?: string;
   headerLeadingAction?: ReactNode;
 };
 
@@ -22,6 +21,26 @@ type PostDetailsHeaderProps = {
   className?: string;
 };
 
+function padDatePart(value: number): string {
+  return value.toString().padStart(2, '0');
+}
+
+function formatPostDetailsCreatedAt(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
 function PostDetailsHeader({
   post,
   viewerProfileId,
@@ -32,6 +51,7 @@ function PostDetailsHeader({
   const hasCreatorAvatar =
     typeof post.creator.imageUrl === 'string' && post.creator.imageUrl.trim().length > 0;
   const isOwner = viewerProfileId === post.creator.id;
+  const formattedCreatedAt = formatPostDetailsCreatedAt(post.createdAt);
 
   return (
     <div className={cn('flex w-full items-center justify-between', className)}>
@@ -53,7 +73,7 @@ function PostDetailsHeader({
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate">{post.creator.name}</p>
             <div className="flex items-center gap-2 text-sm text-ink-subtle">
-              <p className="truncate">{post.createdAt}</p>
+              <p className="truncate">{formattedCreatedAt}</p>
               <span aria-hidden="true">•</span>
               <p className="truncate">{post.location}</p>
             </div>
@@ -77,14 +97,12 @@ export default function PostDetailsContent({
   post,
   viewerProfileId,
   onDeletePost,
-  className,
   headerLeadingAction,
 }: PostDetailsContentProps) {
   return (
     <div
       className={cn(
-        'flex w-full max-w-5xl flex-col rounded-[30px] border lg:flex-row lg:rounded-l-[24px]',
-        className,
+        'flex w-full max-w-none flex-col border-0 bg-card shadow-none lg:w-full lg:max-w-none lg:flex-row lg:[--interaction-width:360px] lg:shadow-2xl xl:[--interaction-width:400px] 2xl:[--interaction-width:440px]',
       )}
     >
       <PostDetailsHeader
@@ -95,15 +113,27 @@ export default function PostDetailsContent({
         className="p-5 lg:hidden"
       />
 
-      <div className="px-5 lg:w-[48%] lg:shrink-0 lg:p-5">
+      <div
+        className={cn(
+          'h-[calc(133.333vw)] max-h-[60vw] min-h-[50vw] max-w-full lg:h-full lg:min-h-0 lg:w-auto lg:max-w-[calc(100%-var(--interaction-width))] lg:max-h-none lg:shrink-0',
+        )}
+      >
         <PostMediaCarousel
           media={post.media}
           altBase={post.caption || `${post.creator.name}'s post media`}
-          className="rounded-[24px]"
+          className="h-full w-full"
+          enablePreview
+          postId={post.id}
+          creatorName={post.creator.name}
         />
       </div>
 
-      <div className="flex flex-1 flex-col items-start gap-5 rounded-[30px] p-8 lg:gap-7">
+      <div
+        className={cn(
+          'flex flex-1 flex-col items-start gap-5 p-8 lg:gap-7',
+          'lg:w-(--interaction-width) lg:flex-none',
+        )}
+      >
         <PostDetailsHeader
           post={post}
           viewerProfileId={viewerProfileId}
