@@ -21,6 +21,26 @@ type PostDetailsHeaderProps = {
   className?: string;
 };
 
+function padDatePart(value: number): string {
+  return value.toString().padStart(2, '0');
+}
+
+function formatPostDetailsCreatedAt(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
 function PostDetailsHeader({
   post,
   viewerProfileId,
@@ -31,6 +51,7 @@ function PostDetailsHeader({
   const hasCreatorAvatar =
     typeof post.creator.imageUrl === 'string' && post.creator.imageUrl.trim().length > 0;
   const isOwner = viewerProfileId === post.creator.id;
+  const formattedCreatedAt = formatPostDetailsCreatedAt(post.createdAt);
 
   return (
     <div className={cn('flex w-full items-center justify-between', className)}>
@@ -52,7 +73,7 @@ function PostDetailsHeader({
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate">{post.creator.name}</p>
             <div className="flex items-center gap-2 text-sm text-ink-subtle">
-              <p className="truncate">{post.createdAt}</p>
+              <p className="truncate">{formattedCreatedAt}</p>
               <span aria-hidden="true">•</span>
               <p className="truncate">{post.location}</p>
             </div>
