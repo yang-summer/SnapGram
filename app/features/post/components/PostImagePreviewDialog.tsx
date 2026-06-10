@@ -565,6 +565,7 @@ export default function PostImagePreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
+        overlayClassName="bg-black/50"
         className={cn(
           'fixed inset-0 left-0 top-0 z-[90] flex h-dvh w-dvw max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-transparent p-0 text-white ring-0 sm:max-w-none',
           'data-closed:zoom-out-100 data-open:zoom-in-100',
@@ -573,16 +574,14 @@ export default function PostImagePreviewDialog({
       >
         <DialogTitle className="sr-only">Image preview</DialogTitle>
 
-        <Button
+        <button
           type="button"
-          variant="secondary"
-          size="icon"
-          className="absolute left-4 top-4 z-10 rounded-full bg-background/90 text-foreground shadow-lg backdrop-blur hover:bg-background"
+          className="fixed left-5 top-5 z-10 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/70"
           onClick={closePreview}
           aria-label="Close image preview"
         >
-          <XIcon data-icon="inline-start" />
-        </Button>
+          <XIcon aria-hidden="true" className="size-5" />
+        </button>
 
         <div className="relative min-h-0 flex-1 overflow-hidden touch-none" onClick={closePreview}>
           {currentMedia ? (
